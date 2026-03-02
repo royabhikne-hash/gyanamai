@@ -14,3 +14,39 @@ verify_jwt = false
 
 [functions.parent-chat]
 verify_jwt = false
+
+[functions.secure-auth]
+verify_jwt = false
+
+[functions.school-student-approval]
+verify_jwt = false
+
+[functions.get-students]
+verify_jwt = false
+
+[functions.get-schools-public]
+verify_jwt = false
+
+[functions.save-weekly-rankings]
+verify_jwt = false
+
+[functions.send-weekly-report]
+verify_jwt = false
+
+[functions.seed-schools]
+verify_jwt = false
+
+[functions.manage-subscription]
+verify_jwt = false
+
+[functions.notify-school-registration]
+verify_jwt = false
+
+[functions.analyze-answer]
+verify_jwt = false
+
+[functions.generate-quiz]
+verify_jwt = false
+
+[functions.study-chat]
+verify_jwt = false
