@@ -26,6 +26,7 @@ import StudentRankingCard from "@/components/StudentRankingCard";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import DailyUsageWidget from "@/components/DailyUsageWidget";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import BottomNavBar from "@/components/BottomNavBar";
 
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -459,7 +460,7 @@ const StudentDashboard = () => {
   // Study sessions now use route navigation (/study) for WebView/PWA compatibility
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16 sm:pb-0">
       {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
@@ -713,6 +714,7 @@ const StudentDashboard = () => {
           </TabsContent>
         </Tabs>
       </main>
+      <BottomNavBar />
     </div>
   );
 };
