@@ -303,8 +303,8 @@ Keep topics short (2-3 words max).` : "";
       }
     }
 
-    // Use fast model for 5k user scale
-    const PRIMARY_MODEL = "google/gemini-2.5-flash-lite";
+    // Use Gemini 3.0 Flash for chat
+    const PRIMARY_MODEL = "google/gemini-3-flash-preview";
     const FALLBACK_MODEL = "google/gemini-2.5-flash";
 
     const callLovableAI = async (model: string) => {

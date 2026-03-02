@@ -81,7 +81,7 @@ Return ONLY a valid JSON array with this exact format, no other text:
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: "You are an expert MCQ question generator for Indian school board exams. Generate questions that match the exact style and difficulty of official board exams. Return ONLY valid JSON, no markdown, no code blocks." },
             { role: "user", content: prompt },
@@ -247,7 +247,7 @@ Return ONLY a valid JSON array:
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: "You are an expert exam paper setter for Indian school boards. Generate a balanced weekly assessment. Return ONLY valid JSON, no markdown." },
             { role: "user", content: prompt },
