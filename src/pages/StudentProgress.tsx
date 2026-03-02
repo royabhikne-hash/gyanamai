@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import BottomNavBar from "@/components/BottomNavBar";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -419,7 +420,7 @@ const StudentProgress = () => {
   const latestWPS = getLatestWPS();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-16 sm:pb-0">
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -775,6 +776,7 @@ const StudentProgress = () => {
           </div>
         </div>
       </main>
+      <BottomNavBar />
     </div>
   );
 };

@@ -29,6 +29,24 @@ const Login = () => {
     return () => { mountedRef.current = false; };
   }, []);
 
+  // Check localStorage availability - some phones block it in WebView
+  useEffect(() => {
+    try {
+      const test = '__storage_test__';
+      localStorage.setItem(test, test);
+      localStorage.removeItem(test);
+    } catch (e) {
+      console.warn("localStorage not available, login may have issues on this device");
+      toast({
+        title: language === 'en' ? "Browser Warning" : "ब्राउज़र चेतावनी",
+        description: language === 'en' 
+          ? "Your browser may have storage issues. Try using Chrome or your default browser." 
+          : "आपके ब्राउज़र में storage issue है। Chrome या default browser use करें।",
+        variant: "destructive",
+      });
+    }
+  }, []);
+
   // Check if user is already logged in and approved - only after auth is ready
   useEffect(() => {
     if (authLoading || !user) return;

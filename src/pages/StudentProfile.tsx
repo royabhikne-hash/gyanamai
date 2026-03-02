@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import BottomNavBar from "@/components/BottomNavBar";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -177,7 +178,7 @@ const StudentProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16 sm:pb-0">
       {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -419,6 +420,7 @@ const StudentProfile = () => {
           </p>
         </div>
       </main>
+      <BottomNavBar />
     </div>
   );
 };
