@@ -187,7 +187,7 @@ OUTPUT FORMAT (JSON only):
         confidence: 0,
         feedback: "Could not analyze answer"
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

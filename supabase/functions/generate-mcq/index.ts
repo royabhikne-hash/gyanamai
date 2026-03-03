@@ -356,7 +356,7 @@ Return ONLY a valid JSON array:
   } catch (error) {
     console.error("Generate MCQ error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "An error occurred" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

@@ -180,7 +180,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Parent dashboard error:", error);
     return new Response(JSON.stringify({ error: "Something went wrong" }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

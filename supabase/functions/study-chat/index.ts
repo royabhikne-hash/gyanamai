@@ -412,7 +412,7 @@ Keep topics short (2-3 words max).` : "";
         error: error instanceof Error ? error.message : "An error occurred",
         response: "Oops! Kuch technical problem ho gaya. Thodi der baad try karo! 🙏"
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

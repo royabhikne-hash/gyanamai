@@ -236,7 +236,7 @@ LANGUAGE RULES (VERY IMPORTANT):
       error: error instanceof Error ? error.message : "Something went wrong",
       response: "Sorry, I could not process your question right now. Please try again.",
     }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

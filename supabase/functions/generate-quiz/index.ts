@@ -247,7 +247,7 @@ ${chatContext || `General study session about ${topic || "various topics"}`}`;
         error: error instanceof Error ? error.message : "An error occurred",
         success: false
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
