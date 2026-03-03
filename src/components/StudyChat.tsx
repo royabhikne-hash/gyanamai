@@ -211,7 +211,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = true;
-      recognition.lang = 'hi-IN'; // Hindi-India for Hinglish support
+      recognition.lang = 'en-IN'; // English-India for voice input
       
       recognition.onresult = (event) => {
         const transcript = Array.from(event.results)

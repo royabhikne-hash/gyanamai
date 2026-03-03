@@ -859,17 +859,16 @@ const AdminDashboard = () => {
       `👤 *Student:* ${student.full_name}\n` +
       `📚 *Class:* ${student.class}\n` +
       `🏫 *School:* ${student.school_name}\n\n` +
-      `Namaste! 🙏\n` +
-      `Aapke bachche ki weekly progress report ready hai.\n\n` +
+      `Hello! 🙏\n` +
+      `Your child's weekly progress report is ready.\n\n` +
       (parentLink 
-        ? `📱 *Full Report dekhne ke liye:*\n🔗 ${parentLink}\n\n`
+        ? `📱 *View Full Report:*\n🔗 ${parentLink}\n\n`
         : '') +
-      `Is link par click karke aap apne bachche ki:\n` +
+      `Click the link above to see your child's:\n` +
       `✅ Study time & consistency\n` +
       `✅ Quiz performance\n` +
       `✅ Strong & weak subjects\n` +
-      `✅ Weekly test scores\n` +
-      `dekh sakte hain.\n\n` +
+      `✅ Weekly test scores\n\n` +
       `━━━━━━━━━━━━━━━━━━━━━\n` +
       `📱 *Study Buddy AI*\n` +
       `🌟 AI-Powered Study Partner\n` +

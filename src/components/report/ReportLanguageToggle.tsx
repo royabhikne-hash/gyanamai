@@ -22,7 +22,7 @@ export const ReportLanguageToggle = () => {
         className="rounded-lg text-xs px-3 h-7"
       >
         <Languages className="w-3 h-3 mr-1" />
-        Hinglish
+        हिंदी
       </Button>
     </div>
   );

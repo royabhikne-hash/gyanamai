@@ -534,9 +534,9 @@ const StudentReportModal = ({
     
     // Streak-based feedback
     if (studyStreak.currentStreak === 0) {
-      recommendations.push("Aaj se start karo ji! Roz thoda padho, streak banao aur topper bano!");
+      recommendations.push("Start today! Study a little every day, build your streak and become a topper!");
     } else if (studyStreak.currentStreak < 3) {
-      recommendations.push("Bahut accha ji! " + studyStreak.currentStreak + "-day streak hai. Ab isko 7 din tak le jao - consistency is key!");
+      recommendations.push("Great start! You have a " + studyStreak.currentStreak + "-day streak. Push it to 7 days — consistency is key!");
     } else {
       recommendations.push("Amazing! " + studyStreak.currentStreak + "-day streak — you're becoming a champion! Keep it going!");
     }
@@ -1177,7 +1177,7 @@ const StudentReportModal = ({
         yPos += 5;
       }
 
-      // ===== AI RECOMMENDATIONS (Hinglish) =====
+      // ===== AI RECOMMENDATIONS =====
       if (recommendations.length > 0) {
         checkPageBreak(15 + recommendations.length * 12);
         pdf.setTextColor(34, 197, 94);
@@ -1489,7 +1489,7 @@ const StudentReportModal = ({
                 <div className="bg-gradient-to-br from-indigo-500/10 via-blue-500/10 to-cyan-500/10 rounded-2xl p-5 border border-indigo-500/20">
                   <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
                     <FileText className="w-5 h-5 text-indigo-500" />
-                    Is Hafte Ki Padhai (What Child Studied This Week)
+                    What Child Studied This Week
                   </h3>
                   
                   {/* Total Study Summary */}

@@ -87,7 +87,7 @@ const Landing = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Button variant="hero" size="xl" onClick={() => navigate("/signup")} className="shadow-xl shadow-primary/30 font-bold text-base group">
                 <GraduationCap className="w-5 h-5" />
-                {language === 'en' ? 'Start Studying Free' : 'Free Padhai Shuru Karo'}
+                {language === 'en' ? 'Start Studying Free' : 'Start Studying Free'}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button variant="hero-outline" size="xl" onClick={() => navigate("/school-login")} className="font-semibold">
@@ -140,10 +140,10 @@ const Landing = () => {
             </span>
           </div>
           <h2 className="text-3xl md:text-5xl font-extrabold mb-4">
-            {language === 'en' ? 'Everything You Need to ' : 'Wo Sab Jo '}<span className="gradient-text">{language === 'en' ? 'Excel' : 'Success'}</span>{language === 'en' ? '' : ' ke Liye Chahiye'}
+            {language === 'en' ? 'Everything You Need to ' : 'Everything You Need to '}<span className="gradient-text">{language === 'en' ? 'Excel' : 'Excel'}</span>
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto text-lg">
-            {language === 'en' ? 'Powerful features designed for Indian students' : 'Indian students ke liye powerful features'}
+            {language === 'en' ? 'Powerful features designed for Indian students' : 'Powerful features designed for Indian students'}
           </p>
         </div>
         
@@ -153,7 +153,7 @@ const Landing = () => {
             title={language === 'en' ? "AI Study Chat" : "AI Study Chat"}
             description={language === 'en' 
               ? "Chat with AI while studying. Upload notes, ask doubts, get step-by-step explanations instantly."
-              : "Padhai karte waqt AI se chat karo. Notes upload karo, doubts poocho, turant samjho."}
+              : "Chat with AI while studying. Upload notes, ask doubts, get step-by-step explanations instantly."}
             color="primary"
           />
           <FeatureCard
@@ -161,7 +161,7 @@ const Landing = () => {
             title={language === 'en' ? "Weekly Smart Test" : "Weekly Smart Test"}
             description={language === 'en'
               ? "AI generates personalized weekly tests based on what you studied. 70% current + 30% weak topics."
-              : "AI tumhare padhe topics se weekly test banata hai. 70% current + 30% weak topics."}
+              : "AI generates personalized weekly tests based on what you studied. 70% current + 30% weak topics."}
             color="accent"
           />
           <FeatureCard
@@ -169,7 +169,7 @@ const Landing = () => {
             title={language === 'en' ? "WPS Progress Score" : "WPS Progress Score"}
             description={language === 'en'
               ? "Weekly Performance Score tracks accuracy, improvement, weak topics & consistency automatically."
-              : "Weekly Performance Score automatically accuracy, improvement aur consistency track karta hai."}
+              : "Weekly Performance Score tracks accuracy, improvement, weak topics & consistency automatically."}
             color="purple"
           />
           <FeatureCard
@@ -177,7 +177,7 @@ const Landing = () => {
             title={language === 'en' ? "Rankings & Leaderboard" : "Rankings & Leaderboard"}
             description={language === 'en'
               ? "Compete with school & district peers. Climb the leaderboard and earn achievement badges."
-              : "School aur district ke students se compete karo. Leaderboard mein upar aao."}
+              : "Compete with school & district peers. Climb the leaderboard and earn achievement badges."}
             color="primary"
           />
           <FeatureCard
@@ -185,7 +185,7 @@ const Landing = () => {
             title={language === 'en' ? "Parent Reports" : "Parent Reports"}
             description={language === 'en'
               ? "Weekly PDF reports with WPS score sent to parents via WhatsApp. Full transparency."
-              : "WPS score ke saath weekly PDF report parents ko WhatsApp pe jaata hai."}
+              : "Weekly PDF reports with WPS score sent to parents via WhatsApp. Full transparency."}
             color="accent"
           />
           <FeatureCard
@@ -193,7 +193,7 @@ const Landing = () => {
             title={language === 'en' ? "School Dashboard" : "School Dashboard"}
             description={language === 'en'
               ? "Schools and coaching centers manage students, track performance & approve subscriptions."
-              : "Schools aur coaching centers students ko manage karte hain, performance track karte hain."}
+              : "Schools and coaching centers manage students, track performance & approve subscriptions."}
             color="purple"
           />
         </div>
@@ -208,8 +208,8 @@ const Landing = () => {
                 {language === 'en' ? 'How It Works' : 'Process'}
               </span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-extrabold">
-              {language === 'en' ? 'Start in ' : ''}<span className="gradient-text">{language === 'en' ? '4 Simple Steps' : '4 Easy Steps'}</span>{language === 'en' ? '' : ' mein Shuru Karo'}
+             <h2 className="text-3xl md:text-5xl font-extrabold">
+              {language === 'en' ? 'Start in ' : 'Start in '}<span className="gradient-text">{language === 'en' ? '4 Simple Steps' : '4 Simple Steps'}</span>
             </h2>
           </div>
           
@@ -217,10 +217,10 @@ const Landing = () => {
             <div className="grid md:grid-cols-4 gap-8 relative">
               {/* Connection line */}
               <div className="hidden md:block absolute top-7 left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-primary/30 via-primary/50 to-primary/30" />
-              <StepCard step={1} title={language === 'en' ? "Sign Up" : "Sign Up"} description={language === 'en' ? "Create account & get approved by school" : "Account banao & school se approval lo"} />
-              <StepCard step={2} title={language === 'en' ? "Study Daily" : "Roz Padho"} description={language === 'en' ? "Chat with AI, ask doubts freely" : "AI se chat karo, doubts poocho"} />
-              <StepCard step={3} title={language === 'en' ? "Weekly Test" : "Weekly Test"} description={language === 'en' ? "Take AI-generated adaptive test" : "AI ka smart test do har hafta"} />
-              <StepCard step={4} title={language === 'en' ? "Track Growth" : "Growth Dekho"} description={language === 'en' ? "See WPS score & improve" : "WPS score dekho aur sudharo"} />
+              <StepCard step={1} title="Sign Up" description="Create account & get approved by school" />
+              <StepCard step={2} title="Study Daily" description="Chat with AI, ask doubts freely" />
+              <StepCard step={3} title="Weekly Test" description="Take AI-generated adaptive test" />
+              <StepCard step={4} title="Track Growth" description="See WPS score & improve" />
             </div>
           </div>
         </div>
@@ -236,22 +236,22 @@ const Landing = () => {
             <div className="relative z-10">
               <Sparkles className="w-10 h-10 text-primary mx-auto mb-4" />
               <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
-                {language === 'en' ? 'Ready to Start Your ' : 'Apni '}<span className="gradient-text">{language === 'en' ? 'Journey?' : 'Journey Shuru Karo!'}</span>
+                {language === 'en' ? 'Ready to Start Your ' : 'Ready to Start Your '}<span className="gradient-text">{language === 'en' ? 'Journey?' : 'Journey?'}</span>
               </h2>
               <p className="text-muted-foreground mb-8 max-w-lg mx-auto text-lg">
                 {language === 'en' 
                   ? 'Join thousands of students already improving their grades with AI-powered learning.'
-                  : 'Hazaaron students AI ke saath apne grades sudhar rahe hain. Tum bhi shuru karo!'}
+                  : 'Join thousands of students already improving their grades with AI-powered learning.'}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button variant="hero" size="xl" onClick={() => navigate("/signup")} className="shadow-xl shadow-primary/30 font-bold text-base group">
                   <GraduationCap className="w-5 h-5" />
-                  {language === 'en' ? 'Get Started Free' : 'Free Shuru Karo'}
+                  {language === 'en' ? 'Get Started Free' : 'Get Started Free'}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
                 <Button variant="hero-outline" size="xl" onClick={() => navigate("/schools")} className="font-semibold">
                   <Users className="w-5 h-5" />
-                  {language === 'en' ? 'Browse Schools' : 'Schools Dekho'}
+                  {language === 'en' ? 'Browse Schools' : 'Browse Schools'}
                 </Button>
               </div>
             </div>
@@ -282,15 +282,18 @@ const Landing = () => {
   );
 };
 
-const StatItem = ({ value, label, icon }: { value: string; label: string; icon: React.ReactNode }) => (
-  <div className="flex flex-col items-center gap-2">
-    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mb-1">
-      {icon}
+const StatItem = React.forwardRef<HTMLDivElement, { value: string; label: string; icon: React.ReactNode }>(
+  ({ value, label, icon }, ref) => (
+    <div ref={ref} className="flex flex-col items-center gap-2">
+      <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mb-1">
+        {icon}
+      </div>
+      <p className="text-2xl md:text-3xl font-extrabold text-primary">{value}</p>
+      <p className="text-sm text-muted-foreground font-medium">{label}</p>
     </div>
-    <p className="text-2xl md:text-3xl font-extrabold text-primary">{value}</p>
-    <p className="text-sm text-muted-foreground font-medium">{label}</p>
-  </div>
+  )
 );
+StatItem.displayName = "StatItem";
 
 const FeatureCard = React.forwardRef<HTMLDivElement, { icon: React.ReactNode; title: string; description: string; color?: string }>(
   ({ icon, title, description, color = "primary" }, ref) => {

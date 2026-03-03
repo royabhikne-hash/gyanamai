@@ -62,7 +62,7 @@ export const UpgradePopup = ({ open, onClose, studentId, limitType }: UpgradePop
             Daily {limitLabel} limit reached! 😔
           </DialogTitle>
           <DialogDescription className="text-center">
-            Aapke aaj ke {limitLabel}s khatam ho gaye. Upgrade karo aur zyada {limitLabel}s pao!
+            Your daily {limitLabel} limit has been reached. Upgrade your plan to get more {limitLabel}s!
           </DialogDescription>
         </DialogHeader>
 

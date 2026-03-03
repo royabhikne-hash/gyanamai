@@ -9,7 +9,7 @@ interface Translations {
   };
 }
 
-// Common translations used across the app - English primary, Hinglish secondary
+// Common translations used across the app - English primary
 export const translations: Translations = {
   // Navigation & Common
   'app.name': { en: 'Study Buddy AI', hi: 'Study Buddy AI' },

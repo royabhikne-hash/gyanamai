@@ -108,7 +108,7 @@ const SpeechifyVoiceSelector: React.FC<SpeechifyVoiceSelectorProps> = ({
       {selectedVoiceId && (
         <div className="text-xs text-muted-foreground pl-6">
           {SPEECHIFY_VOICES.find(v => v.id === selectedVoiceId)?.description || 'Voice selected'} 
-          <span className="ml-1 text-primary/70">• Hindi/Hinglish supported</span>
+          <span className="ml-1 text-primary/70">• Multi-language supported</span>
         </div>
       )}
     </div>
