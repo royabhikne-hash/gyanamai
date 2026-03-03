@@ -53,9 +53,9 @@ export class AppErrorBoundary extends React.Component<Props, State> {
     return (
       <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-card border border-border rounded-xl p-6 text-center">
-          <h1 className="text-xl font-semibold">App me error aa gaya</h1>
+          <h1 className="text-xl font-semibold">Something went wrong</h1>
           <p className="text-sm text-muted-foreground mt-2">
-            White screen se bachane ke liye safe mode open hua hai. Neeche se retry ya dashboard par jao.
+            The app encountered an error. You can retry or go to the dashboard.
           </p>
 
           <div className="mt-6 flex flex-col gap-2">

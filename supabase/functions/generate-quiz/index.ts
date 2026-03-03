@@ -92,7 +92,7 @@ CRITICAL RULES:
 4. If topic is Physics, ask ONLY Physics questions
 5. If topic is Biology, ask ONLY Biology questions
 6. Questions should be based on what was discussed in the study session
-7. Use simple Hinglish (Hindi-English mix)
+7. Use simple, clear English
 8. Number questions from 1 to ${questionCount} correctly
 
 ADAPTIVE DIFFICULTY:
@@ -118,10 +118,10 @@ OUTPUT FORMAT (strictly JSON):
     {
       "id": 1,
       "type": "mcq",
-      "question": "Simple Hinglish question about ${topic}?",
+      "question": "Simple English question about ${topic}?",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correct_answer": "The exact correct option text",
-      "explanation": "Brief explanation in Hinglish",
+      "explanation": "Brief explanation in English",
       "difficulty": "easy",
       "topic": "${topic}"
     },

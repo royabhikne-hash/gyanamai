@@ -100,12 +100,12 @@ serve(async (req) => {
 
 RULES:
 1. Focus on MEANING, not exact wording
-2. Accept synonyms, paraphrasing, Hindi-English mixing
+2. Accept synonyms, paraphrasing, and mixed language answers
 3. Accept partial answers if key concept is understood
 4. Be lenient with spelling mistakes
 
 OUTPUT FORMAT (JSON only):
-{"isCorrect":true|false,"confidence":0-100,"feedback":"Short Hinglish feedback"}`;
+{"isCorrect":true|false,"confidence":0-100,"feedback":"Short English feedback"}`;
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

@@ -167,11 +167,9 @@ RULES:
 8. Always address the parent warmly, e.g., "Your child..." or "${student.full_name}..."
 
 LANGUAGE RULES (VERY IMPORTANT):
-- Your DEFAULT language is English. Always reply in simple English unless the parent writes in Hindi/Hinglish.
-- If the parent writes in Hindi or Hinglish, THEN switch to Hinglish (Roman script Hindi-English mix).
-- Detect the language of each message and match it naturally.
-- For Hinglish responses, use warm tone like: "Aapke bachche ne is hafte..." 
-- Never use Devanagari script. Always use Roman/English script for Hindi words.`;
+- Always reply in simple, clear English.
+- Use a warm and encouraging tone.
+- Keep language professional yet approachable for parents.`;
 
 
     // Build messages

@@ -23,7 +23,7 @@ export const GlobalErrorHandlers = () => {
             : "Unexpected error";
 
       toast({
-        title: "Kuch problem ho gaya",
+        title: "Something went wrong",
         description: message,
         variant: "destructive",
       });

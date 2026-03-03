@@ -538,52 +538,52 @@ const StudentReportModal = ({
     } else if (studyStreak.currentStreak < 3) {
       recommendations.push("Bahut accha ji! " + studyStreak.currentStreak + "-day streak hai. Ab isko 7 din tak le jao - consistency is key!");
     } else {
-      recommendations.push("Kya baat hai ji! " + studyStreak.currentStreak + "-day streak - aap toh champion ban rahe ho! Aise hi continue karo!");
+      recommendations.push("Amazing! " + studyStreak.currentStreak + "-day streak — you're becoming a champion! Keep it going!");
     }
     
     // Quiz accuracy feedback - more detailed
     if (weeklyStats.avgAccuracy < 30) {
-      recommendations.push("Quiz accuracy thodi low hai (" + weeklyStats.avgAccuracy + "%). Pehle chapter acche se padho, phir quiz do - samajh ke padhna zaroori hai!");
+      recommendations.push("Quiz accuracy is a bit low (" + weeklyStats.avgAccuracy + "%). Read the chapter thoroughly first, then attempt the quiz — understanding is key!");
     } else if (weeklyStats.avgAccuracy < 50) {
-      recommendations.push("Quiz mein " + weeklyStats.avgAccuracy + "% accuracy hai. Accha effort hai! Weak topics dubara revise karo, accuracy zaroor badhegi!");
+      recommendations.push("Quiz accuracy is " + weeklyStats.avgAccuracy + "%. Good effort! Revise the weak topics again and your accuracy will improve!");
     } else if (weeklyStats.avgAccuracy < 70) {
-      recommendations.push("Good job ji! " + weeklyStats.avgAccuracy + "% quiz accuracy hai. Thoda aur practice karo, 80%+ possible hai!");
+      recommendations.push("Good job! " + weeklyStats.avgAccuracy + "% quiz accuracy. A little more practice and 80%+ is within reach!");
     } else {
-      recommendations.push("Outstanding ji! " + weeklyStats.avgAccuracy + "% quiz accuracy - aap toh exam ready ho! Aise hi brilliant kaam karte raho!");
+      recommendations.push("Outstanding! " + weeklyStats.avgAccuracy + "% quiz accuracy — you're exam ready! Keep up the brilliant work!");
     }
     
     // Weak areas - specific actionable advice
     if (topWeakAreas.length > 0) {
-      const weakTopics = topWeakAreas.slice(0, 2).map(([a]) => a).join(" aur ");
-      recommendations.push("'" + weakTopics + "' pe thoda aur mehnat chahiye. Inko daily 15-20 min revise karo, bahut jaldi improve hoga!");
+      const weakTopics = topWeakAreas.slice(0, 2).map(([a]) => a).join(" and ");
+      recommendations.push("'" + weakTopics + "' needs more attention. Revise these daily for 15-20 min and you'll improve quickly!");
     }
     
     // Study time feedback
     if (weeklyStats.totalTimeSpent < 30) {
-      recommendations.push("Study time badhaao ji! Kam se kam roz 30 min padho - chhota sa effort bhi bahut bada result deta hai!");
+      recommendations.push("Increase your study time! Aim for at least 30 min daily — even a small effort makes a big difference!");
     } else if (weeklyStats.totalTimeSpent < 120) {
-      recommendations.push("Study time theek hai, par aur badha sakte ho! Roz 45-60 min ka target rakho - toppers yahi karte hain!");
+      recommendations.push("Study time is decent, but you can do more! Set a target of 45-60 min daily — that's what toppers do!");
     } else {
-      recommendations.push("Study time excellent hai ji! " + weeklyStats.totalTimeSpent + " min padhai - aap serious student ho!");
+      recommendations.push("Study time is excellent! " + weeklyStats.totalTimeSpent + " min of studying — you're a dedicated student!");
     }
     
     // Best study time
     if (preferredStudyTime && preferredStudyTime[1] > 0) {
       const timeLabels: Record<string, string> = {
-        morning: "subah (morning)",
-        afternoon: "dopahar (afternoon)", 
-        evening: "shaam (evening)",
-        night: "raat (night)",
+        morning: "Morning",
+        afternoon: "Afternoon", 
+        evening: "Evening",
+        night: "Night",
       };
-      recommendations.push("Aapka best study time " + timeLabels[preferredStudyTime[0]] + " hai - is time pe focus karke padho, result aur accha aayega!");
+      recommendations.push("Your best study time is " + timeLabels[preferredStudyTime[0]] + " — focus your study sessions at this time for even better results!");
     }
 
     // Class comparison feedback
     if (classAverages) {
       if (weeklyStats.avgAccuracy > classAverages.avgAccuracy) {
-        recommendations.push("Class average se aap aage ho ji! Keep leading - baaki students aapko follow kar rahe hain!");
+        recommendations.push("You're ahead of the class average! Keep leading — other students are looking up to you!");
       } else {
-        recommendations.push("Class average se thoda peeche ho abhi. Par fikar mat karo - regular practice se aap bhi top kar sakte ho!");
+        recommendations.push("You're slightly behind the class average. Don't worry — regular practice will help you catch up and even lead!");
       }
     }
     
@@ -592,14 +592,14 @@ const StudentReportModal = ({
   
   const recommendations = getRecommendations();
   
-  // Parent Tips - Hinglish
+  // Parent Tips
   const parentTips = [
-    "Roz 10 minute bachche se pucho 'Aaj kya naya seekha?' - isse unka confidence badhta hai aur wo share karna seekhte hain!",
-    "Jab bachcha kuch accha kare toh turant praise karo - 'Bahut accha kiya!' bolne se motivation 3x badhta hai!",
-    "Screen time aur study time ka balance banao - study ke baad 15 min break allowed hai, par pehle padhai!",
-    "Padhai ke liye ek fixed jagah aur fixed time set karo - routine se bachche ki performance automatically improve hoti hai!",
-    "Quiz results mein galti ho toh daanto mat - bolye 'Koi baat nahi, next time better karenge!' - positive approach kaam karta hai!",
-    "Weekly report dekho aur bachche ke saath discuss karo - unhe lagega ki aapko unki padhai ki parwah hai!",
+    "Ask your child 'What did you learn today?' for 10 minutes daily — it builds their confidence and encourages sharing!",
+    "Praise your child immediately when they do well — saying 'Great job!' boosts motivation 3x!",
+    "Balance screen time with study time — a 15 min break after study is fine, but studies come first!",
+    "Set a fixed place and time for studying — a routine automatically improves your child's performance!",
+    "Don't scold for quiz mistakes — say 'It's okay, you'll do better next time!' — a positive approach works best!",
+    "Review the weekly report with your child — it shows them you care about their learning!",
   ];
   
   // Calculate Engagement Score
