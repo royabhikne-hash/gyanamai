@@ -68,32 +68,57 @@ const Signup = () => {
 
     const loadInstitutions = async () => {
       setLoadingInstitutions(true);
-      try {
-        const state = formData.state.trim();
-        if (studentType === "school_student") {
-          const { data, error } = await supabase.functions.invoke("get-schools-public", {
-            body: { action: "list", district, state: state || undefined },
-          });
-          if (!error && !data?.error) {
+      
+      const tryFetch = async (attempt = 1): Promise<void> => {
+        try {
+          const state = formData.state.trim();
+          if (studentType === "school_student") {
+            const { data, error } = await supabase.functions.invoke("get-schools-public", {
+              body: { action: "list", district, state: state || undefined },
+            });
+            if (error) {
+              if (attempt < 3) {
+                console.warn(`School fetch attempt ${attempt} failed, retrying...`);
+                await new Promise(r => setTimeout(r, 1500));
+                return tryFetch(attempt + 1);
+              }
+              console.error("School fetch failed after retries:", error);
+              setSchools([]);
+              return;
+            }
             const list = (data?.schools as School[]) ?? [];
             setSchools(list);
             setSelectedSchoolId("");
-          }
-        } else if (studentType === "coaching_student") {
-          const { data, error } = await supabase.functions.invoke("get-schools-public", {
-            body: { action: "list_coaching_centers", district, state: state || undefined },
-          });
-          if (!error && !data?.error) {
+          } else if (studentType === "coaching_student") {
+            const { data, error } = await supabase.functions.invoke("get-schools-public", {
+              body: { action: "list_coaching_centers", district, state: state || undefined },
+            });
+            if (error) {
+              if (attempt < 3) {
+                console.warn(`Coaching fetch attempt ${attempt} failed, retrying...`);
+                await new Promise(r => setTimeout(r, 1500));
+                return tryFetch(attempt + 1);
+              }
+              console.error("Coaching fetch failed after retries:", error);
+              setCoachingCenters([]);
+              return;
+            }
             const list = (data?.coachingCenters as CoachingCenter[]) ?? [];
             setCoachingCenters(list);
             setSelectedCoachingId("");
           }
+        } catch (err) {
+          if (attempt < 3) {
+            console.warn(`Institution fetch attempt ${attempt} error, retrying...`, err);
+            await new Promise(r => setTimeout(r, 1500));
+            return tryFetch(attempt + 1);
+          }
+          console.error("Load institutions error after retries:", err);
         }
-      } catch (err) {
-        console.error("Load institutions error:", err);
-      } finally {
-        setLoadingInstitutions(false);
-      }
+      };
+
+      await tryFetch();
+      setLoadingInstitutions(false);
     };
 
     const debounce = setTimeout(loadInstitutions, 500);

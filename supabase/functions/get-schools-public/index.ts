@@ -40,8 +40,8 @@ Deno.serve(async (req) => {
       if (error) {
         console.error("list coaching centers error:", error);
         return new Response(
-          JSON.stringify({ error: "Failed to load coaching centers" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Failed to load coaching centers", coachingCenters: [] }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -68,8 +68,8 @@ Deno.serve(async (req) => {
       if (error) {
         console.error("get-schools-public by_school_id error:", error);
         return new Response(
-          JSON.stringify({ error: "Failed to load school" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Failed to load school", school: null }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -97,8 +97,8 @@ Deno.serve(async (req) => {
     if (error) {
       console.error("get-schools-public list error:", error);
       return new Response(
-        JSON.stringify({ error: "Failed to load schools" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Failed to load schools", schools: [] }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -110,8 +110,8 @@ Deno.serve(async (req) => {
     console.error("get-schools-public error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
     return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: message, schools: [], coachingCenters: [] }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
