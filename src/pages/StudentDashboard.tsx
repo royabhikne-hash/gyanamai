@@ -556,6 +556,10 @@ const StudentDashboard = () => {
                   <BarChart3 className="w-5 h-5" />
                   Progress
                 </Button>
+                <Button variant="outline" size="lg" className="text-sm sm:text-base hover-scale border-primary/50 bg-primary/5" onClick={() => navigate("/exam-prep")}>
+                  <Target className="w-5 h-5 text-primary" />
+                  AI Exam Prep
+                </Button>
               </div>
             </div>
           </div>
