@@ -177,13 +177,18 @@ Deno.serve(async (req) => {
           }),
         });
 
-        const aiData = await aiResponse.json();
         let extracted = { topics: [], summary: "Content extracted successfully", estimatedStudyHours: 5 };
-        try {
-          const content = aiData.choices?.[0]?.message?.content || "";
-          const jsonMatch = content.match(/\{[\s\S]*\}/);
-          if (jsonMatch) extracted = JSON.parse(jsonMatch[0]);
-        } catch {}
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          try {
+            const content = aiData.choices?.[0]?.message?.content || "";
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) extracted = JSON.parse(jsonMatch[0]);
+          } catch {}
+        } else {
+          const errText = await aiResponse.text();
+          console.error("AI extract error:", aiResponse.status, errText.substring(0, 500));
+        }
 
         // Update material
         await supabase
