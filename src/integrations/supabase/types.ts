@@ -292,6 +292,232 @@ export type Database = {
           },
         ]
       }
+      exam_prep_invites: {
+        Row: {
+          created_at: string
+          id: string
+          invite_code: string
+          inviter_id: string
+          is_active: boolean
+          joined_by: string | null
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invite_code?: string
+          inviter_id: string
+          is_active?: boolean
+          joined_by?: string | null
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invite_code?: string
+          inviter_id?: string
+          is_active?: boolean
+          joined_by?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_prep_invites_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_prep_invites_joined_by_fkey"
+            columns: ["joined_by"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_prep_invites_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_prep_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_prep_materials: {
+        Row: {
+          created_at: string
+          extracted_content: string | null
+          extracted_topics: Json | null
+          file_name: string
+          file_size: number | null
+          file_url: string
+          id: string
+          processing_status: string
+          session_id: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          extracted_content?: string | null
+          extracted_topics?: Json | null
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          processing_status?: string
+          session_id: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          extracted_content?: string | null
+          extracted_topics?: Json | null
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          processing_status?: string
+          session_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_prep_materials_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_prep_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_prep_materials_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_prep_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          session_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_prep_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_prep_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_prep_sessions: {
+        Row: {
+          created_at: string
+          exam_date: string | null
+          exam_name: string
+          extracted_topics: Json | null
+          id: string
+          mastery_data: Json | null
+          mood: string
+          onboarding_completed: boolean
+          student_id: string
+          target_score: number | null
+          topic_familiarity: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          exam_date?: string | null
+          exam_name?: string
+          extracted_topics?: Json | null
+          id?: string
+          mastery_data?: Json | null
+          mood?: string
+          onboarding_completed?: boolean
+          student_id: string
+          target_score?: number | null
+          topic_familiarity?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          exam_date?: string | null
+          exam_name?: string
+          extracted_topics?: Json | null
+          id?: string
+          mastery_data?: Json | null
+          mood?: string
+          onboarding_completed?: boolean
+          student_id?: string
+          target_score?: number | null
+          topic_familiarity?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_prep_sessions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_prep_usage: {
+        Row: {
+          created_at: string
+          id: string
+          sessions_used: number
+          student_id: string
+          updated_at: string
+          usage_month: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sessions_used?: number
+          student_id: string
+          updated_at?: string
+          usage_month?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sessions_used?: number
+          student_id?: string
+          updated_at?: string
+          usage_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_prep_usage_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       login_attempts: {
         Row: {
           attempt_type: string
