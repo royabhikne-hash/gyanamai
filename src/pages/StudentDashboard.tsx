@@ -548,18 +548,6 @@ const StudentDashboard = () => {
                   <Play className="w-5 h-5" />
                   Start Studying
                 </Button>
-                <Button variant="outline" size="lg" className="text-sm sm:text-base hover-scale" onClick={() => navigate("/mcq-practice")}>
-                  <Brain className="w-5 h-5" />
-                  Practice MCQ
-                </Button>
-                <Button variant="outline" size="lg" className="text-sm sm:text-base hover-scale" onClick={() => navigate("/weekly-test")}>
-                  <ClipboardList className="w-5 h-5" />
-                  Weekly Test
-                </Button>
-                <Button variant="outline" size="lg" className="text-sm sm:text-base hover-scale" onClick={() => navigate("/progress")}>
-                  <BarChart3 className="w-5 h-5" />
-                  Progress
-                </Button>
                 <Button variant="outline" size="lg" className="text-sm sm:text-base hover-scale border-primary/50 bg-primary/5" onClick={() => navigate("/exam-prep")}>
                   <Target className="w-5 h-5 text-primary" />
                   AI Exam Prep
