@@ -460,9 +460,13 @@ const StudentDashboard = () => {
   // Study sessions now use route navigation (/study) for WebView/PWA compatibility
 
   return (
-    <div className="min-h-screen bg-background pb-16 sm:pb-0">
+    <div className="min-h-screen liquid-bg pb-16 sm:pb-0 relative overflow-hidden">
+      {/* Liquid background orbs */}
+      <div className="liquid-orb liquid-orb-blue w-[350px] h-[350px] -top-32 -left-20 opacity-30" />
+      <div className="liquid-orb liquid-orb-purple w-[250px] h-[250px] top-40 -right-20 opacity-25" style={{ animationDelay: '3s' }} />
+      
       {/* Header */}
-      <header className="border-b border-border bg-card sticky top-0 z-10">
+      <header className="glass-nav border-b border-border/20 sticky top-0 z-10">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -472,7 +476,7 @@ const StudentDashboard = () => {
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex-shrink-0 object-contain"
               />
               <div className="min-w-0">
-                <span className="font-bold text-sm sm:text-lg truncate block">{t('app.name')}</span>
+                <span className="font-bold font-display text-sm sm:text-lg truncate block">{t('app.name')}</span>
                 <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">{t('nav.dashboard')}</p>
               </div>
             </div>
@@ -505,13 +509,13 @@ const StudentDashboard = () => {
         </div>
       </header>
 
-      {/* Main Content - ChatGPT-style wider layout */}
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl">
+      {/* Main Content */}
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl relative z-10">
         {/* Welcome & Start Study */}
         <div className="mb-6 sm:mb-8 animate-fade-in">
-          <div className="relative overflow-hidden rounded-2xl border border-border p-5 sm:p-8 md:p-10 text-center"
+          <div className="glass-card relative overflow-hidden p-5 sm:p-8 md:p-10 text-center"
             style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.12) 0%, hsl(var(--accent) / 0.12) 50%, hsl(var(--edu-purple) / 0.1) 100%)',
+              background: 'var(--gradient-liquid)',
             }}
           >
             {/* Animated background orbs */}
@@ -668,7 +672,7 @@ const StudentDashboard = () => {
             )}
 
             {/* Recent Sessions */}
-            <div className="edu-card p-6">
+            <div className="glass-card p-6">
               <h2 className="text-lg font-bold mb-4">Recent Study Sessions</h2>
               {recentSessions.length > 0 ? (
                 <div className="space-y-3">
@@ -739,7 +743,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
     };
 
     return (
-      <div ref={ref} className="edu-card p-4">
+      <div ref={ref} className="glass-card p-4">
         <div className={`w-10 h-10 rounded-lg ${colorClasses[color]} flex items-center justify-center mb-3`}>
           {icon}
         </div>

@@ -237,8 +237,10 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen hero-gradient flex flex-col">
-      <header className="container mx-auto py-4 px-3 sm:px-4">
+    <div className="min-h-screen liquid-bg flex flex-col relative overflow-hidden">
+      <div className="liquid-orb liquid-orb-blue w-[400px] h-[400px] -top-32 -right-32" />
+      <div className="liquid-orb liquid-orb-purple w-[300px] h-[300px] bottom-0 -left-20" style={{ animationDelay: '3s' }} />
+      <header className="container mx-auto py-4 px-3 sm:px-4 relative z-10">
         <div className="flex items-center justify-between">
           <Link to="/" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm">
             <ArrowLeft className="w-4 h-4" />
@@ -251,9 +253,9 @@ const Login = () => {
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-3 sm:px-4 flex items-center justify-center py-4 sm:py-8">
+      <main className="flex-1 container mx-auto px-3 sm:px-4 flex items-center justify-center py-4 sm:py-8 relative z-10">
         <div className="w-full max-w-md">
-          <div className="edu-card p-4 sm:p-6 md:p-8">
+          <div className="glass-card p-4 sm:p-6 md:p-8">
             <div className="text-center mb-6 sm:mb-8">
               <img src="/logo.png" alt="Study Buddy AI" className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl mx-auto mb-3 sm:mb-4 object-contain" />
               <h1 className="text-xl sm:text-2xl font-bold">
