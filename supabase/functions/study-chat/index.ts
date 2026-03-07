@@ -1,6 +1,29 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Fire-and-forget AI usage logger
+function logAIUsage(studentId: string, action: string, model: string, usage: any) {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const sb = createClient(supabaseUrl, supabaseKey);
+    const inputTokens = usage?.prompt_tokens || 0;
+    const outputTokens = usage?.completion_tokens || 0;
+    // Gemini 3 Flash: ~$0.10/1M input, ~$0.40/1M output → INR approx
+    const costINR = ((inputTokens * 0.0000001 + outputTokens * 0.0000004) * 85);
+    sb.from("ai_usage_log").insert({
+      student_id: studentId,
+      action,
+      model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      estimated_cost_inr: Math.round(costINR * 10000) / 10000,
+    }).then(() => {}).catch((e: any) => console.error("Usage log error:", e));
+  } catch (e) {
+    console.error("Usage log setup error:", e);
+  }
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -375,6 +398,11 @@ Keep topics short (2-3 words max).` : "";
     }
 
     console.log("AI response received successfully");
+
+    // Log AI usage (fire-and-forget)
+    if (studentId && data?.usage) {
+      logAIUsage(studentId, "study_chat", PRIMARY_MODEL, data.usage);
+    }
 
     // Extract analysis from response if present
     let sessionAnalysis = null;

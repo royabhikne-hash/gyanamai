@@ -1,4 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+function logAIUsage(studentId: string, action: string, model: string, usage: any) {
+  try {
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const inputTokens = usage?.prompt_tokens || 0;
+    const outputTokens = usage?.completion_tokens || 0;
+    const costINR = ((inputTokens * 0.0000001 + outputTokens * 0.0000004) * 85);
+    sb.from("ai_usage_log").insert({
+      student_id: studentId, action, model,
+      input_tokens: inputTokens, output_tokens: outputTokens,
+      estimated_cost_inr: Math.round(costINR * 10000) / 10000,
+    }).then(() => {}).catch((e: any) => console.error("Usage log error:", e));
+  } catch (e) { console.error("Usage log setup error:", e); }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
