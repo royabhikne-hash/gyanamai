@@ -1,5 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+function logAIUsage(studentId: string, action: string, model: string, usage: any) {
+  try {
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const inputTokens = usage?.prompt_tokens || 0;
+    const outputTokens = usage?.completion_tokens || 0;
+    const costINR = ((inputTokens * 0.0000001 + outputTokens * 0.0000004) * 85);
+    sb.from("ai_usage_log").insert({
+      student_id: studentId, action, model,
+      input_tokens: inputTokens, output_tokens: outputTokens,
+      estimated_cost_inr: Math.round(costINR * 10000) / 10000,
+    }).then(() => {}).catch((e: any) => console.error("Usage log error:", e));
+  } catch (e) { console.error("Usage log setup error:", e); }
+}
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -243,6 +256,9 @@ CRITICAL Instructions:
         const aiData = await aiResponse.json();
         const reply = aiData.choices?.[0]?.message?.content || "I'm having trouble responding right now. Please try again.";
 
+        // Log usage
+        if (aiData?.usage) logAIUsage(student.id, "exam_prep_chat", AI_MODEL, aiData.usage);
+
         await supabase.from("exam_prep_messages").insert([
           { session_id: sessionId, role: "user", content: message },
           { session_id: sessionId, role: "assistant", content: reply },
@@ -343,6 +359,9 @@ Return ONLY valid JSON in this exact format:
 
         const aiData = await aiResponse.json();
         const content = aiData.choices?.[0]?.message?.content || "";
+
+        // Log usage
+        if (aiData?.usage) logAIUsage(student.id, "exam_prep_exam", AI_MODEL, aiData.usage);
         
         let exam = null;
         try {

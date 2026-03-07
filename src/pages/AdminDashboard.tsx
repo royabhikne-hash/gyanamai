@@ -29,6 +29,7 @@ import {
   Trophy,
   Key,
   Crown,
+  BarChart3,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +54,7 @@ import {
 import StudentReportModal from "@/components/StudentReportModal";
 import StudentRanking from "@/components/StudentRanking";
 import SubscriptionAnalytics from "@/components/SubscriptionAnalytics";
+import AIUsageAnalytics from "@/components/AIUsageAnalytics";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LanguageToggle from "@/components/LanguageToggle";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -116,7 +118,7 @@ const AdminDashboard = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"schools" | "coaching" | "students" | "reports" | "student-reports" | "rankings" | "subscriptions">("schools");
+  const [activeTab, setActiveTab] = useState<"schools" | "coaching" | "students" | "reports" | "student-reports" | "rankings" | "subscriptions" | "ai-usage">("schools");
   const [rankings, setRankings] = useState<RankingData[]>([]);
   
   // Coaching centers state
@@ -1109,6 +1111,15 @@ const AdminDashboard = () => {
             <Crown className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             Plans
           </Button>
+          <Button
+            variant={activeTab === "ai-usage" ? "default" : "outline"}
+            onClick={() => setActiveTab("ai-usage")}
+            size="sm"
+            className="text-xs sm:text-sm whitespace-nowrap"
+          >
+            <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            AI Costs
+          </Button>
         </div>
 
         {/* Search & Actions */}
@@ -1594,6 +1605,10 @@ const AdminDashboard = () => {
 
         {activeTab === "subscriptions" && (
           <SubscriptionAnalytics />
+        )}
+
+        {activeTab === "ai-usage" && (
+          <AIUsageAnalytics />
         )}
       </main>
 

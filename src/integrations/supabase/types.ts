@@ -124,6 +124,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_log: {
+        Row: {
+          action: string
+          created_at: string
+          estimated_cost_inr: number
+          id: string
+          input_tokens: number
+          model: string
+          output_tokens: number
+          student_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          estimated_cost_inr?: number
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          student_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          estimated_cost_inr?: number
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_log_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chapter_progress: {
         Row: {
           board: string
