@@ -209,6 +209,11 @@ ${chatContext || `General study session about ${topic || "various topics"}`}`;
 
     console.log("Quiz generation response received");
 
+    // Log AI usage
+    if (studentId && data?.usage) {
+      logAIUsage(studentId, "generate_quiz", "google/gemini-3-flash-preview", data.usage);
+    }
+
     // Extract JSON from response
     let quizData;
     try {
