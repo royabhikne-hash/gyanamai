@@ -18,7 +18,7 @@ const ExamPrep = () => {
   const { toast } = useToast();
   const {
     access, sessions, loading, error,
-    createSession, extractContent, sendChat, createInvite, joinInvite, refresh,
+    createSession, extractContent, sendChat, generateVirtualExam, evaluateVirtualExam, createInvite, joinInvite, refresh,
   } = useExamPrep();
 
   const [view, setView] = useState<View>('loading');
@@ -108,6 +108,8 @@ const ExamPrep = () => {
         session={activeSession}
         studentName={access.studentName}
         onSendMessage={sendChat}
+        onGenerateExam={generateVirtualExam}
+        onEvaluateExam={evaluateVirtualExam}
         onBack={() => { setView('dashboard'); setActiveSession(null); }}
       />
     );
