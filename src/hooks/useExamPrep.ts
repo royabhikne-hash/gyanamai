@@ -100,6 +100,24 @@ export const useExamPrep = () => {
     return data.reply;
   }, []);
 
+  const generateVirtualExam = useCallback(async (sessionId: string) => {
+    const { data, error: err } = await supabase.functions.invoke('exam-prep', {
+      body: { action: 'generate_virtual_exam', sessionId },
+    });
+    if (err) throw err;
+    if (data?.error) throw new Error(data.error);
+    return data.exam;
+  }, []);
+
+  const evaluateVirtualExam = useCallback(async (sessionId: string, examData: any, answers: any[]) => {
+    const { data, error: err } = await supabase.functions.invoke('exam-prep', {
+      body: { action: 'evaluate_virtual_exam', sessionId, examData, answers },
+    });
+    if (err) throw err;
+    if (data?.error) throw new Error(data.error);
+    return data.result;
+  }, []);
+
   const createInvite = useCallback(async (sessionId: string) => {
     const { data, error: err } = await supabase.functions.invoke('exam-prep', {
       body: { action: 'create_invite', sessionId },
@@ -131,6 +149,8 @@ export const useExamPrep = () => {
     createSession,
     extractContent,
     sendChat,
+    generateVirtualExam,
+    evaluateVirtualExam,
     createInvite,
     joinInvite,
     refresh: () => { checkAccess(); fetchSessions(); },
