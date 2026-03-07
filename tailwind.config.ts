@@ -19,7 +19,6 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Space Grotesk', 'Inter', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         '2xs': ['0.65rem', { lineHeight: '1rem' }],
@@ -69,12 +68,6 @@ export default {
           orange: "hsl(var(--edu-orange))",
           purple: "hsl(var(--edu-purple))",
         },
-        liquid: {
-          blue: "hsl(var(--liquid-blue))",
-          purple: "hsl(var(--liquid-purple))",
-          teal: "hsl(var(--liquid-teal))",
-          indigo: "hsl(var(--liquid-indigo))",
-        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -99,9 +92,6 @@ export default {
         'edu-md': 'var(--shadow-md)',
         'edu-lg': 'var(--shadow-lg)',
         'edu-xl': 'var(--shadow-xl)',
-        'edu-glow': 'var(--shadow-glow)',
-        'glass': 'var(--shadow-glass)',
-        'liquid': 'var(--shadow-liquid)',
       },
       keyframes: {
         "accordion-down": {
@@ -113,23 +103,23 @@ export default {
           to: { height: "0", opacity: "0" },
         },
         "fade-in": {
-          from: { opacity: "0", transform: "translateY(10px)" },
+          from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "fade-out": {
           from: { opacity: "1", transform: "translateY(0)" },
-          to: { opacity: "0", transform: "translateY(10px)" },
+          to: { opacity: "0", transform: "translateY(8px)" },
         },
         "scale-in": {
-          from: { transform: "scale(0.95)", opacity: "0" },
+          from: { transform: "scale(0.97)", opacity: "0" },
           to: { transform: "scale(1)", opacity: "1" },
         },
         "scale-out": {
           from: { transform: "scale(1)", opacity: "1" },
-          to: { transform: "scale(0.95)", opacity: "0" },
+          to: { transform: "scale(0.97)", opacity: "0" },
         },
         "slide-in": {
-          from: { opacity: "0", transform: "translateX(-10px)" },
+          from: { opacity: "0", transform: "translateX(-8px)" },
           to: { opacity: "1", transform: "translateX(0)" },
         },
         "slide-in-right": {
@@ -141,31 +131,23 @@ export default {
           to: { transform: "translateX(100%)" },
         },
         "slide-up": {
-          from: { opacity: "0", transform: "translateY(20px)" },
+          from: { opacity: "0", transform: "translateY(16px)" },
           to: { opacity: "1", transform: "translateY(0)" },
-        },
-        "glow-pulse": {
-          "0%, 100%": { boxShadow: "0 0 20px hsl(var(--primary) / 0.15)" },
-          "50%": { boxShadow: "0 0 50px hsl(var(--primary) / 0.35)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-        "fade-out": "fade-out 0.3s ease-out",
-        "scale-in": "scale-in 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-        "scale-out": "scale-out 0.2s ease-out",
-        "slide-in": "slide-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-        "slide-in-right": "slide-in-right 0.3s ease-out",
-        "slide-out-right": "slide-out-right 0.3s ease-out",
-        "slide-up": "slide-up 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-        "enter": "fade-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), scale-in 0.3s ease-out",
-        "exit": "fade-out 0.3s ease-out, scale-out 0.2s ease-out",
-        "glow-pulse": "glow-pulse 3s ease-in-out infinite",
-      },
-      backdropBlur: {
-        xs: '2px',
+        "fade-in": "fade-in 0.3s ease-out forwards",
+        "fade-out": "fade-out 0.2s ease-out",
+        "scale-in": "scale-in 0.2s ease-out",
+        "scale-out": "scale-out 0.15s ease-out",
+        "slide-in": "slide-in 0.3s ease-out",
+        "slide-in-right": "slide-in-right 0.25s ease-out",
+        "slide-out-right": "slide-out-right 0.25s ease-out",
+        "slide-up": "slide-up 0.4s ease-out forwards",
+        "enter": "fade-in 0.3s ease-out, scale-in 0.2s ease-out",
+        "exit": "fade-out 0.2s ease-out, scale-out 0.15s ease-out",
       },
     },
   },
