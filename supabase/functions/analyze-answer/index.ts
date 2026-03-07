@@ -188,6 +188,11 @@ OUTPUT FORMAT (JSON only):
 
     console.log("Analysis result:", analysisResult);
 
+    // Log AI usage
+    if (studentId && data?.usage) {
+      logAIUsage(studentId, "analyze_answer", "google/gemini-3-flash-preview", data.usage);
+    }
+
     return new Response(
       JSON.stringify(analysisResult),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
