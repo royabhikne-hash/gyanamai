@@ -151,6 +151,97 @@ Deno.serve(async (req) => {
     // Get total unique students
     const uniqueStudents = new Set((rawUsage || []).map(r => r.student_id)).size;
 
+    // ---- Database Cost Estimation ----
+    // Get table row counts for cost estimation
+    const tableQueries = [
+      "students", "study_sessions", "chat_messages", "quiz_attempts",
+      "mcq_attempts", "weekly_tests", "daily_usage", "subscriptions",
+      "exam_prep_sessions", "exam_prep_messages", "exam_prep_materials",
+      "ai_usage_log", "ranking_history", "achievements", "rank_notifications",
+      "chapter_progress", "parent_reports", "session_tokens", "ai_rate_limits",
+      "schools", "coaching_centers", "upgrade_requests", "parent_access_tokens",
+      "exam_prep_invites", "exam_prep_usage", "login_attempts",
+    ];
+
+    const tableSizes: { name: string; rows: number; estimatedSizeMB: number }[] = [];
+    let totalDbRows = 0;
+
+    for (const table of tableQueries) {
+      try {
+        const { count } = await supabase
+          .from(table)
+          .select("*", { count: "exact", head: true });
+        const rows = count || 0;
+        totalDbRows += rows;
+        // Estimate: ~0.5KB per row average
+        const estimatedSizeMB = Math.round((rows * 0.5) / 1024 * 100) / 100;
+        tableSizes.push({ name: table, rows, estimatedSizeMB });
+      } catch {
+        tableSizes.push({ name: table, rows: 0, estimatedSizeMB: 0 });
+      }
+    }
+
+    // Sort by rows descending
+    tableSizes.sort((a, b) => b.rows - a.rows);
+
+    const totalDbSizeMB = Math.round(tableSizes.reduce((s, t) => s + t.estimatedSizeMB, 0) * 100) / 100;
+    
+    // Supabase pricing: Free tier = 500MB, Pro = $25/mo for 8GB
+    // Estimated DB cost based on size
+    const dbCostPerGBMonth = 0.125; // $0.125/GB/month after free tier (Pro plan)
+    const dbSizeGB = totalDbSizeMB / 1024;
+    const freeGBAllowance = 0.5; // 500MB free
+    const chargeableGB = Math.max(0, dbSizeGB - freeGBAllowance);
+    const monthlyDbCostUSD = chargeableGB * dbCostPerGBMonth;
+    const monthlyDbCostINR = Math.round(monthlyDbCostUSD * 83 * 100) / 100;
+
+    // Storage bucket sizes
+    let storageSizeMB = 0;
+    try {
+      const { data: studentPhotos } = await supabase.storage.from("student-photos").list("", { limit: 1000 });
+      const { data: examMaterials } = await supabase.storage.from("exam-prep-materials").list("", { limit: 1000 });
+      const photoCount = studentPhotos?.length || 0;
+      const materialCount = examMaterials?.length || 0;
+      // Average: photos ~200KB, materials ~500KB
+      storageSizeMB = Math.round(((photoCount * 0.2) + (materialCount * 0.5)) * 100) / 100;
+    } catch {}
+
+    const storageCostPerGBMonth = 0.021; // $0.021/GB/month
+    const storageSizeGB = storageSizeMB / 1024;
+    const storageFreeGB = 1; // 1GB free
+    const chargeableStorageGB = Math.max(0, storageSizeGB - storageFreeGB);
+    const monthlyStorageCostINR = Math.round(chargeableStorageGB * storageCostPerGBMonth * 83 * 100) / 100;
+
+    // Edge function invocations cost
+    const edgeFnInvocations = totalRequests; // AI requests ≈ edge fn invocations for this period
+    const edgeFnFreeTier = 500000; // 500K free/month
+    const chargeableInvocations = Math.max(0, edgeFnInvocations - edgeFnFreeTier);
+    const edgeFnCostPerMillion = 2; // $2/million
+    const monthlyEdgeFnCostINR = Math.round((chargeableInvocations / 1000000) * edgeFnCostPerMillion * 83 * 100) / 100;
+
+    // Platform base cost (Supabase Pro plan)
+    const platformBaseCostINR = 2075; // $25 × ₹83
+
+    const dbCosts = {
+      tables: tableSizes.slice(0, 15), // Top 15 tables
+      totalRows: totalDbRows,
+      totalDbSizeMB,
+      storageSizeMB,
+      monthlyEstimate: {
+        platformBase: platformBaseCostINR,
+        database: monthlyDbCostINR,
+        storage: monthlyStorageCostINR,
+        edgeFunctions: monthlyEdgeFnCostINR,
+        aiCost: Math.round(totalCost * (30 / Math.max(1, period === "today" ? 1 : period === "week" ? 7 : 30)) * 100) / 100,
+        total: 0,
+      },
+    };
+    dbCosts.monthlyEstimate.total = Math.round(
+      (dbCosts.monthlyEstimate.platformBase + dbCosts.monthlyEstimate.database +
+       dbCosts.monthlyEstimate.storage + dbCosts.monthlyEstimate.edgeFunctions +
+       dbCosts.monthlyEstimate.aiCost) * 100
+    ) / 100;
+
     return new Response(
       JSON.stringify({
         summary: {
@@ -169,6 +260,7 @@ Deno.serve(async (req) => {
         topStudents,
         dailyTrend,
         costRates,
+        dbCosts,
         period: period || "month",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

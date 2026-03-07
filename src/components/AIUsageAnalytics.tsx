@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   BarChart3, TrendingUp, Users, DollarSign, Loader2, Brain,
-  MessageSquare, ClipboardList, FileText, Mic, Target, Zap
+  MessageSquare, ClipboardList, FileText, Mic, Target, Zap,
+  Database, HardDrive, Server, Cloud
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -38,6 +39,27 @@ interface DailyTrend {
   cost: number;
 }
 
+interface TableSize {
+  name: string;
+  rows: number;
+  estimatedSizeMB: number;
+}
+
+interface DbCosts {
+  tables: TableSize[];
+  totalRows: number;
+  totalDbSizeMB: number;
+  storageSizeMB: number;
+  monthlyEstimate: {
+    platformBase: number;
+    database: number;
+    storage: number;
+    edgeFunctions: number;
+    aiCost: number;
+    total: number;
+  };
+}
+
 const ACTION_ICONS: Record<string, any> = {
   study_chat: MessageSquare,
   generate_quiz: ClipboardList,
@@ -67,6 +89,7 @@ const AIUsageAnalytics = () => {
   const [actionBreakdown, setActionBreakdown] = useState<ActionBreakdown[]>([]);
   const [topStudents, setTopStudents] = useState<TopStudent[]>([]);
   const [dailyTrend, setDailyTrend] = useState<DailyTrend[]>([]);
+  const [dbCosts, setDbCosts] = useState<DbCosts | null>(null);
 
   const fetchUsageData = useCallback(async () => {
     setLoading(true);
@@ -85,6 +108,7 @@ const AIUsageAnalytics = () => {
       setActionBreakdown(data.actionBreakdown || []);
       setTopStudents(data.topStudents || []);
       setDailyTrend(data.dailyTrend || []);
+      setDbCosts(data.dbCosts || null);
     } catch (e: any) {
       console.error("Failed to fetch AI usage:", e);
     } finally {
@@ -244,7 +268,86 @@ const AIUsageAnalytics = () => {
         </Card>
       )}
 
-      {/* Cost Estimation */}
+      {/* Database & Infrastructure Costs */}
+      {dbCosts && (
+        <Card className="bg-card border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Database className="h-4 w-4 text-primary" />
+              Database & Infrastructure
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* DB Stats */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="text-center p-2 rounded-lg bg-muted/30">
+                <p className="text-lg font-bold text-foreground">{dbCosts.totalRows.toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground">Total Rows</p>
+              </div>
+              <div className="text-center p-2 rounded-lg bg-muted/30">
+                <p className="text-lg font-bold text-foreground">{dbCosts.totalDbSizeMB} MB</p>
+                <p className="text-[10px] text-muted-foreground">DB Size</p>
+              </div>
+              <div className="text-center p-2 rounded-lg bg-muted/30">
+                <p className="text-lg font-bold text-foreground">{dbCosts.storageSizeMB} MB</p>
+                <p className="text-[10px] text-muted-foreground">File Storage</p>
+              </div>
+            </div>
+
+            {/* Top Tables */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Top Tables by Size</p>
+              <div className="space-y-1">
+                {dbCosts.tables.filter(t => t.rows > 0).slice(0, 8).map((table) => (
+                  <div key={table.name} className="flex items-center justify-between text-xs p-1.5 rounded bg-muted/20">
+                    <span className="text-foreground font-medium">{table.name.replace(/_/g, " ")}</span>
+                    <span className="text-muted-foreground">{table.rows.toLocaleString()} rows • {table.estimatedSizeMB} MB</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Monthly Cost Breakdown */}
+      {dbCosts?.monthlyEstimate && (
+        <Card className="bg-card border-primary/30 border-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Cloud className="h-4 w-4 text-primary" />
+              📊 Monthly Cost Estimate (Projected)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[
+              { label: "Platform Base (Pro Plan)", cost: dbCosts.monthlyEstimate.platformBase, icon: Server, color: "text-blue-500" },
+              { label: "AI / LLM Costs", cost: dbCosts.monthlyEstimate.aiCost, icon: Brain, color: "text-purple-500" },
+              { label: "Database Storage", cost: dbCosts.monthlyEstimate.database, icon: Database, color: "text-green-500" },
+              { label: "File Storage", cost: dbCosts.monthlyEstimate.storage, icon: HardDrive, color: "text-orange-500" },
+              { label: "Edge Functions", cost: dbCosts.monthlyEstimate.edgeFunctions, icon: Zap, color: "text-yellow-500" },
+            ].map(({ label, cost, icon: Icon, color }) => (
+              <div key={label} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <Icon className={`h-4 w-4 ${color}`} />
+                  <span className="text-sm text-foreground">{label}</span>
+                </div>
+                <span className="text-sm font-semibold text-foreground">₹{cost.toFixed(2)}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20 mt-2">
+              <span className="text-sm font-bold text-foreground">Total Monthly Estimate</span>
+              <span className="text-lg font-bold text-primary">₹{dbCosts.monthlyEstimate.total.toFixed(2)}</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              * AI cost projected from current period. Platform base = Lovable Cloud Pro ($25/mo). 
+              Estimates assume current usage patterns continue.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cost Estimation Guide */}
       <Card className="bg-card border-border/50">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">💡 Cost Estimation Guide</CardTitle>
