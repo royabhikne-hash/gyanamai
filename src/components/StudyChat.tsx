@@ -493,6 +493,32 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     }
   };
 
+  // Subject command detection
+  const detectSubjectCommand = (text: string): { type: 'start' | 'done' | 'finish' | null; subject: string } => {
+    const lower = text.toLowerCase().trim();
+    
+    // "Finish study" command
+    if (lower === 'finish study' || lower === 'finish studying' || lower === 'end study' || lower === 'study khatam' || lower === 'padhai khatam') {
+      return { type: 'finish', subject: '' };
+    }
+    
+    // "Start [Subject]" command
+    const startMatch = lower.match(/^start\s+(.+)$/i) || lower.match(/^(.+)\s+start\s*$/i) || lower.match(/^(.+)\s+shuru\s*$/i);
+    if (startMatch) {
+      const subj = startMatch[1].trim().replace(/^(the|a|an)\s+/i, '');
+      return { type: 'start', subject: subj.charAt(0).toUpperCase() + subj.slice(1) };
+    }
+    
+    // "[Subject] done" command
+    const doneMatch = lower.match(/^(.+)\s+(done|complete|finished|khatam|ho gaya|hogaya)$/i);
+    if (doneMatch) {
+      const subj = doneMatch[1].trim();
+      return { type: 'done', subject: subj.charAt(0).toUpperCase() + subj.slice(1) };
+    }
+    
+    return { type: null, subject: '' };
+  };
+
   const handleSendMessage = async () => {
     if ((!inputValue.trim() && !selectedImage) || isLoading) return;
 
@@ -517,7 +543,6 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         }
       } catch (err) {
         console.error("Usage limit check failed:", err);
-        // Continue if check fails - don't block user
       }
     }
 
@@ -531,32 +556,130 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
 
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
+    const userInput = inputValue;
     setInputValue("");
     setSelectedImage(null);
-    setIsLoading(true);
 
-    const topicKeywords = ["physics", "chemistry", "maths", "math", "biology", "history", "geography", "english", "hindi", "science", "social", "economics", "political", "civics", "computer", "bio"];
-    const foundTopic = topicKeywords.find((t) => inputValue.toLowerCase().includes(t));
-    let detectedTopic = currentTopic;
+    // Detect subject commands
+    const command = detectSubjectCommand(userInput);
     
-    if (foundTopic) {
-      const topicMap: Record<string, string> = {
-        "maths": "Math",
-        "bio": "Biology",
-        "political": "Political Science",
-        "civics": "Civics",
-        "social": "Social Science"
+    if (command.type === 'start') {
+      // Start a new subject
+      if (currentSubject) {
+        // Must finish current subject first
+        const warnMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: `You're currently studying ${currentSubject}. Please say "${currentSubject} done" first before starting ${command.subject}! 📝`,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, warnMsg]);
+        if (autoSpeak) setTimeout(() => speakText(warnMsg.content, warnMsg.id), 200);
+        return;
+      }
+      
+      setCurrentSubjectState(command.subject);
+      setCurrentTopic(command.subject);
+      setSubjectSessions(prev => ({
+        ...prev,
+        [command.subject]: { messages: [], startedAt: new Date() }
+      }));
+      
+      const startMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: `Great! Let's start studying ${command.subject}! 📖\n\nAsk me any doubt or question about ${command.subject}. I'm ready to help!\n\nWhen you're done with ${command.subject}, just say "${command.subject} done".`,
+        timestamp: new Date(),
+        isTyping: true,
       };
-      detectedTopic = topicMap[foundTopic] || foundTopic.charAt(0).toUpperCase() + foundTopic.slice(1);
-      if (!currentTopic) {
-        setCurrentTopic(detectedTopic);
+      setMessages(prev => [...prev, startMsg]);
+      setTypingMessageId(startMsg.id);
+      
+      const sessId = await ensureSession(command.subject);
+      if (sessId) await saveMessageToDb(userMessage, sessId);
+      if (sessId) await saveMessageToDb(startMsg, sessId);
+      return;
+    }
+    
+    if (command.type === 'done') {
+      // Complete current subject
+      const subjectToComplete = command.subject || currentSubject;
+      if (!currentSubject || currentSubject.toLowerCase() !== subjectToComplete.toLowerCase()) {
+        const errorMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: currentSubject 
+            ? `You're studying ${currentSubject}, not ${subjectToComplete}. Say "${currentSubject} done" to finish it.`
+            : `No subject is active right now. Say "Start [Subject]" to begin studying.`,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMsg]);
+        return;
+      }
+      
+      // Save subject session messages
+      const subjectMessages = messages.filter(m => {
+        // Get messages since this subject was started
+        const sessionStart = subjectSessions[currentSubject]?.startedAt;
+        return sessionStart && m.timestamp >= sessionStart;
+      });
+      
+      setSubjectSessions(prev => ({
+        ...prev,
+        [currentSubject]: { ...prev[currentSubject], messages: subjectMessages }
+      }));
+      
+      setCompletedSubjects(prev => [...prev, currentSubject]);
+      const completedSubj = currentSubject;
+      setCurrentSubjectState("");
+      setCurrentTopic("");
+      
+      const doneMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: `${completedSubj} completed! Well done! ✅\n\nYou can now:\n- Say "Start [Subject]" to study another subject\n- Say "Finish study" to end your session and take quizzes for all studied subjects`,
+        timestamp: new Date(),
+        isTyping: true,
+      };
+      setMessages(prev => [...prev, doneMsg]);
+      setTypingMessageId(doneMsg.id);
+      
+      const sessId = await ensureSession(completedSubj);
+      if (sessId) await saveMessageToDb(userMessage, sessId);
+      if (sessId) await saveMessageToDb(doneMsg, sessId);
+      return;
+    }
+    
+    if (command.type === 'finish') {
+      // If there's an active subject, complete it first
+      if (currentSubject) {
+        setCompletedSubjects(prev => [...prev, currentSubject]);
+        setCurrentSubjectState("");
+      }
+      
+      // Trigger quiz generation for all studied subjects
+      handleEndStudyClick();
+      return;
+    }
+
+    // Normal message flow - detect topic from keywords only if no active subject
+    let detectedTopic = currentSubject || currentTopic;
+    if (!currentSubject) {
+      const topicKeywords = ["physics", "chemistry", "maths", "math", "biology", "history", "geography", "english", "hindi", "science", "social", "economics", "political", "civics", "computer", "bio"];
+      const foundTopic = topicKeywords.find((t) => userInput.toLowerCase().includes(t));
+      if (foundTopic) {
+        const topicMap: Record<string, string> = {
+          "maths": "Math", "bio": "Biology", "political": "Political Science",
+          "civics": "Civics", "social": "Social Science"
+        };
+        detectedTopic = topicMap[foundTopic] || foundTopic.charAt(0).toUpperCase() + foundTopic.slice(1);
+        if (!currentTopic) setCurrentTopic(detectedTopic);
       }
     }
 
+    setIsLoading(true);
     const sessId = await ensureSession(detectedTopic);
-    if (sessId) {
-      await saveMessageToDb(userMessage, sessId);
-    }
+    if (sessId) await saveMessageToDb(userMessage, sessId);
 
     const aiResponseText = await getAIResponse(newMessages);
     
@@ -572,14 +695,8 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     setMessages((prev) => [...prev, aiResponse]);
     setTypingMessageId(aiResponseId);
     
-    if (sessId) {
-      await saveMessageToDb(aiResponse, sessId);
-    }
-    
+    if (sessId) await saveMessageToDb(aiResponse, sessId);
     setIsLoading(false);
-    
-    // Auto-speak AI response after typing completes
-    // (handled in typing complete callback)
   };
   
   const handleTypingComplete = (messageId: string, content: string) => {
