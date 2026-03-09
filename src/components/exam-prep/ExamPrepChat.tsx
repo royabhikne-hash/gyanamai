@@ -506,7 +506,7 @@ const ExamPrepChat: React.FC<Props> = ({ session, studentName, onSendMessage, on
         <Button variant="ghost" size="icon" onClick={toggleTTS} className={ttsEnabled ? 'text-primary' : 'text-muted-foreground'}>
           {ttsEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
         </Button>
-        <Button variant="outline" size="sm" onClick={startVirtualExam} className="text-xs gap-1">
+        <Button variant="outline" size="sm" onClick={startVirtualExam} className="text-xs gap-1" disabled={!hasMaterials}>
           <ClipboardCheck className="h-3.5 w-3.5" /> Exam
         </Button>
       </div>
