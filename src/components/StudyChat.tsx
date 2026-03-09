@@ -399,8 +399,8 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
           messages: formattedMessages, 
           studentId, 
           analyzeSession: true,
-          currentTopic: currentTopic || undefined,
-          // Pass subject and chapter context to AI
+          currentSubject: currentSubject || undefined,
+          completedSubjects: completedSubjects,
           subject: selectedSubject || undefined,
           chapter: selectedChapter || undefined,
           studentClass: studentClass,
