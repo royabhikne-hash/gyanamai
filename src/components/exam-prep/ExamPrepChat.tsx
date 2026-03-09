@@ -63,14 +63,34 @@ interface SpeechRecognitionType {
 }
 
 const ExamPrepChat: React.FC<Props> = ({ session, studentName, onSendMessage, onGenerateExam, onEvaluateExam, onBack }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
+  const hasMaterials = (session.exam_prep_materials?.length || 0) > 0;
+  const hasExtractedTopics = (session.extracted_topics?.length || 0) > 0;
+  
+  const getInitialMessages = (): ChatMessage[] => {
+    if (!hasMaterials) {
+      return [{
+        role: 'assistant',
+        content: `Welcome ${studentName}!\n\nPlease upload your study materials first to begin your personalized Exam Prep journey. Go back and upload a PDF, DOCX, or TXT file, then return here.\n\nOnce materials are uploaded, I'll analyze them and present key topics for focused study!`,
+      }];
+    }
+    
+    if (hasExtractedTopics) {
+      const topicNames = session.extracted_topics.map((t: any) => typeof t === 'string' ? t : t.name || t.topic || 'Unknown').slice(0, 10);
+      return [{
+        role: 'assistant',
+        content: `Hello ${studentName}! I've analyzed your uploaded material for ${session.exam_name || 'your exam'}.\n\nHere are the key topics and concepts we'll be focusing on:\n\n${topicNames.map((t: string, i: number) => `${i + 1}. ${t}`).join('\n')}\n\n${session.exam_date ? `Your exam is on ${session.exam_date}. ` : ''}${session.target_score ? `Aiming for ${session.target_score}? Let's make it happen! ` : ''}\n\nPlease review these topics. Which one would you like to start with, or do you have any initial questions?\n\nWhen you feel ready, say "I am ready" to take a Virtual Exam!`,
+      }];
+    }
+    
+    return [{
       role: 'assistant',
       content: `Welcome ${studentName}!\n\nI'm your AI exam prep tutor for ${session.exam_name || 'your exam'}. ${
         session.exam_date ? `Your exam is on ${session.exam_date}. ` : ''
-      }${session.target_score ? `Aiming for ${session.target_score}? Let's make it happen! ` : ''}\n\nWhat would you like to do?\n\n1. Review a specific topic\n2. Practice questions\n3. Explain a concept\n4. Quick revision\n5. Say "I am ready" to take a Virtual Exam!`,
-    },
-  ]);
+      }${session.target_score ? `Aiming for ${session.target_score}? Let's make it happen! ` : ''}\n\nYour material has been uploaded but is still being processed. Let me know what topic you'd like to focus on!\n\nSay "I am ready" when you want to take a Virtual Exam!`,
+    }];
+  };
+
+  const [messages, setMessages] = useState<ChatMessage[]>(getInitialMessages());
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
@@ -188,12 +208,27 @@ const ExamPrepChat: React.FC<Props> = ({ session, studentName, onSendMessage, on
 
   const handleSend = async () => {
     if (!input.trim() || sending) return;
+    
+    // Block chat if no materials uploaded
+    if (!hasMaterials) {
+      setMessages(prev => [...prev, 
+        { role: 'user', content: input.trim() },
+        { role: 'assistant', content: 'Please upload your study materials first to begin your personalized Exam Prep journey. Go back and upload a PDF, DOCX, or TXT file to get started! 📚' }
+      ]);
+      setInput('');
+      return;
+    }
+    
     const msg = input.trim();
     setInput('');
     stopSpeaking();
     setMessages(prev => [...prev, { role: 'user', content: msg }]);
 
     if (checkForExamTrigger(msg)) {
+      if (!hasMaterials) {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'You need to upload study materials before taking a virtual exam. Please go back and upload your notes or textbook first.' }]);
+        return;
+      }
       setMessages(prev => [...prev, { role: 'assistant', content: 'Great! You said you are ready! Let me generate a virtual exam based on your study material. This will include MCQs, Short Answer, and Long Answer questions. Get ready...' }]);
       setTimeout(() => startVirtualExam(), 1500);
       return;
@@ -471,10 +506,24 @@ const ExamPrepChat: React.FC<Props> = ({ session, studentName, onSendMessage, on
         <Button variant="ghost" size="icon" onClick={toggleTTS} className={ttsEnabled ? 'text-primary' : 'text-muted-foreground'}>
           {ttsEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
         </Button>
-        <Button variant="outline" size="sm" onClick={startVirtualExam} className="text-xs gap-1">
+        <Button variant="outline" size="sm" onClick={startVirtualExam} className="text-xs gap-1" disabled={!hasMaterials}>
           <ClipboardCheck className="h-3.5 w-3.5" /> Exam
         </Button>
       </div>
+
+      {/* No materials banner */}
+      {!hasMaterials && (
+        <div className="p-3 bg-destructive/10 border-b border-destructive/20">
+          <p className="text-sm text-destructive font-medium text-center">
+            📄 Please upload your study materials first to begin your personalized Exam Prep journey.
+          </p>
+          <div className="flex justify-center mt-2">
+            <Button variant="outline" size="sm" onClick={onBack} className="text-xs">
+              ← Go back to upload materials
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -508,7 +557,7 @@ const ExamPrepChat: React.FC<Props> = ({ session, studentName, onSendMessage, on
         <div className="flex items-center gap-2">
           <Input
             ref={inputRef}
-            placeholder="Ask your tutor or say 'I am ready' for exam..."
+            placeholder={hasMaterials ? "Ask your tutor or say 'I am ready' for exam..." : "Upload study materials first to start chatting..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}

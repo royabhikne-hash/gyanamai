@@ -9,7 +9,6 @@ function logAIUsage(studentId: string, action: string, model: string, usage: any
     const sb = createClient(supabaseUrl, supabaseKey);
     const inputTokens = usage?.prompt_tokens || 0;
     const outputTokens = usage?.completion_tokens || 0;
-    // Gemini 3 Flash: ~$0.10/1M input, ~$0.40/1M output → INR approx
     const costINR = ((inputTokens * 0.0000001 + outputTokens * 0.0000004) * 85);
     sb.from("ai_usage_log").insert({
       student_id: studentId,
@@ -29,30 +28,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// In-memory rate limiting (per isolate) - optimized for 5k users
+// In-memory rate limiting
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_CLEANUP_INTERVAL = 300000; // 5 min
+const RATE_LIMIT_CLEANUP_INTERVAL = 300000;
 let lastCleanup = Date.now();
 
 function checkRateLimit(userId: string, maxRequests = 20, windowMs = 60000): boolean {
   const now = Date.now();
-  
-  // Periodic cleanup to prevent memory leaks at scale
   if (now - lastCleanup > RATE_LIMIT_CLEANUP_INTERVAL) {
     for (const [key, val] of rateLimits) {
       if (now > val.resetAt) rateLimits.delete(key);
     }
     lastCleanup = now;
   }
-  
   const key = `chat:${userId}`;
   const limit = rateLimits.get(key);
-  
   if (!limit || now > limit.resetAt) {
     rateLimits.set(key, { count: 1, resetAt: now + windowMs });
     return true;
   }
-  
   if (limit.count >= maxRequests) return false;
   limit.count++;
   return true;
@@ -65,11 +59,18 @@ interface StudentContext {
   chapter?: string;
 }
 
+interface SubjectSession {
+  subject: string;
+  startedAt: string;
+  messageCount: number;
+}
+
 const buildSystemPrompt = (
   pastSessions: any[], 
   weakAreas: string[], 
   strongAreas: string[], 
-  currentTopic: string = "",
+  currentSubject: string = "",
+  completedSubjects: string[] = [],
   studentContext: StudentContext = {}
 ) => {
   let personalizedContext = "";
@@ -82,103 +83,92 @@ STUDENT'S LEARNING HISTORY:
 - Weak areas needing revision: ${weakAreas.join(", ") || "None identified yet"}
 - Strong areas: ${strongAreas.join(", ") || "None identified yet"}
 - Total sessions: ${pastSessions.length}
-
-Use this history to:
-1. Reference previously studied topics when relevant
-2. Suggest revising weak areas when appropriate
-3. Build on strong areas to boost confidence
-4. Provide personalized study recommendations
 `;
   }
 
-  // Student context from profile
   const studentInfo = studentContext.studentClass || studentContext.board ? `
-STUDENT PROFILE (VERIFIED):
+STUDENT PROFILE:
 - Class: ${studentContext.studentClass || "Not specified"}
 - Board: ${studentContext.board || "Not specified"}
-${studentContext.subject ? `- Subject: ${studentContext.subject}` : ""}
-${studentContext.chapter ? `- Active Chapter: ${studentContext.chapter}` : ""}
 ` : "";
 
-  // Chapter-focused instruction
-  const chapterInstruction = studentContext.chapter ? `
-CRITICAL CHAPTER RESTRICTION - STRICT ENFORCEMENT:
-You are ONLY allowed to teach "${studentContext.chapter}" for ${studentContext.subject || "this subject"}.
-
-STRICT RULES:
-1. If question is about "${studentContext.chapter}" - Answer it fully, helpfully, with examples
-2. If question is OUTSIDE "${studentContext.chapter}":
-   - DO NOT answer it at all
-   - Politely say: "This question is outside ${studentContext.chapter}. Your current chapter is ${studentContext.chapter}."
-   - Redirect: "Let's stay focused on ${studentContext.chapter}. What doubts do you have about it?"
-3. If student asks about different subject or class level:
-   - Say: "You are studying Class ${studentContext.studentClass || ""} ${studentContext.board || ""} ${studentContext.subject || ""} - ${studentContext.chapter}. Please ask questions from this chapter only."
-4. NEVER explain content from other chapters, subjects, or class levels
-5. ALL examples, questions, explanations MUST be from "${studentContext.chapter}" only
+  // Subject session context
+  const subjectInstruction = currentSubject ? `
+CURRENT ACTIVE SUBJECT: ${currentSubject}
+You are currently teaching "${currentSubject}". Focus ALL your responses on this subject ONLY.
+- Do NOT mix content from other subjects
+- All examples, explanations, and questions should be about "${currentSubject}"
+- If the student asks about a different subject, tell them: "You are currently studying ${currentSubject}. To switch subjects, say '${currentSubject} done' first, then 'Start [new subject]'."
 ` : "";
 
-  const topicInstruction = currentTopic ? `
-CURRENT STUDY TOPIC: ${currentTopic}
-CRITICAL: Stay focused ONLY on "${currentTopic}". 
-- DO NOT mix subjects (no biology if studying physics)
-- If student asks about different subject, acknowledge but bring them back to ${currentTopic}
-- All examples and explanations should be ONLY about ${currentTopic}
+  const completedInfo = completedSubjects.length > 0 ? `
+SUBJECTS COMPLETED IN THIS SESSION: ${completedSubjects.join(", ")}
+The student has already studied these subjects today. If they ask about them, acknowledge their earlier study.
 ` : "";
 
   return `You are Study Buddy AI - India's BEST personal tutor for school students (Class 6-12).
 
 ${studentInfo}
-${chapterInstruction || topicInstruction}
+${subjectInstruction}
+${completedInfo}
 
 YOUR IDENTITY:
-- You are a STRICT but CARING teacher - like the best coaching teacher
+- You are a STRICT but CARING teacher
 - You teach with DEPTH, CLARITY, and EXAM FOCUS
-- You are NOT a chatbot - you are a REAL TEACHER who genuinely cares
+- You are a REAL TEACHER who genuinely cares
+
+SUBJECT SESSION SYSTEM - CRITICAL:
+Students can control their study flow with these commands:
+1. "Start [Subject]" (e.g., "Start Computer", "Start History") - Begin studying a new subject
+2. "[Subject] done" (e.g., "Computer done", "History done") - Finish current subject
+3. "Finish study" - End the entire study session and get quizzes for all studied subjects
+
+When a student says "Start [Subject]":
+- Acknowledge the subject switch
+- Begin teaching that subject immediately
+- Say something like: "Great! Let's start studying [Subject]! What topic or doubt do you have?"
+
+When a student says "[Subject] done":
+- Acknowledge completion
+- Say: "Good job finishing [Subject]! You can say 'Start [new subject]' to study another subject, or 'Finish study' to end your session and take quizzes."
+
+When NO subject is active (student hasn't started any subject yet):
+- Ask them what they want to study
+- They can say "Start [Subject]" to begin
 
 LANGUAGE RULES:
 - Always respond in clear, simple English.
-- If a student writes in Hindi or any other language, still respond in English unless they explicitly request otherwise.
+- If student writes in Hindi, still respond in English unless they explicitly request otherwise.
 
-RESPONSE STYLE - CONTEXT BASED:
+RESPONSE STYLE:
+TYPE 1 - DOUBT/CONCEPT: Clear explanation (3-4 lines) + real-life EXAMPLE. Ask "Did you understand?"
+TYPE 2 - PROBLEM: Step-by-step solution. Show each step. Give final answer + WHY.
+TYPE 3 - GREETING/CASUAL: Warm response + ask what to study.
 
-TYPE 1 - DOUBT/CONCEPT QUESTION (student asks "what is...", "explain...", etc.):
-Give a clear CONCEPT explanation (3-4 lines) with a real-life EXAMPLE (2-3 lines).
-Then ask: "Did you understand? Any other doubts?"
+ANSWER EVALUATION:
+Correct: "Absolutely right! [why correct]. Well done!"
+Wrong: "Not quite, the correct answer is [ANSWER]. [re-explain in 2 lines]. Try another one!"
+Partial: "Almost right! [right part] but [wrong part]. Hint: [hint]"
 
-TYPE 2 - SPECIFIC QUESTION (student asks a problem/question to solve):
-Solve it step-by-step in a simple, easy way. Show each step clearly.
-Give the final answer. Explain WHY this is correct in 1-2 lines.
-Say: "Try solving a similar question on your own!"
-
-TYPE 3 - GREETING/CASUAL:
-Give a warm response + ask what to study today.
-
-ANSWER EVALUATION - BE THOROUGH AND CARING:
-Correct: "Absolutely right! [1-line explanation WHY correct]. Well done!"
-Wrong: "Not quite, the correct answer is [CORRECT ANSWER]. Let me explain - [re-explain concept in 2 lines]. Try another one!"
-Partial: "Almost right! [what's right] but [what's wrong]. Hint: [specific hint]"
-- ALWAYS give the correct answer when wrong - never just hints forever
-- ALWAYS explain WHY the correct answer is correct
-
-SUBJECT-SPECIFIC TEACHING RULES:
-MATH: Step-by-step solution MANDATORY. Write formulas clearly. Show each calculation step.
-SCIENCE: Explain the "WHY" behind every concept. Real-life connection MUST.
-ENGLISH: Grammar rules with patterns. Give 3+ sentence examples. Point out common mistakes.
-SOCIAL SCIENCE: Dates, names, causes-effects chain. Make history feel like a story.
-HINDI: Explain the meaning of poems in simple language. Summarize prose passages. Grammar with multiple examples.
+SUBJECT-SPECIFIC RULES:
+MATH: Step-by-step MANDATORY. Write formulas clearly.
+SCIENCE: Explain the "WHY". Real-life connection MUST.
+ENGLISH: Grammar rules with patterns. 3+ examples.
+SOCIAL SCIENCE: Dates, names, causes-effects. Make it a story.
+HINDI: Meanings in simple language. Grammar with examples.
+COMPUTER: Practical examples, code snippets when relevant.
 
 CRITICAL RULES:
-- NEVER give wrong information - if unsure, say "Please verify this from your textbook"
+- NEVER give wrong information
 - NEVER use markdown formatting (no *, #, backtick, _) - plain text only with emojis
-- Keep responses 80-150 words - focused and impactful
-- Use emojis naturally but sparingly (max 3 per response)
-- Non-study questions: "I'm your study buddy! Ask me anything related to your studies and I'll help you!"
-- Mention "important for exams" when relevant
-- DO NOT force practice questions after every response - only when it naturally fits
+- Keep responses 80-150 words
+- Use emojis sparingly (max 3)
+- Non-study questions: "I'm your study buddy! Ask me anything related to your studies!"
+- DO NOT force practice questions after every response
 
 ${personalizedContext}
 
-REMEMBER: You are the BEST teacher this student ever had. Every response should teach something new. Quality over quantity. Strict but caring. Clear explanations with real examples.`;
+REMEMBER: You are the BEST teacher. Every response teaches something new. Quality over quantity.`;
 };
 
 interface ChatMessage {
@@ -198,7 +188,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, studentId, analyzeSession, currentTopic, studentContext, subject, chapter, studentClass, studentBoard } = await req.json();
+    const { messages, studentId, analyzeSession, currentSubject, completedSubjects, subject, chapter, studentClass, studentBoard } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -206,7 +196,6 @@ serve(async (req) => {
       throw new Error("AI service is not configured");
     }
 
-    // Rate limit check
     if (studentId && !checkRateLimit(studentId)) {
       return new Response(
         JSON.stringify({ 
@@ -217,13 +206,12 @@ serve(async (req) => {
       );
     }
 
-    console.log("Processing study chat request with", messages?.length || 0, "messages");
+    console.log("Processing study chat request with", messages?.length || 0, "messages, subject:", currentSubject);
 
-    // Fetch student's past sessions and profile for personalization
     let pastSessions: any[] = [];
     let weakAreas: string[] = [];
     let strongAreas: string[] = [];
-    let studentProfile: StudentContext = studentContext || {
+    let studentProfile: StudentContext = {
       subject: subject,
       chapter: chapter,
       studentClass: studentClass,
@@ -236,14 +224,12 @@ serve(async (req) => {
         const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // Fetch student profile if not provided
-        if (!studentContext?.studentClass) {
+        if (!studentClass) {
           const { data: student } = await supabase
             .from("students")
             .select("class, board")
             .eq("id", studentId)
             .single();
-          
           if (student) {
             studentProfile.studentClass = student.class;
             studentProfile.board = student.board;
@@ -259,54 +245,42 @@ serve(async (req) => {
 
         if (sessions) {
           pastSessions = sessions;
-          
-          // Aggregate weak and strong areas
           const weakSet = new Set<string>();
           const strongSet = new Set<string>();
-          
           sessions.forEach(s => {
             (s.weak_areas || []).forEach((a: string) => weakSet.add(a));
             (s.strong_areas || []).forEach((a: string) => strongSet.add(a));
           });
-          
           weakAreas = [...weakSet].slice(0, 5);
           strongAreas = [...strongSet].slice(0, 5);
         }
-
-        console.log("Loaded student history:", { 
-          sessions: pastSessions.length, 
-          weakAreas, 
-          strongAreas,
-          studentProfile
-        });
       } catch (err) {
         console.error("Error fetching student history:", err);
       }
     }
 
-    // Build personalized system prompt with current topic and student context
-    const systemPrompt = buildSystemPrompt(pastSessions, weakAreas, strongAreas, currentTopic || "", studentProfile);
+    // Build system prompt with current subject context
+    const systemPrompt = buildSystemPrompt(
+      pastSessions, weakAreas, strongAreas, 
+      currentSubject || "", 
+      completedSubjects || [],
+      studentProfile
+    );
 
-    // Add analysis instruction if requested
     const analysisInstruction = analyzeSession ? `
 
 IMPORTANT: At the end of your response, include a JSON analysis block in this exact format:
 [ANALYSIS]{"understanding":"weak|average|good|excellent","topics":["topic1","topic2"],"weakAreas":["area1"],"strongAreas":["area1"]}[/ANALYSIS]
 
-Analyze the student's understanding based on:
-- Their questions (confused = weak, specific = good)
-- Clarity of their responses
-- Whether they're grasping concepts
-Keep topics short (2-3 words max).` : "";
+Analyze the student's understanding based on their questions and responses. Keep topics short (2-3 words max).` : "";
 
-    // Build messages array
     const chatMessages: AIMessage[] = [
       { role: "system", content: systemPrompt + analysisInstruction },
     ];
 
-    // Add conversation history (limit to last 4 messages for speed at 5k scale)
+    // Send last 8 messages for better context (was 4, too few for subject switching)
     if (messages && Array.isArray(messages)) {
-      const recentMessages = messages.slice(-4);
+      const recentMessages = messages.slice(-8);
       for (const msg of recentMessages as ChatMessage[]) {
         if (msg.imageUrl) {
           chatMessages.push({
@@ -325,13 +299,11 @@ Keep topics short (2-3 words max).` : "";
       }
     }
 
-    // Use Gemini 3.0 Flash for chat
     const PRIMARY_MODEL = "google/gemini-3-flash-preview";
     const FALLBACK_MODEL = "google/gemini-2.5-flash";
 
     const callLovableAI = async (model: string) => {
       console.log(`Calling Lovable AI with model: ${model}`);
-
       const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -348,21 +320,18 @@ Keep topics short (2-3 words max).` : "";
       if (!resp.ok) {
         const errorText = await resp.text();
         console.error("AI gateway error:", resp.status, errorText);
-
         if (resp.status === 429) {
           return new Response(
             JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
             { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-
         if (resp.status === 402) {
           return new Response(
             JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }),
             { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-
         throw new Error(`AI service error: ${resp.status}`);
       }
 
@@ -371,8 +340,6 @@ Keep topics short (2-3 words max).` : "";
     };
 
     let data: any;
-
-    // Primary call (Gemini Flash - faster)
     {
       const result = await callLovableAI(PRIMARY_MODEL);
       if (result instanceof Response) return result;
@@ -381,37 +348,27 @@ Keep topics short (2-3 words max).` : "";
 
     let aiResponse = data?.choices?.[0]?.message?.content;
 
-    // Fallback if empty
     if (typeof aiResponse !== "string" || aiResponse.trim().length === 0) {
-      console.error("No response content from primary AI, trying fallback");
-
+      console.error("No response from primary AI, trying fallback");
       const result2 = await callLovableAI(FALLBACK_MODEL);
       if (result2 instanceof Response) return result2;
-
       const data2 = result2.data;
       aiResponse = data2?.choices?.[0]?.message?.content;
-
       if (typeof aiResponse !== "string" || aiResponse.trim().length === 0) {
-        console.error("No response content from fallback AI");
         throw new Error("No response from AI");
       }
     }
 
-    console.log("AI response received successfully");
-
-    // Log AI usage (fire-and-forget)
     if (studentId && data?.usage) {
       logAIUsage(studentId, "study_chat", PRIMARY_MODEL, data.usage);
     }
 
-    // Extract analysis from response if present
     let sessionAnalysis = null;
     if (analyzeSession) {
       const analysisMatch = aiResponse.match(/\[ANALYSIS\](.*?)\[\/ANALYSIS\]/s);
       if (analysisMatch) {
         try {
           sessionAnalysis = JSON.parse(analysisMatch[1]);
-          // Remove analysis block from displayed response
           aiResponse = aiResponse.replace(/\[ANALYSIS\].*?\[\/ANALYSIS\]/s, "").trim();
         } catch (e) {
           console.error("Failed to parse analysis:", e);

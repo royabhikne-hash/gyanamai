@@ -31,8 +31,8 @@ const ExamPrepDashboard: React.FC<Props> = ({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, sessionId: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 20 * 1024 * 1024) {
-      toast({ title: 'File too large', description: 'Max 20MB', variant: 'destructive' });
+    if (file.size > 25 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Max 25MB. Please upload a smaller file or split your document.', variant: 'destructive' });
       return;
     }
 
