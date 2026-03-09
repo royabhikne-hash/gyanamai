@@ -63,14 +63,34 @@ interface SpeechRecognitionType {
 }
 
 const ExamPrepChat: React.FC<Props> = ({ session, studentName, onSendMessage, onGenerateExam, onEvaluateExam, onBack }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
+  const hasMaterials = (session.exam_prep_materials?.length || 0) > 0;
+  const hasExtractedTopics = (session.extracted_topics?.length || 0) > 0;
+  
+  const getInitialMessages = (): ChatMessage[] => {
+    if (!hasMaterials) {
+      return [{
+        role: 'assistant',
+        content: `Welcome ${studentName}!\n\nPlease upload your study materials first to begin your personalized Exam Prep journey. Go back and upload a PDF, DOCX, or TXT file, then return here.\n\nOnce materials are uploaded, I'll analyze them and present key topics for focused study!`,
+      }];
+    }
+    
+    if (hasExtractedTopics) {
+      const topicNames = session.extracted_topics.map((t: any) => typeof t === 'string' ? t : t.name || t.topic || 'Unknown').slice(0, 10);
+      return [{
+        role: 'assistant',
+        content: `Hello ${studentName}! I've analyzed your uploaded material for ${session.exam_name || 'your exam'}.\n\nHere are the key topics and concepts we'll be focusing on:\n\n${topicNames.map((t: string, i: number) => `${i + 1}. ${t}`).join('\n')}\n\n${session.exam_date ? `Your exam is on ${session.exam_date}. ` : ''}${session.target_score ? `Aiming for ${session.target_score}? Let's make it happen! ` : ''}\n\nPlease review these topics. Which one would you like to start with, or do you have any initial questions?\n\nWhen you feel ready, say "I am ready" to take a Virtual Exam!`,
+      }];
+    }
+    
+    return [{
       role: 'assistant',
       content: `Welcome ${studentName}!\n\nI'm your AI exam prep tutor for ${session.exam_name || 'your exam'}. ${
         session.exam_date ? `Your exam is on ${session.exam_date}. ` : ''
-      }${session.target_score ? `Aiming for ${session.target_score}? Let's make it happen! ` : ''}\n\nWhat would you like to do?\n\n1. Review a specific topic\n2. Practice questions\n3. Explain a concept\n4. Quick revision\n5. Say "I am ready" to take a Virtual Exam!`,
-    },
-  ]);
+      }${session.target_score ? `Aiming for ${session.target_score}? Let's make it happen! ` : ''}\n\nYour material has been uploaded but is still being processed. Let me know what topic you'd like to focus on!\n\nSay "I am ready" when you want to take a Virtual Exam!`,
+    }];
+  };
+
+  const [messages, setMessages] = useState<ChatMessage[]>(getInitialMessages());
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);

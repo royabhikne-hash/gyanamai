@@ -994,6 +994,12 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                   <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
                   Q {currentQuestionIndex + 1}/{quizQuestions.length}
                 </span>
+              ) : currentSubject ? (
+                <span className="flex items-center gap-1 truncate max-w-[150px]">
+                  <BookOpen className="w-3 h-3 text-primary" />
+                  {currentSubject}
+                  {completedSubjects.length > 0 && ` (${completedSubjects.length} done)`}
+                </span>
               ) : selectedChapter ? (
                 <span className="flex items-center gap-1 truncate max-w-[150px]">
                   <BookOpen className="w-3 h-3 text-primary" />
@@ -1002,7 +1008,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
               ) : (
                 <span className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
-                  {currentTopic || "Ready!"}
+                  {completedSubjects.length > 0 ? `${completedSubjects.length} subject(s) studied` : "Ready!"}
                 </span>
               )}
             </p>
