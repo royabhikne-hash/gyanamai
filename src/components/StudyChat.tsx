@@ -829,7 +829,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     }
   };
 
-
+  const handleEndStudyClick = async () => {
     setQuizLoading(true);
     
     try {
