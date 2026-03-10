@@ -40,7 +40,7 @@ const WeeklyTest = () => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [weekStart, setWeekStart] = useState("");
   const [weekEnd, setWeekEnd] = useState("");
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!loading && !user) { navigate("/login"); return; }

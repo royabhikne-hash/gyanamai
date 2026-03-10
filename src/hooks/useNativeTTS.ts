@@ -25,7 +25,7 @@ export const useNativeTTS = () => {
   const [selectedVoiceName, setSelectedVoiceName] = useState<string | null>(null);
   const [activeEngine, setActiveEngine] = useState<ActiveEngine>('none');
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chunksRef = useRef<string[]>([]);
   const currentChunkIndexRef = useRef(0);
   const isCancelledRef = useRef(false);

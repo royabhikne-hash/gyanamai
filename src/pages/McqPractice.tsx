@@ -47,7 +47,7 @@ const McqPractice = () => {
   const [answers, setAnswers] = useState<{ selected: string; correct: string; isCorrect: boolean }[]>([]);
   const [startTime, setStartTime] = useState<number>(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Results
   const [correctCount, setCorrectCount] = useState(0);
