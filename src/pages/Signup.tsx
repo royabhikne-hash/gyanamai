@@ -43,12 +43,27 @@ const Signup = () => {
     parentWhatsapp: "",
     class: "",
     age: "",
-    board: "CBSE" as "CBSE" | "ICSE" | "Bihar Board" | "Other",
+    board: "CBSE",
     district: "",
     state: "",
     email: "",
     password: "",
   });
+  
+  const [customBoards, setCustomBoards] = useState<{ id: string; name: string }[]>([]);
+
+  // Load custom boards on mount
+  useEffect(() => {
+    const loadCustomBoards = async () => {
+      try {
+        const { data } = await supabase.from("custom_boards").select("id, name").eq("is_active", true);
+        if (data) setCustomBoards(data);
+      } catch (e) {
+        console.error("Failed to load custom boards:", e);
+      }
+    };
+    loadCustomBoards();
+  }, []);
   
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

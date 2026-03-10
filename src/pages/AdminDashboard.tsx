@@ -1621,6 +1621,10 @@ const AdminDashboard = () => {
         {activeTab === "ai-usage" && (
           <AIUsageAnalytics />
         )}
+
+        {activeTab === "boards" && (
+          <BoardsManagement />
+        )}
       </main>
 
       {/* Confirmation Dialog */}
