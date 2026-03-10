@@ -552,7 +552,10 @@ const Signup = () => {
                   >
                     <option value="CBSE">CBSE</option>
                     <option value="ICSE">ICSE</option>
-                    <option value="Bihar Board">Bihar</option>
+                    <option value="Bihar Board">Bihar Board</option>
+                    {customBoards.map((b) => (
+                      <option key={b.id} value={b.name}>{b.name}</option>
+                    ))}
                     <option value="Other">Other</option>
                   </select>
                 </div>
