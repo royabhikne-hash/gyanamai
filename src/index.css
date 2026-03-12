@@ -213,9 +213,9 @@
     animation: liquid-float 8s ease-in-out infinite;
     z-index: 0;
   }
-  .liquid-orb-blue {
-    background: radial-gradient(circle, hsl(221 83% 53% / 0.48), hsl(214 95% 70% / 0.2));
-  }
+.liquid-orb-blue {
+  background: radial-gradient(circle, hsl(221 83% 53% / 0.55), hsl(214 95% 70% / 0.22));
+}
   .liquid-orb-purple {
     background: radial-gradient(circle, hsl(262 68% 52% / 0.3), hsl(262 68% 70% / 0.1));
   }
