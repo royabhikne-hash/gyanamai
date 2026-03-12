@@ -198,22 +198,28 @@
 
   /* ▸ BUTTONS ──────────────────────────────────── */
   .edu-button-primary {
-    @apply text-primary-foreground font-semibold rounded-xl px-6 py-3 transition-all duration-200;
+    @apply text-primary-foreground font-semibold rounded-2xl px-6 py-3 transition-all duration-300;
     background: var(--gradient-primary);
-    box-shadow: 0 2px 8px hsl(var(--primary) / 0.25);
+    box-shadow: 0 4px 15px hsl(var(--primary) / 0.3), inset 0 1px 0 hsl(0 0% 100% / 0.15);
   }
   .edu-button-primary:hover {
-    box-shadow: 0 4px 16px hsl(var(--primary) / 0.35);
-    transform: translateY(-1px);
+    box-shadow: 0 8px 25px hsl(var(--primary) / 0.4), inset 0 1px 0 hsl(0 0% 100% / 0.2);
+    transform: translateY(-2px) scale(1.02);
   }
-  .edu-button-primary:active { transform: translateY(0); }
+  .edu-button-primary:active { transform: translateY(0) scale(0.98); }
 
   .edu-button-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold rounded-xl px-6 py-3 transition-all duration-200;
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold rounded-2xl px-6 py-3 transition-all duration-300;
+    box-shadow: var(--shadow-sm);
+  }
+  .edu-button-secondary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
   }
   .edu-button-accent {
-    @apply text-accent-foreground font-semibold rounded-xl px-6 py-3 transition-all duration-200;
+    @apply text-accent-foreground font-semibold rounded-2xl px-6 py-3 transition-all duration-300;
     background: var(--gradient-success);
+    box-shadow: 0 4px 15px hsl(var(--accent) / 0.3);
   }
 
   /* ▸ INPUTS ───────────────────────────────────── */
