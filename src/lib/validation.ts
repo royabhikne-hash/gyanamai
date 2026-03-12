@@ -54,7 +54,7 @@ export const locationSchema = z
   .max(100, { message: "Must be less than 100 characters" });
 
 // Board type enum
-export const boardSchema = z.enum(["CBSE", "ICSE", "Bihar Board", "Other"]);
+export const boardSchema = z.string().trim().min(1, { message: "Please select a board" });
 
 // Class validation
 export const classSchema = z
