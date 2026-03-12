@@ -165,25 +165,35 @@
 
   /* ▸ EDU CARD ─────────────────────────────────── */
   .edu-card {
-    @apply bg-card rounded-xl border border-border shadow-sm transition-all duration-200;
+    @apply bg-card rounded-2xl border border-border transition-all duration-300;
+    box-shadow: var(--shadow-md);
+    transform: perspective(1000px) rotateX(0deg);
   }
   .edu-card:hover {
-    @apply shadow-md;
-    transform: translateY(-1px);
+    box-shadow: var(--shadow-xl);
+    transform: perspective(1000px) rotateX(-1deg) translateY(-4px);
+  }
+  .edu-card:active {
+    transform: perspective(1000px) scale(0.98);
   }
 
   .glass {
-    @apply bg-card/80 backdrop-blur-sm border border-border;
+    @apply backdrop-blur-xl border border-border;
+    background: hsl(var(--card) / 0.7);
   }
   .glass-card {
-    @apply bg-card rounded-xl border border-border shadow-sm transition-all duration-200;
+    @apply rounded-2xl border border-border transition-all duration-300;
+    background: hsl(var(--card) / 0.85);
+    backdrop-filter: blur(20px) saturate(1.5);
+    box-shadow: var(--shadow-md), inset 0 1px 0 0 hsl(0 0% 100% / 0.1);
   }
   .glass-card:hover {
-    @apply shadow-md;
-    transform: translateY(-1px);
+    box-shadow: var(--shadow-xl), inset 0 1px 0 0 hsl(0 0% 100% / 0.15);
+    transform: translateY(-4px);
   }
   .glass-nav {
-    @apply bg-card/95 backdrop-blur-md border-border;
+    @apply backdrop-blur-xl border-border;
+    background: hsl(var(--card) / 0.9);
   }
 
   /* ▸ BUTTONS ──────────────────────────────────── */
