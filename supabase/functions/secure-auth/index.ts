@@ -672,7 +672,6 @@ Deno.serve(async (req) => {
         JSON.stringify({ success: true, newPassword }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    } else if (action === "create_admin") {
     } else if (action === "reset_student_password") {
       // Admin or School action to reset a student password
       // Validate caller credentials
