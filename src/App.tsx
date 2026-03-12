@@ -27,6 +27,7 @@ import WeeklyTest from "./pages/WeeklyTest";
 import ParentDashboard from "./pages/ParentDashboard";
 import NotFound from "./pages/NotFound";
 import ExamPrep from "./pages/ExamPrep";
+import StudyBlaster from "./pages/StudyBlaster";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
 import GlobalErrorHandlers from "@/components/GlobalErrorHandlers";
 
