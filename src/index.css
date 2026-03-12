@@ -214,7 +214,7 @@
     z-index: 0;
   }
   .liquid-orb-blue {
-    background: radial-gradient(circle, hsl(221 83% 53% / 0.35), hsl(214 95% 70% / 0.15));
+    background: radial-gradient(circle, hsl(221 83% 53% / 0.48), hsl(214 95% 70% / 0.2));
   }
   .liquid-orb-purple {
     background: radial-gradient(circle, hsl(262 68% 52% / 0.3), hsl(262 68% 70% / 0.1));
