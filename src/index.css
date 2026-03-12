@@ -249,29 +249,42 @@
   }
 
   /* ▸ QUIZ OPTIONS ─────────────────────────────── */
-  .quiz-option { @apply w-full text-left p-4 rounded-xl border-2 transition-all duration-200 text-sm font-medium; }
+  .quiz-option { @apply w-full text-left p-4 rounded-2xl border-2 transition-all duration-300 text-sm font-medium; }
   .quiz-option-default { @apply border-border bg-card; }
   .quiz-option-default:hover {
     @apply border-primary/30 bg-primary/5;
+    transform: translateX(4px);
+    box-shadow: var(--shadow-md);
   }
   .quiz-option-selected {
     @apply border-primary bg-primary/10;
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15);
   }
   .quiz-option-correct {
     @apply border-accent bg-accent/10;
+    box-shadow: 0 0 0 3px hsl(var(--accent) / 0.15);
   }
   .quiz-option-wrong {
     @apply border-destructive bg-destructive/10;
+    box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.15);
   }
 
   /* ▸ STAT CARDS ───────────────────────────────── */
-  .stat-card { @apply edu-card p-5 transition-all duration-200; }
-  .stat-card:hover { transform: translateY(-2px); @apply shadow-md; }
+  .stat-card {
+    @apply edu-card p-5 transition-all duration-300;
+    transform: perspective(800px) rotateY(0deg);
+  }
+  .stat-card:hover {
+    transform: perspective(800px) rotateY(-2deg) translateY(-4px);
+    box-shadow: var(--shadow-xl);
+  }
   .stat-card-accent {
-    @apply stat-card border-accent/20 bg-accent/5;
+    @apply stat-card border-accent/20;
+    background: linear-gradient(135deg, hsl(var(--accent) / 0.05) 0%, hsl(var(--card)) 100%);
   }
   .stat-card-primary {
-    @apply stat-card border-primary/20 bg-primary/5;
+    @apply stat-card border-primary/20;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.05) 0%, hsl(var(--card)) 100%);
   }
 
   /* ▸ PROGRESS BAR ─────────────────────────────── */
