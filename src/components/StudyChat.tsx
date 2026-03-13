@@ -637,7 +637,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
       const doneMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `${completedSubj} completed! Well done! ✅\n\nYou can now:\n- Say "Start [Subject]" to study another subject\n- Say "Finish study" to end your session and take quizzes for all studied subjects`,
+        content: `${completedSubj} complete! Bahut accha padha tumne! ✅\n\nAb kya karna hai?\n- Naya subject padhne ke liye bolo "Start [Subject]"\n- Quiz lene ke liye bolo "Finish study" 🎯`,
         timestamp: new Date(),
         isTyping: true,
       };
