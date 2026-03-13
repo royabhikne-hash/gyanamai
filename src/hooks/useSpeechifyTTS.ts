@@ -14,15 +14,8 @@ export interface SpeechifyVoice {
 // Speechify system voices (shared voices available to all users)
 // Note: simba-multilingual model is used for all voices
 export const SPEECHIFY_VOICES: SpeechifyVoice[] = [
-  // Indian voices (prioritized first)
-  { id: 'henry', name: 'Henry 🇮🇳', language: 'English (India)', languageCode: 'en-IN', gender: 'male', description: 'Indian accent, natural and clear' },
-  { id: 'natasha', name: 'Natasha 🇮🇳', language: 'English (India)', languageCode: 'en-IN', gender: 'female', description: 'Indian female voice, clear pronunciation' },
-  // English voices
-  { id: 'george', name: 'George', language: 'English (UK)', languageCode: 'en-GB', gender: 'male', description: 'British accent, professional' },
-  { id: 'cliff', name: 'Cliff', language: 'English (US)', languageCode: 'en-US', gender: 'male', description: 'American accent, clear' },
-  { id: 'mrbeast', name: 'MrBeast', language: 'English', languageCode: 'en-US', gender: 'male', description: 'Energetic, fun' },
-  { id: 'gwyneth', name: 'Gwyneth', language: 'English', languageCode: 'en-US', gender: 'female', description: 'Calm, professional' },
-  { id: 'oliver', name: 'Oliver', language: 'English (UK)', languageCode: 'en-GB', gender: 'male', description: 'British, formal' },
+  { id: 'henry', name: 'Henry 🇮🇳', language: 'Hindi/English (India)', languageCode: 'hi-IN', gender: 'male', description: 'Indian male voice, Hindi/Hinglish ke liye best' },
+  { id: 'natasha', name: 'Natasha 🇮🇳', language: 'Hindi/English (India)', languageCode: 'hi-IN', gender: 'female', description: 'Indian female voice, natural Hindi pronunciation' },
 ];
 
 interface TTSOptions {

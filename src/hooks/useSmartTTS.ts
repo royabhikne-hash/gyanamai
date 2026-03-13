@@ -48,13 +48,8 @@ export interface SpeechifyVoice {
 }
 
 export const SPEECHIFY_VOICES: SpeechifyVoice[] = [
-  { id: 'henry', name: 'Henry 🇮🇳', language: 'Hindi/English (India)', languageCode: 'hi-IN', gender: 'male', description: 'Indian accent, Hindi/Hinglish के लिए best' },
+  { id: 'henry', name: 'Henry 🇮🇳', language: 'Hindi/English (India)', languageCode: 'hi-IN', gender: 'male', description: 'Indian male voice, Hindi/Hinglish ke liye best' },
   { id: 'natasha', name: 'Natasha 🇮🇳', language: 'Hindi/English (India)', languageCode: 'hi-IN', gender: 'female', description: 'Indian female voice, natural Hindi pronunciation' },
-  { id: 'george', name: 'George', language: 'English (UK)', languageCode: 'en-GB', gender: 'male', description: 'British accent, professional' },
-  { id: 'cliff', name: 'Cliff', language: 'English (US)', languageCode: 'en-US', gender: 'male', description: 'American accent, clear' },
-  { id: 'mrbeast', name: 'MrBeast', language: 'English', languageCode: 'en-US', gender: 'male', description: 'Energetic, fun' },
-  { id: 'gwyneth', name: 'Gwyneth', language: 'English', languageCode: 'en-US', gender: 'female', description: 'Calm, professional' },
-  { id: 'oliver', name: 'Oliver', language: 'English (UK)', languageCode: 'en-GB', gender: 'male', description: 'British, formal' },
 ];
 
 const clientAudioCache = new Map<string, string>();
