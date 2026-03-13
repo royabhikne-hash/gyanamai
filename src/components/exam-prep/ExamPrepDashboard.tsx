@@ -9,6 +9,8 @@ import { ExamPrepAccess, ExamPrepSession } from '@/hooks/useExamPrep';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+type Feature = 'study_plan' | 'tutor' | 'intro_lessons' | 'quizzes';
+
 interface Props {
   access: ExamPrepAccess;
   sessions: ExamPrepSession[];
@@ -17,10 +19,11 @@ interface Props {
   onInvite: (sessionId: string) => void;
   onExtract: (sessionId: string, fileUrl: string, fileName: string) => Promise<any>;
   onBack: () => void;
+  onFeature: (feature: Feature, session?: ExamPrepSession) => void;
 }
 
 const ExamPrepDashboard: React.FC<Props> = ({
-  access, sessions, onNewSession, onOpenChat, onInvite, onExtract, onBack,
+  access, sessions, onNewSession, onOpenChat, onInvite, onExtract, onBack, onFeature,
 }) => {
   const { toast } = useToast();
   const [uploading, setUploading] = useState<string | null>(null);
@@ -67,11 +70,11 @@ const ExamPrepDashboard: React.FC<Props> = ({
     }
   };
 
-  const menuItems = [
-    { icon: BookOpen, label: 'Daily Study Plan', desc: 'AI-generated schedule', color: 'text-primary' },
-    { icon: Brain, label: 'Personal AI Tutor', desc: 'Chat with your tutor', color: 'text-accent' },
-    { icon: GraduationCap, label: 'Intro Lessons', desc: 'Learn new concepts', color: 'text-[hsl(var(--edu-purple))]' },
-    { icon: ClipboardList, label: 'Quizzes & Flashcards', desc: 'Test your knowledge', color: 'text-[hsl(var(--edu-orange))]' },
+  const menuItems: { icon: any; label: string; desc: string; color: string; feature: Feature; needsSession: boolean }[] = [
+    { icon: BookOpen, label: 'Daily Study Plan', desc: 'AI-generated schedule', color: 'text-primary', feature: 'study_plan', needsSession: true },
+    { icon: Brain, label: 'Personal AI Tutor', desc: 'Chat with your tutor', color: 'text-accent', feature: 'tutor', needsSession: true },
+    { icon: GraduationCap, label: 'Intro Lessons', desc: 'Learn new concepts', color: 'text-[hsl(var(--edu-purple))]', feature: 'intro_lessons', needsSession: true },
+    { icon: ClipboardList, label: 'Quizzes & Flashcards', desc: 'Test your knowledge', color: 'text-[hsl(var(--edu-orange))]', feature: 'quizzes', needsSession: true },
   ];
 
   return (
@@ -115,7 +118,21 @@ const ExamPrepDashboard: React.FC<Props> = ({
       <div className="p-4 space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1">Features</h2>
         {menuItems.map((item, i) => (
-          <Card key={i} className="bg-card hover:bg-muted/50 transition-colors cursor-pointer border-border/50">
+          <Card
+            key={i}
+            className="bg-card hover:bg-muted/50 transition-colors cursor-pointer border-border/50"
+            onClick={() => {
+              if (item.needsSession && sessions.length === 0) {
+                toast({ title: 'Create a session first', description: 'Start a new exam prep session to use this feature.', variant: 'destructive' });
+                return;
+              }
+              if (item.feature === 'tutor' && sessions.length > 0) {
+                onOpenChat(sessions[0]);
+              } else {
+                onFeature(item.feature, sessions[0]);
+              }
+            }}
+          >
             <CardContent className="p-4 flex items-center gap-4">
               <div className="p-2.5 rounded-xl bg-muted">
                 <item.icon className={`h-5 w-5 ${item.color}`} />

@@ -501,6 +501,185 @@ Evaluate and return ONLY valid JSON:
         });
       }
 
+      case "generate_study_plan": {
+        const { sessionId } = body;
+        if (!lovableApiKey) throw new Error("AI not configured");
+
+        const { data: session } = await supabase
+          .from("exam_prep_sessions").select("*").eq("id", sessionId).single();
+
+        const { data: materials } = await supabase
+          .from("exam_prep_materials").select("extracted_topics")
+          .eq("session_id", sessionId);
+
+        const topics = session?.extracted_topics || materials?.flatMap((m: any) => m.extracted_topics || []) || [];
+        const daysUntilExam = session?.exam_date
+          ? Math.max(1, Math.ceil((new Date(session.exam_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+          : 14;
+
+        const planPrompt = `Create a daily study plan for a Class ${student.class} (${student.board}) student.
+
+Exam: ${session?.exam_name || "General"}
+Days until exam: ${daysUntilExam}
+Topic familiarity: ${session?.topic_familiarity || "new"}
+Topics from study material: ${JSON.stringify(topics)}
+
+Create a structured day-by-day study plan. Each day should have 2-3 study blocks.
+Return ONLY valid JSON:
+{
+  "planTitle": "string",
+  "totalDays": number,
+  "dailyStudyHours": number,
+  "days": [
+    {
+      "day": 1,
+      "date": "Day 1",
+      "theme": "string",
+      "blocks": [
+        { "time": "Morning", "topic": "string", "activity": "string", "duration": "30 min", "tip": "string" }
+      ]
+    }
+  ],
+  "tips": ["string"]
+}
+Limit to max 7 days. Make it practical and achievable.`;
+
+        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: AI_MODEL,
+            messages: [
+              { role: "system", content: "You are an expert study planner. Return ONLY valid JSON." },
+              { role: "user", content: planPrompt },
+            ],
+            temperature: 0.4, max_tokens: 4000,
+          }),
+        });
+
+        if (!aiResponse.ok) throw new Error(`AI error: ${aiResponse.status}`);
+        const aiData = await aiResponse.json();
+        if (aiData?.usage) logAIUsage(student.id, "exam_prep_study_plan", AI_MODEL, aiData.usage);
+        const content = aiData.choices?.[0]?.message?.content || "";
+        let plan = null;
+        try { const m = content.match(/\{[\s\S]*\}/); if (m) plan = JSON.parse(m[0]); } catch {}
+        if (!plan) throw new Error("Failed to generate study plan");
+
+        return new Response(JSON.stringify({ plan }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "generate_intro_lesson": {
+        const { sessionId, topicName } = body;
+        if (!lovableApiKey) throw new Error("AI not configured");
+
+        const { data: session } = await supabase
+          .from("exam_prep_sessions").select("*").eq("id", sessionId).single();
+
+        const { data: materials } = await supabase
+          .from("exam_prep_materials").select("extracted_content")
+          .eq("session_id", sessionId);
+
+        const context = materials?.map((m: any) => m.extracted_content).join("\n").substring(0, 8000) || "";
+
+        const lessonPrompt = `Create an introductory lesson on "${topicName}" for a Class ${student.class} (${student.board}) student.
+Topic familiarity: ${session?.topic_familiarity || "new"}
+
+Study material context:
+${context}
+
+Return ONLY valid JSON:
+{
+  "lessonTitle": "string",
+  "introduction": "2-3 sentences introducing the topic simply",
+  "sections": [
+    { "heading": "string", "content": "string (2-4 sentences)", "example": "string or null" }
+  ],
+  "keyTakeaways": ["string"],
+  "quickQuestion": { "question": "string", "answer": "string" }
+}
+Keep it simple, engaging, and based on the study material. Max 4 sections.`;
+
+        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: AI_MODEL,
+            messages: [
+              { role: "system", content: "You are an expert teacher. Create simple, engaging lessons. Return ONLY valid JSON." },
+              { role: "user", content: lessonPrompt },
+            ],
+            temperature: 0.5, max_tokens: 3000,
+          }),
+        });
+
+        if (!aiResponse.ok) throw new Error(`AI error: ${aiResponse.status}`);
+        const aiData = await aiResponse.json();
+        if (aiData?.usage) logAIUsage(student.id, "exam_prep_intro_lesson", AI_MODEL, aiData.usage);
+        const content = aiData.choices?.[0]?.message?.content || "";
+        let lesson = null;
+        try { const m = content.match(/\{[\s\S]*\}/); if (m) lesson = JSON.parse(m[0]); } catch {}
+        if (!lesson) throw new Error("Failed to generate lesson");
+
+        return new Response(JSON.stringify({ lesson }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "generate_quiz_flashcards": {
+        const { sessionId, topicName } = body;
+        if (!lovableApiKey) throw new Error("AI not configured");
+
+        const { data: materials } = await supabase
+          .from("exam_prep_materials").select("extracted_content")
+          .eq("session_id", sessionId);
+
+        const context = materials?.map((m: any) => m.extracted_content).join("\n").substring(0, 8000) || "";
+
+        const quizPrompt = `Create a quiz and flashcards on "${topicName || "all topics"}" for a Class ${student.class} (${student.board}) student.
+
+Study material:
+${context}
+
+Return ONLY valid JSON:
+{
+  "quizTitle": "string",
+  "questions": [
+    { "id": 1, "question": "string", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "correctAnswer": "A", "explanation": "string" }
+  ],
+  "flashcards": [
+    { "id": 1, "front": "string (question/term)", "back": "string (answer/definition)" }
+  ]
+}
+Generate exactly 5 quiz MCQs and 6 flashcards. All must be from the study material.`;
+
+        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: AI_MODEL,
+            messages: [
+              { role: "system", content: "You are an expert quiz maker. Return ONLY valid JSON." },
+              { role: "user", content: quizPrompt },
+            ],
+            temperature: 0.4, max_tokens: 4000,
+          }),
+        });
+
+        if (!aiResponse.ok) throw new Error(`AI error: ${aiResponse.status}`);
+        const aiData = await aiResponse.json();
+        if (aiData?.usage) logAIUsage(student.id, "exam_prep_quiz_flashcards", AI_MODEL, aiData.usage);
+        const content = aiData.choices?.[0]?.message?.content || "";
+        let quizData = null;
+        try { const m = content.match(/\{[\s\S]*\}/); if (m) quizData = JSON.parse(m[0]); } catch {}
+        if (!quizData) throw new Error("Failed to generate quiz");
+
+        return new Response(JSON.stringify({ quizData }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         return new Response(JSON.stringify({ error: "Unknown action" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
