@@ -9,6 +9,8 @@ import { ExamPrepAccess, ExamPrepSession } from '@/hooks/useExamPrep';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+type Feature = 'study_plan' | 'tutor' | 'intro_lessons' | 'quizzes';
+
 interface Props {
   access: ExamPrepAccess;
   sessions: ExamPrepSession[];
