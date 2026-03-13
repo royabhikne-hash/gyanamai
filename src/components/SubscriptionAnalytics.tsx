@@ -108,8 +108,8 @@ export const SubscriptionAnalytics = () => {
           <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-2">
             <Users className="w-5 h-5 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-bold">{totals.starterUsers}</p>
-          <p className="text-xs text-muted-foreground">Starter (₹50)</p>
+          <p className="text-2xl font-bold">{totals.basicUsers + totals.starterUsers}</p>
+          <p className="text-xs text-muted-foreground">Basic (₹149)</p>
         </div>
 
         <div className="edu-card p-4 text-center">
