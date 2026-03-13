@@ -736,7 +736,7 @@ const handler = async (req: Request): Promise<Response> => {
               .from('students').select('student_type')
               .eq('id', sub.student_id).maybeSingle();
 
-            const downgradePlan = student?.student_type === 'coaching_student' ? 'starter' : 'basic';
+            const downgradePlan = 'basic';
 
             await admin.from('subscriptions')
               .update({ plan: downgradePlan, end_date: null, is_active: true })

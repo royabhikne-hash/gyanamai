@@ -120,12 +120,12 @@ export const SubscriptionAnalytics = () => {
           <p className="text-xs text-muted-foreground">Pro (₹299)</p>
         </div>
 
-        <div className="edu-card p-4 text-center bg-gradient-to-br from-amber-500/10 to-orange-500/10">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center mx-auto mb-2">
-            <Crown className="w-5 h-5 text-amber-500" />
+        <div className="edu-card p-4 text-center bg-gradient-to-br from-accent/10 to-primary/10">
+          <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center mx-auto mb-2">
+            <IndianRupee className="w-5 h-5 text-accent" />
           </div>
-          <p className="text-2xl font-bold text-amber-600">{totals.proUsers}</p>
-          <p className="text-xs text-muted-foreground">Pro (₹199)</p>
+          <p className="text-2xl font-bold text-accent">₹{totals.estimatedRevenue.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground">Est. Monthly Revenue</p>
         </div>
 
         <div className="edu-card p-4 text-center bg-gradient-to-br from-accent/10 to-primary/10">

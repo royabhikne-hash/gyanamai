@@ -134,7 +134,6 @@ export const useSubscription = (studentId: string | null): UseSubscriptionReturn
       return 'Active Pro';
     }
     
-    if (subscription.plan === 'starter') return 'Starter';
     return 'Basic';
   }, [subscription, pendingRequest]);
 

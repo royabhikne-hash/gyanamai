@@ -75,7 +75,7 @@ export const UpgradePopup = ({ open, onClose, studentId, limitType }: UpgradePop
                   <Crown className="w-4 h-4 text-amber-500" />
                   Pro Plan
                 </h4>
-                <span className="text-sm font-bold text-amber-600">₹199/mo</span>
+                <span className="text-sm font-bold text-amber-600">₹299/mo</span>
               </div>
               <ul className="text-xs text-muted-foreground space-y-1 mb-3">
                 <li>✅ 100 chats/day</li>

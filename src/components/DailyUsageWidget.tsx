@@ -40,9 +40,7 @@ export const DailyUsageWidget = ({ studentId }: DailyUsageWidgetProps) => {
     ? Math.min(100, (subscription.tts_used / subscription.tts_limit) * 100)
     : 0;
 
-  const planLabel = subscription.plan === 'starter' ? 'Starter' 
-    : subscription.plan === 'basic' ? 'Basic' 
-    : 'Pro';
+  const planLabel = subscription.plan === 'basic' ? 'Basic' : 'Pro';
 
   // Calculate expiry
   const daysRemaining = subscription.end_date 

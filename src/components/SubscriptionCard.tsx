@@ -207,7 +207,7 @@ export const SubscriptionCard = ({ studentId, onRefresh }: SubscriptionCardProps
       {/* Price info for Basic */}
       {!isPro && statusLabel === 'Basic' && (
         <p className="text-xs text-muted-foreground mt-2">
-          Basic plan: ₹99/month | Pro plan: ₹199/month
+          Basic plan: ₹149/month | Pro plan: ₹299/month
         </p>
       )}
     </div>
