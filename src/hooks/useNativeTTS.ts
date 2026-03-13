@@ -119,6 +119,26 @@ export const useNativeTTS = () => {
       : (typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis.getVoices() : []);
     if (voices.length === 0) return null;
 
+    // Female name patterns to exclude when looking for male voices
+    const femalePatterns = ['female', 'swara', 'lekha', 'aditi', 'priya', 'neerja', 'sunita', 'kavya', 'woman'];
+
+    const isMaleVoice = (name: string) => {
+      const n = name.toLowerCase();
+      return !femalePatterns.some(p => n.includes(p));
+    };
+
+    // Priority 1: English-India male voice (best for Hinglish content)
+    const enInMale = voices.find(v => {
+      const n = v.name.toLowerCase();
+      return v.lang === 'en-IN' && isMaleVoice(n) && (n.includes('ravi') || n.includes('male') || n.includes('google'));
+    });
+    if (enInMale) return enInMale;
+
+    // Priority 2: Any en-IN male
+    const enInAny = voices.find(v => v.lang === 'en-IN' && isMaleVoice(v.name));
+    if (enInAny) return enInAny;
+
+    // Priority 3: Hindi male voice
     const hindiMaleNames = [
       'google हिन्दी', 'google hindi', 'madhur', 'hemant', 'prabhat',
       'microsoft madhur', 'samsung hindi male', 'hindi male', 'hindi india male', 'male hindi', 'vani'
@@ -126,25 +146,23 @@ export const useNativeTTS = () => {
     const hindiMaleVoice = voices.find(v => {
       const n = v.name.toLowerCase();
       const isHindi = v.lang === 'hi-IN' || v.lang.startsWith('hi');
-      const isMale = hindiMaleNames.some(name => n.includes(name)) ||
-        (!n.includes('female') && !n.includes('swara') && !n.includes('lekha'));
+      const isMale = hindiMaleNames.some(name => n.includes(name)) || isMaleVoice(n);
       return isHindi && isMale;
     });
     if (hindiMaleVoice) return hindiMaleVoice;
 
+    // Priority 4: Any Hindi voice
     const hindiVoice = voices.find(v => v.lang === 'hi-IN');
     if (hindiVoice) return hindiVoice;
-    const hindiAny = voices.find(v => v.lang.startsWith('hi'));
-    if (hindiAny) return hindiAny;
-    const indianEnglishMale = voices.find(v => {
-      const n = v.name.toLowerCase();
-      return v.lang === 'en-IN' && (n.includes('ravi') || n.includes('male') || (!n.includes('female') && !n.includes('heera')));
-    });
-    if (indianEnglishMale) return indianEnglishMale;
-    const indianEnglish = voices.find(v => v.lang === 'en-IN');
-    if (indianEnglish) return indianEnglish;
+
+    // Priority 5: English male voice
+    const englishMale = voices.find(v => v.lang.startsWith('en') && isMaleVoice(v.name));
+    if (englishMale) return englishMale;
+
+    // Priority 6: Any English voice
     const english = voices.find(v => v.lang.startsWith('en'));
     if (english) return english;
+
     return voices[0] || null;
   }, [availableVoices]);
 
