@@ -118,7 +118,21 @@ const ExamPrepDashboard: React.FC<Props> = ({
       <div className="p-4 space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1">Features</h2>
         {menuItems.map((item, i) => (
-          <Card key={i} className="bg-card hover:bg-muted/50 transition-colors cursor-pointer border-border/50">
+          <Card
+            key={i}
+            className="bg-card hover:bg-muted/50 transition-colors cursor-pointer border-border/50"
+            onClick={() => {
+              if (item.needsSession && sessions.length === 0) {
+                toast({ title: 'Create a session first', description: 'Start a new exam prep session to use this feature.', variant: 'destructive' });
+                return;
+              }
+              if (item.feature === 'tutor' && sessions.length > 0) {
+                onOpenChat(sessions[0]);
+              } else {
+                onFeature(item.feature, sessions[0]);
+              }
+            }}
+          >
             <CardContent className="p-4 flex items-center gap-4">
               <div className="p-2.5 rounded-xl bg-muted">
                 <item.icon className={`h-5 w-5 ${item.color}`} />
