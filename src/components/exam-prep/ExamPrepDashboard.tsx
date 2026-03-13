@@ -19,6 +19,7 @@ interface Props {
   onInvite: (sessionId: string) => void;
   onExtract: (sessionId: string, fileUrl: string, fileName: string) => Promise<any>;
   onBack: () => void;
+  onFeature: (feature: Feature, session?: ExamPrepSession) => void;
 }
 
 const ExamPrepDashboard: React.FC<Props> = ({
