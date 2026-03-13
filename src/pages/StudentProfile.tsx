@@ -247,6 +247,12 @@ const StudentProfile = () => {
           </div>
         </div>
 
+        {/* Daily Usage & Subscription Plan */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <DailyUsageWidget studentId={studentData.id} />
+          <SubscriptionCard studentId={studentData.id} onRefresh={loadStudentData} />
+        </div>
+
         {/* School Info (Read-only) */}
         <div className="edu-card p-6 mb-6">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
