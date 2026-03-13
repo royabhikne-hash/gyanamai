@@ -319,7 +319,7 @@ const SchoolDashboard = () => {
             isApproved: student.is_approved,
             createdAt: student.created_at,
             quizAccuracy,
-            studyTimeToday: Math.round(studyTimeToday / 60),
+            studyTimeToday: studyTimeToday,
           };
         });
 
