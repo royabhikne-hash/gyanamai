@@ -450,6 +450,11 @@ Deno.serve(async (req) => {
         .select('student_id, accuracy_percentage')
         .in('student_id', studentIds);
 
+      const { data: quizAttempts } = await supabaseAdmin
+        .from('quiz_attempts')
+        .select('student_id, accuracy_percentage')
+        .in('student_id', studentIds);
+
       const { data: weekSessions } = await supabaseAdmin
         .from('study_sessions')
         .select('student_id')
@@ -458,6 +463,12 @@ Deno.serve(async (req) => {
 
       const studentAccMap: Record<string, { total: number; sum: number; sessions: number }> = {};
       mcqAttempts?.forEach(a => {
+        if (!studentAccMap[a.student_id]) studentAccMap[a.student_id] = { total: 0, sum: 0, sessions: 0 };
+        studentAccMap[a.student_id].total++;
+        studentAccMap[a.student_id].sum += Number(a.accuracy_percentage);
+      });
+      quizAttempts?.forEach(a => {
+        if (a.accuracy_percentage == null) return;
         if (!studentAccMap[a.student_id]) studentAccMap[a.student_id] = { total: 0, sum: 0, sessions: 0 };
         studentAccMap[a.student_id].total++;
         studentAccMap[a.student_id].sum += Number(a.accuracy_percentage);
