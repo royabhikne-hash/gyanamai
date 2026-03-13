@@ -405,6 +405,115 @@ Deno.serve(async (req) => {
       );
     }
 
+    // School Analytics action - handle before generic session_token check
+    if (action === 'get_school_analytics') {
+      const sId = schoolId || school_id;
+      const sToken = sessionToken || session_token;
+      
+      if (!sId || !sToken) {
+        return new Response(
+          JSON.stringify({ error: 'School ID and session token required' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const validation = await validateSessionToken(supabaseAdmin, sToken, 'school');
+      if (!validation.valid) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid session' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get all approved students in this school
+      const { data: students } = await supabaseAdmin
+        .from('students')
+        .select('id, full_name, class')
+        .eq('school_id', sId)
+        .eq('is_approved', true);
+
+      if (!students || students.length === 0) {
+        return new Response(JSON.stringify({
+          topPerformers: [], lowPerformers: [], classAccuracy: [],
+          weeklyEngagement: { activeStudents: 0, totalStudents: 0, avgSessions: 0 },
+        }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const studentIds = students.map(s => s.id);
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+
+      const { data: mcqAttempts } = await supabaseAdmin
+        .from('mcq_attempts')
+        .select('student_id, accuracy_percentage')
+        .in('student_id', studentIds);
+
+      const { data: weekSessions } = await supabaseAdmin
+        .from('study_sessions')
+        .select('student_id')
+        .in('student_id', studentIds)
+        .gte('created_at', weekStart.toISOString());
+
+      const studentAccMap: Record<string, { total: number; sum: number; sessions: number }> = {};
+      mcqAttempts?.forEach(a => {
+        if (!studentAccMap[a.student_id]) studentAccMap[a.student_id] = { total: 0, sum: 0, sessions: 0 };
+        studentAccMap[a.student_id].total++;
+        studentAccMap[a.student_id].sum += Number(a.accuracy_percentage);
+      });
+
+      const weekSessionCounts: Record<string, number> = {};
+      weekSessions?.forEach(s => {
+        weekSessionCounts[s.student_id] = (weekSessionCounts[s.student_id] || 0) + 1;
+      });
+
+      const performerList = students
+        .filter(s => studentAccMap[s.id] && studentAccMap[s.id].total > 0)
+        .map(s => ({
+          name: s.full_name,
+          class: s.class,
+          accuracy: Math.round(studentAccMap[s.id].sum / studentAccMap[s.id].total),
+          sessions: studentAccMap[s.id].total,
+        }))
+        .sort((a, b) => b.accuracy - a.accuracy);
+
+      const topPerformers = performerList.slice(0, 10);
+      const lowPerformers = performerList.filter(p => p.accuracy < 50).slice(0, 10);
+
+      const classMap: Record<string, { sum: number; count: number; students: number }> = {};
+      students.forEach(s => {
+        if (!classMap[s.class]) classMap[s.class] = { sum: 0, count: 0, students: 0 };
+        classMap[s.class].students++;
+        if (studentAccMap[s.id]) {
+          classMap[s.class].sum += Math.round(studentAccMap[s.id].sum / studentAccMap[s.id].total);
+          classMap[s.class].count++;
+        }
+      });
+
+      const classAccuracy = Object.entries(classMap)
+        .map(([className, data]) => ({
+          className,
+          avgAccuracy: data.count > 0 ? Math.round(data.sum / data.count) : 0,
+          studentCount: data.students,
+        }))
+        .sort((a, b) => a.className.localeCompare(b.className));
+
+      const activeStudents = new Set(weekSessions?.map(s => s.student_id)).size;
+      const totalSessions = weekSessions?.length || 0;
+
+      return new Response(JSON.stringify({
+        topPerformers,
+        lowPerformers,
+        classAccuracy,
+        weeklyEngagement: {
+          activeStudents,
+          totalStudents: students.length,
+          avgSessions: students.length > 0 ? Math.round(totalSessions / students.length) : 0,
+        },
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     // Validate session token for list operations
     if (!session_token) {
       return new Response(
