@@ -367,7 +367,7 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        let reason = "Basic/Starter plan";
+        let reason = "Basic plan";
         if (isPro && !hasQuota) reason = "TTS limit reached";
         if (isPro && isExpired) reason = "Subscription expired";
 
