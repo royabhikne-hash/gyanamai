@@ -23,7 +23,7 @@ interface Props {
 }
 
 const ExamPrepDashboard: React.FC<Props> = ({
-  access, sessions, onNewSession, onOpenChat, onInvite, onExtract, onBack,
+  access, sessions, onNewSession, onOpenChat, onInvite, onExtract, onBack, onFeature,
 }) => {
   const { toast } = useToast();
   const [uploading, setUploading] = useState<string | null>(null);
