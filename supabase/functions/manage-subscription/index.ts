@@ -705,7 +705,7 @@ const handler = async (req: Request): Promise<Response> => {
 
           return {
             ...cc, type: 'coaching', totalStudents: totalStudents || 0,
-            starterUsers: starterCount, basicUsers: basicCount, proUsers: proCount, estimatedRevenue
+            starterUsers: 0, basicUsers: basicCount, proUsers: proCount, estimatedRevenue
           };
         }));
 
