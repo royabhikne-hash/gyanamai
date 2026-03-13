@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface Subscription {
   id: string;
   student_id: string;
-  plan: 'starter' | 'basic' | 'pro';
+  plan: 'basic' | 'pro';
   start_date: string;
   end_date: string | null;
   tts_used: number;
