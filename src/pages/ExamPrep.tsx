@@ -8,8 +8,11 @@ import ExamPrepOnboarding from '@/components/exam-prep/ExamPrepOnboarding';
 import ExamPrepDashboard from '@/components/exam-prep/ExamPrepDashboard';
 import ExamPrepChat from '@/components/exam-prep/ExamPrepChat';
 import InviteModal from '@/components/exam-prep/InviteModal';
+import DailyStudyPlan from '@/components/exam-prep/DailyStudyPlan';
+import IntroLessons from '@/components/exam-prep/IntroLessons';
+import QuizzesFlashcards from '@/components/exam-prep/QuizzesFlashcards';
 
-type View = 'loading' | 'dashboard' | 'onboarding' | 'chat';
+type View = 'loading' | 'dashboard' | 'onboarding' | 'chat' | 'study_plan' | 'intro_lessons' | 'quizzes';
 
 const ExamPrep = () => {
   const navigate = useNavigate();
@@ -27,12 +30,10 @@ const ExamPrep = () => {
     open: false, code: null, loading: false,
   });
 
-  // Auth redirect
   useEffect(() => {
     if (!authLoading && !user) navigate('/login');
   }, [authLoading, user, navigate]);
 
-  // Handle invite code in URL
   useEffect(() => {
     const inviteCode = searchParams.get('invite');
     if (inviteCode && access) {
@@ -45,7 +46,6 @@ const ExamPrep = () => {
     }
   }, [searchParams, access]);
 
-  // Set initial view
   useEffect(() => {
     if (!loading && access) setView('dashboard');
   }, [loading, access]);
@@ -92,6 +92,13 @@ const ExamPrep = () => {
     }
   };
 
+  const handleFeature = (feature: string, session?: ExamPrepSession) => {
+    if (session) setActiveSession(session);
+    if (feature === 'study_plan') setView('study_plan');
+    else if (feature === 'intro_lessons') setView('intro_lessons');
+    else if (feature === 'quizzes') setView('quizzes');
+  };
+
   if (view === 'onboarding') {
     return (
       <ExamPrepOnboarding
@@ -115,6 +122,34 @@ const ExamPrep = () => {
     );
   }
 
+  if (view === 'study_plan' && activeSession) {
+    return (
+      <DailyStudyPlan
+        sessionId={activeSession.id}
+        onBack={() => setView('dashboard')}
+      />
+    );
+  }
+
+  if (view === 'intro_lessons' && activeSession) {
+    return (
+      <IntroLessons
+        session={activeSession}
+        onBack={() => setView('dashboard')}
+      />
+    );
+  }
+
+  if (view === 'quizzes' && activeSession) {
+    return (
+      <QuizzesFlashcards
+        sessionId={activeSession.id}
+        topics={activeSession.extracted_topics || []}
+        onBack={() => setView('dashboard')}
+      />
+    );
+  }
+
   return (
     <>
       <ExamPrepDashboard
@@ -131,6 +166,7 @@ const ExamPrep = () => {
         onInvite={handleInvite}
         onExtract={extractContent}
         onBack={() => navigate('/dashboard')}
+        onFeature={handleFeature}
       />
       {inviteModal.open && (
         <InviteModal
