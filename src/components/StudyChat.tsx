@@ -121,11 +121,23 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   const [completedSubjects, setCompletedSubjects] = useState<string[]>([]);
   const [subjectSessions, setSubjectSessions] = useState<Record<string, { messages: ChatMessage[], startedAt: Date }>>({});
   
+  const getRandomGreeting = () => {
+    const greetings = [
+      "Hey! Ready to learn something amazing today? 🚀\n\nJust tell me which subject you want to study - say \"Start Maths\" or \"Start Science\" and let's dive in!",
+      "Welcome back, champ! 🎓\n\nWhat subject are we conquering today? Say \"Start History\" or \"Start English\" - I'm here to help you ace it!",
+      "Good to see you! Let's make today count! 💪\n\nPick your subject - say \"Start Computer\" or \"Start Physics\" and we'll get started right away!",
+      "Hello there, future topper! 🌟\n\nWhich subject do you want to master today? Just say \"Start [Subject]\" and I'll be your personal teacher!",
+      "Hey, welcome! Time to power up your brain! ⚡\n\nTell me what you'd like to study - say \"Start Biology\" or \"Start Chemistry\" and let's begin!",
+      "Hi! Your Study Buddy is ready! 📚\n\nWhat's on the menu today? Say \"Start [Subject]\" to begin, and when you're done, say \"Finish study\" for a quiz!"
+    ];
+    return greetings[Math.floor(Math.random() * greetings.length)];
+  };
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
       role: "assistant",
-      content: "Hello! Welcome back! 🎓\n\nAaj kya padhna hai? Bas subject ka naam bolo aur hum shuru karte hain!\n\nExample: \"Start Science\" ya \"Start Maths\"\n\nJab subject khatam ho jaye toh bolo \"Science done\", aur poori padhai ke baad \"Finish study\" bolke quiz lo! 💪",
+      content: getRandomGreeting(),
       timestamp: new Date(),
     },
   ]);
