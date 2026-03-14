@@ -662,7 +662,7 @@ const StudentDashboard = () => {
                   {recentSessions.map((session) => (
                     <div
                       key={session.id}
-                      className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl"
+                      className="session-row"
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
