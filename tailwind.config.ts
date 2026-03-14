@@ -19,6 +19,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Space Grotesk', 'Inter', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         '2xs': ['0.65rem', { lineHeight: '1rem' }],

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -137,6 +137,7 @@
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold tracking-tight;
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
   }
   h1 { @apply text-3xl font-extrabold; }
   h2 { @apply text-2xl font-bold; }
@@ -157,6 +158,9 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.3);
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.25);
   }
 }
 
@@ -183,17 +187,18 @@
   }
   .glass-card {
     @apply rounded-2xl border border-border transition-all duration-300;
-    background: hsl(var(--card) / 0.85);
-    backdrop-filter: blur(20px) saturate(1.5);
-    box-shadow: var(--shadow-md), inset 0 1px 0 0 hsl(0 0% 100% / 0.1);
+    background: hsl(var(--card) / 0.82);
+    backdrop-filter: blur(24px) saturate(1.6);
+    box-shadow: var(--shadow-md), inset 0 1px 0 0 hsl(0 0% 100% / 0.12), inset 0 0 0 0.5px hsl(0 0% 100% / 0.06);
   }
   .glass-card:hover {
-    box-shadow: var(--shadow-xl), inset 0 1px 0 0 hsl(0 0% 100% / 0.15);
+    box-shadow: var(--shadow-xl), inset 0 1px 0 0 hsl(0 0% 100% / 0.18);
     transform: translateY(-4px);
   }
   .glass-nav {
     @apply backdrop-blur-xl border-border;
-    background: hsl(var(--card) / 0.9);
+    background: hsl(var(--card) / 0.88);
+    backdrop-filter: blur(20px) saturate(1.5);
   }
 
   /* ▸ LIQUID BACKGROUND ─────────────────────────── */
@@ -213,11 +218,14 @@
     animation: liquid-float 8s ease-in-out infinite;
     z-index: 0;
   }
-.liquid-orb-blue {
-  background: radial-gradient(circle, hsl(221 83% 53% / 0.55), hsl(214 95% 70% / 0.22));
-}
+  .liquid-orb-blue {
+    background: radial-gradient(circle, hsl(221 83% 53% / 0.55), hsl(214 95% 70% / 0.22));
+  }
   .liquid-orb-purple {
     background: radial-gradient(circle, hsl(262 68% 52% / 0.3), hsl(262 68% 70% / 0.1));
+  }
+  .liquid-orb-green {
+    background: radial-gradient(circle, hsl(160 84% 39% / 0.25), hsl(160 84% 60% / 0.08));
   }
   @keyframes liquid-float {
     0%, 100% { transform: translate(0, 0) scale(1); }
@@ -266,6 +274,7 @@
   }
   .edu-input:focus {
     @apply ring-2 ring-primary/20 border-primary/50;
+    box-shadow: 0 0 0 4px hsl(var(--primary) / 0.08);
   }
   .edu-label {
     @apply text-sm font-medium text-foreground/80 mb-1.5 block;
@@ -277,13 +286,32 @@
     background-image: var(--gradient-primary);
   }
 
+  .text-gradient-shimmer {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+    background-size: 200% auto;
+    animation: gradient-shift 3s ease-in-out infinite;
+  }
+
+  /* ▸ CARD HOVER LIFT ──────────────────────────── */
+  .card-hover-lift {
+    @apply transition-all duration-300;
+  }
+  .card-hover-lift:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-xl), 0 0 30px hsl(var(--primary) / 0.08);
+  }
+
   /* ▸ CHAT BUBBLES ─────────────────────────────── */
   .chat-bubble-user {
     @apply text-primary-foreground rounded-2xl rounded-br-md px-4 py-3 max-w-[85%] ml-auto;
     background: var(--gradient-primary);
+    box-shadow: 0 2px 12px hsl(var(--primary) / 0.2);
   }
   .chat-bubble-ai {
     @apply bg-muted rounded-2xl rounded-bl-md px-4 py-3 max-w-[85%] text-foreground;
+    border-left: 3px solid hsl(var(--primary) / 0.3);
+    box-shadow: 0 1px 6px hsl(var(--foreground) / 0.04);
   }
 
   /* ▸ QUIZ OPTIONS ─────────────────────────────── */
@@ -354,6 +382,41 @@
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
+
+  /* ▸ FEATURE CARD ─────────────────────────────── */
+  .feature-card {
+    @apply bg-card rounded-2xl border border-border p-6 transition-all duration-300;
+    box-shadow: var(--shadow-sm);
+  }
+  .feature-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-6px);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+
+  /* ▸ STEP CONNECTOR LINE ──────────────────────── */
+  .step-connector {
+    background: linear-gradient(90deg, hsl(var(--primary) / 0.3), hsl(var(--accent) / 0.3), hsl(var(--primary) / 0.3));
+    height: 2px;
+  }
+
+  /* ▸ STATS SECTION GLASS ──────────────────────── */
+  .stats-glass {
+    background: hsl(var(--card) / 0.6);
+    backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  /* ▸ SESSION ROW ──────────────────────────────── */
+  .session-row {
+    @apply flex items-center justify-between p-4 rounded-xl transition-all duration-200;
+    background: hsl(var(--secondary) / 0.3);
+  }
+  .session-row:hover {
+    background: hsl(var(--secondary) / 0.5);
+    transform: translateX(4px);
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 /* ── UTILITIES ─────────────────────────────────── */
@@ -402,4 +465,14 @@
   .voice-ring-3 { width: 20px; height: 20px; animation-delay: 1s; }
   @keyframes voice-dot-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.8; } }
   @keyframes voice-ring-expand { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2.5); opacity: 0; } }
+
+  @keyframes gradient-shift {
+    0% { background-position: 0% center; }
+    50% { background-position: 100% center; }
+    100% { background-position: 0% center; }
+  }
+
+  .font-display {
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  }
 }
