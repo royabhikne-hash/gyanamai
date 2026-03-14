@@ -357,9 +357,13 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen hero-gradient">
+    <div className="min-h-screen liquid-bg relative overflow-hidden">
+      {/* Liquid orbs */}
+      <div className="liquid-orb liquid-orb-blue w-[350px] h-[350px] -top-28 -right-28 opacity-25" />
+      <div className="liquid-orb liquid-orb-purple w-[250px] h-[250px] bottom-20 -left-16 opacity-20" style={{ animationDelay: '4s' }} />
+
       {/* Header */}
-      <header className="container mx-auto py-4 px-3 sm:px-4">
+      <header className="container mx-auto py-4 px-3 sm:px-4 relative z-10">
         <Link to="/" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm">
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Home</span>
@@ -367,16 +371,16 @@ const Signup = () => {
       </header>
 
       {/* Signup Form */}
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 relative z-10">
         <div className="max-w-2xl mx-auto">
-          <div className="edu-card p-4 sm:p-6 md:p-8">
+          <div className="glass-card p-4 sm:p-6 md:p-8">
             <div className="text-center mb-6 sm:mb-8">
               <img 
                 src="/logo.png" 
                 alt="Study Buddy AI" 
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl mx-auto mb-3 sm:mb-4 object-contain"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl mx-auto mb-3 sm:mb-4 object-contain drop-shadow-lg"
               />
-              <h1 className="text-xl sm:text-2xl font-bold">Create Your Account</h1>
+              <h1 className="text-xl sm:text-2xl font-bold font-display">Create Your Account</h1>
               <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Join Study Buddy AI and start improving</p>
             </div>
 
