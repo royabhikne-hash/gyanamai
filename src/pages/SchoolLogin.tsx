@@ -90,10 +90,10 @@ const SchoolLogin = () => {
         });
 
         if (error) {
-          if (attempt === 1) {
-            console.warn("School login attempt 1 failed, retrying...", error);
-            await new Promise(r => setTimeout(r, 1500));
-            return tryLogin(2);
+          if (attempt < 3) {
+            console.warn(`School login attempt ${attempt} failed, retrying...`, error);
+            await new Promise(r => setTimeout(r, 2000));
+            return tryLogin(attempt + 1);
           }
           console.error("Function invoke error:", error);
           toast({
@@ -159,9 +159,9 @@ const SchoolLogin = () => {
         }
       } catch (error) {
         console.error("Login error:", error);
-        if (attempt === 1) {
-          await new Promise(r => setTimeout(r, 1500));
-          return tryLogin(2);
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 2000));
+          return tryLogin(attempt + 1);
         }
         toast({
           title: t('msg.error'),
