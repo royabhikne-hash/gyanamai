@@ -167,6 +167,7 @@ const ExamPrep = () => {
         onExtract={extractContent}
         onBack={() => navigate('/dashboard')}
         onFeature={handleFeature}
+        onRefresh={refresh}
       />
       {inviteModal.open && (
         <InviteModal
