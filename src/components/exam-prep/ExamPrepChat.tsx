@@ -63,7 +63,7 @@ interface SpeechRecognitionType {
 }
 
 const ExamPrepChat: React.FC<Props> = ({ session, studentName, onSendMessage, onGenerateExam, onEvaluateExam, onBack }) => {
-  const hasMaterials = (session.exam_prep_materials?.length || 0) > 0;
+  const hasMaterials = (session.exam_prep_materials?.length || 0) > 0 || (session.extracted_topics?.length || 0) > 0;
   const hasExtractedTopics = (session.extracted_topics?.length || 0) > 0;
   
   const getInitialMessages = (): ChatMessage[] => {
