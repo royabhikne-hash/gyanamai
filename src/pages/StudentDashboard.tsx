@@ -149,38 +149,38 @@ const StudentDashboard = () => {
         setSchoolName((student.schools as any)?.name || "Your School");
         setStudentDistrict(student.district || "Your District");
         
-        // Load ranking data if approved
+        // Only load data if approved - run in parallel for speed
         if (student.is_approved) {
-          loadRankingData(student.id);
-        }
-        
-        // Only load sessions if approved
-        if (student.is_approved) {
-          // Fetch sessions with quiz attempts to get actual scores
-          const { data: sessions } = await supabase
-            .from("study_sessions")
-            .select("*, quiz_attempts(accuracy_percentage)")
-            .eq("student_id", student.id)
-            .not("time_spent", "eq", 0)  // Only get sessions that were actually completed
-            .order("created_at", { ascending: false });
+          const [sessionsResult, weeklyTestsResult] = await Promise.all([
+            supabase
+              .from("study_sessions")
+              .select("*, quiz_attempts(accuracy_percentage)")
+              .eq("student_id", student.id)
+              .not("time_spent", "eq", 0)
+              .order("created_at", { ascending: false })
+              .limit(200),
+            supabase
+              .from("weekly_tests")
+              .select("accuracy_percentage, weak_subjects, week_start, week_end, created_at")
+              .eq("student_id", student.id)
+              .order("created_at", { ascending: true })
+              .limit(52),
+          ]);
 
+          // Process sessions
+          const sessions = sessionsResult.data;
           if (sessions) {
             const today = new Date();
             const todayStr = today.toDateString();
             
-            // Get the start of this week (Sunday = 0)
             const currentDay = today.getDay();
             const weekStart = new Date(today);
             weekStart.setDate(today.getDate() - currentDay);
             weekStart.setHours(0, 0, 0, 0);
             
-            // Filter today's sessions
             const todaySessions = sessions.filter(s => new Date(s.created_at).toDateString() === todayStr);
-            
-            // Filter this week's sessions (since last Sunday)
             const weekSessions = sessions.filter(s => new Date(s.created_at) >= weekStart);
             
-            // Calculate scores helper
             const getAvgScore = (sessionList: typeof sessions) => {
               const scores = sessionList.map(s => {
                 const quizAttempts = s.quiz_attempts as { accuracy_percentage: number | null }[] | null;
@@ -194,7 +194,6 @@ const StudentDashboard = () => {
                 : 0;
             };
             
-            // Today stats (refresh every 24 hours)
             setTodayStats({
               sessions: todaySessions.length,
               minutes: todaySessions.reduce((acc, s) => acc + (s.time_spent || 0), 0),
@@ -202,7 +201,6 @@ const StudentDashboard = () => {
               studied: todaySessions.length > 0,
             });
             
-            // Week stats (refresh every Sunday)
             const uniqueDays = new Set(weekSessions.map(s => new Date(s.created_at).toDateString())).size;
             setWeekStats({
               sessions: weekSessions.length,
@@ -211,7 +209,6 @@ const StudentDashboard = () => {
               daysStudied: uniqueDays,
             });
 
-            // Recent sessions
             const recent = sessions.slice(0, 5).map((s) => {
               const quizAttempts = s.quiz_attempts as { accuracy_percentage: number | null }[] | null;
               const score = (quizAttempts && quizAttempts.length > 0 && quizAttempts[0].accuracy_percentage !== null)
@@ -229,18 +226,12 @@ const StudentDashboard = () => {
             });
             setRecentSessions(recent);
 
-            // Fetch weekly tests for WPS
-            const { data: weeklyTestsData } = await supabase
-              .from("weekly_tests")
-              .select("accuracy_percentage, weak_subjects, week_start, week_end, created_at")
-              .eq("student_id", student.id)
-              .order("created_at", { ascending: true });
-
+            // Process weekly tests
+            const weeklyTestsData = weeklyTestsResult.data;
             if (weeklyTestsData && weeklyTestsData.length > 0) {
               const latestTest = weeklyTestsData[weeklyTestsData.length - 1];
               setLatestTestAccuracy(latestTest.accuracy_percentage);
 
-              // Calculate WPS for latest test
               const accuracy = latestTest.accuracy_percentage;
               const prevTest = weeklyTestsData.length > 1 ? weeklyTestsData[weeklyTestsData.length - 2] : null;
               const improvement = prevTest ? Math.max(0, accuracy - prevTest.accuracy_percentage) : 0;
@@ -248,7 +239,6 @@ const StudentDashboard = () => {
               const prevWeak = prevTest ? (prevTest.weak_subjects || []).length : currentWeak;
               const weakReduction = prevWeak > 0 ? Math.max(0, ((prevWeak - currentWeak) / prevWeak) * 100) : (currentWeak === 0 ? 100 : 0);
               
-              // Consistency from sessions this week
               const testWeekStart = new Date(latestTest.week_start);
               const testWeekEnd = new Date(latestTest.week_end);
               const testWeekSessions = sessions?.filter(s => {
@@ -264,6 +254,9 @@ const StudentDashboard = () => {
               setWeeklyWPS(wps);
             }
           }
+
+          // Load rankings in parallel (non-blocking)
+          loadRankingData(student.id);
         }
         setIsDataLoading(false);
       } else {
@@ -273,6 +266,7 @@ const StudentDashboard = () => {
       }
     } catch (error) {
       console.error("Error loading student data:", error);
+      setIsDataLoading(false);
     }
   };
 

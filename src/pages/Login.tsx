@@ -88,21 +88,26 @@ const Login = () => {
     
     setIsLoading(true);
 
-    // Global timeout - never let loading stay more than 15 seconds
+    // Global timeout - 30s to handle cold-start backends + slow mobile networks
     const globalTimeout = setTimeout(() => {
       if (mountedRef.current) {
         setIsLoading(false);
+        setShowAuthRepair(true);
         toast({
           title: language === 'en' ? "Login Timeout" : "लॉगिन टाइमआउट",
           description: language === 'en' ? "Server took too long. Please try again." : "सर्वर ने बहुत समय लिया। कृपया फिर से कोशिश करें।",
           variant: "destructive",
         });
       }
-    }, 15000);
+    }, 30000);
 
     const trySignIn = async (attempt = 1): Promise<void> => {
       try {
+        const controller = new AbortController();
+        const attemptTimeout = setTimeout(() => controller.abort(), 12000);
+        
         const { error } = await signIn(email, password);
+        clearTimeout(attemptTimeout);
         
         if (!mountedRef.current) return;
         
@@ -116,26 +121,33 @@ const Login = () => {
                              msg.includes('timed out') ||
                              msg.includes('Failed to fetch') ||
                              msg.includes('NetworkError') ||
-                             msg.includes('network');
+                             msg.includes('network') ||
+                             msg.includes('CORS') ||
+                             msg.includes('Load failed');
           
           if (isTransient) {
-            await new Promise(r => setTimeout(r, 1500));
+            // Wait longer on each retry
+            const delay = attempt === 1 ? 2000 : 3000;
+            await new Promise(r => setTimeout(r, delay));
             if (!mountedRef.current) return;
+            
+            // Check if session was actually created despite network error
             const { data } = await supabase.auth.getSession();
             if (data.session) {
               clearTimeout(globalTimeout);
               await checkApprovalAndNavigate(data.session.user.id);
               return;
             }
-            if (attempt === 1) {
-              console.warn("Student login attempt 1 failed (transient), retrying...");
-              return trySignIn(2);
+            if (attempt < 3) {
+              console.warn(`Student login attempt ${attempt} failed (transient), retrying...`);
+              return trySignIn(attempt + 1);
             }
             clearTimeout(globalTimeout);
             setIsLoading(false);
+            setShowAuthRepair(true);
             toast({
               title: language === 'en' ? "Connection Error" : "कनेक्शन एरर",
-              description: language === 'en' ? "Could not connect to server. Check your internet." : "सर्वर से कनेक्ट नहीं हो पाया।",
+              description: language === 'en' ? "Could not connect to server. Check your internet and try again." : "सर्वर से कनेक्ट नहीं हो पाया। इंटरनेट चेक करें।",
               variant: "destructive",
             });
             return;
@@ -155,10 +167,10 @@ const Login = () => {
               variant: "destructive",
             });
           } else {
-            if (attempt === 1) {
-              console.warn("Student login attempt 1 failed, retrying...", msg);
-              await new Promise(r => setTimeout(r, 1500));
-              return trySignIn(2);
+            if (attempt < 3) {
+              console.warn(`Student login attempt ${attempt} failed, retrying...`, msg);
+              await new Promise(r => setTimeout(r, 2000));
+              return trySignIn(attempt + 1);
             }
             setShowAuthRepair(true);
             toast({
@@ -184,10 +196,10 @@ const Login = () => {
       } catch (error) {
         if (!mountedRef.current) return;
         console.error("Login error:", error);
-        if (attempt === 1) {
-          console.warn("Student login catch, retrying...");
-          await new Promise(r => setTimeout(r, 1500));
-          return trySignIn(2);
+        if (attempt < 3) {
+          console.warn(`Student login catch attempt ${attempt}, retrying...`);
+          await new Promise(r => setTimeout(r, 2000));
+          return trySignIn(attempt + 1);
         }
         clearTimeout(globalTimeout);
         setShowAuthRepair(true);
@@ -213,26 +225,28 @@ const Login = () => {
       
       if (!mountedRef.current) return;
       
+      // Always navigate to dashboard - let the dashboard handle pending/rejected UI
+      // This prevents the UX deadlock where unapproved students get logged out
       if (student && !student.is_approved) {
         toast({
           title: language === 'en' ? "Approval Pending ⏳" : "अप्रूवल पेंडिंग ⏳",
           description: language === 'en' 
-            ? "Your account is waiting for approval." 
+            ? "Your account is waiting for approval. You can check your status." 
             : "आपका अकाउंट अप्रूवल का इंतज़ार कर रहा है।",
-          variant: "destructive",
         });
-        await supabase.auth.signOut();
-        setIsLoading(false);
-        return;
+      } else {
+        toast({
+          title: language === 'en' ? "Welcome back!" : "वापस स्वागत है!",
+          description: language === 'en' ? "Let's start studying." : "चलो पढ़ाई करते हैं।",
+        });
       }
-
-      toast({
-        title: language === 'en' ? "Welcome back!" : "वापस स्वागत है!",
-        description: language === 'en' ? "Let's start studying." : "चलो पढ़ाई करते हैं।",
-      });
+      
       navigate("/dashboard", { replace: true });
     } catch {
-      if (mountedRef.current) setIsLoading(false);
+      if (mountedRef.current) {
+        // Even on error, navigate to dashboard - let it handle
+        navigate("/dashboard", { replace: true });
+      }
     }
   };
 
