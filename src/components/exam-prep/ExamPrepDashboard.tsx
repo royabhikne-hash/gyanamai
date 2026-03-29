@@ -20,10 +20,11 @@ interface Props {
   onExtract: (sessionId: string, fileUrl: string, fileName: string) => Promise<any>;
   onBack: () => void;
   onFeature: (feature: Feature, session?: ExamPrepSession) => void;
+  onRefresh?: () => void;
 }
 
 const ExamPrepDashboard: React.FC<Props> = ({
-  access, sessions, onNewSession, onOpenChat, onInvite, onExtract, onBack, onFeature,
+  access, sessions, onNewSession, onOpenChat, onInvite, onExtract, onBack, onFeature, onRefresh,
 }) => {
   const { toast } = useToast();
   const [uploading, setUploading] = useState<string | null>(null);
@@ -62,6 +63,7 @@ const ExamPrepDashboard: React.FC<Props> = ({
       setExtracting(sessionId);
       await onExtract(sessionId, filePath, file.name);
       toast({ title: 'Content extracted!', description: 'AI has analyzed your material' });
+      onRefresh?.();
     } catch (err: any) {
       toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
     } finally {
