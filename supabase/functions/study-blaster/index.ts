@@ -327,41 +327,29 @@ ${combinedContent.substring(0, 60000)}`;
 
     } else if (action === "extract_file") {
       // Extract content from base64 file using multimodal Gemini
-      const { fileName, fileType, fileBase64 } = await Promise.resolve({ 
-        fileName: (await Promise.resolve(req)).headers.get("x-file-name") || "document",
-        fileType: "application/pdf",
-        fileBase64: ""
-      }).catch(() => ({ fileName: "document", fileType: "application/pdf", fileBase64: "" }));
+      if (!fileBase64 || !fileName) {
+        return new Response(JSON.stringify({ error: "Missing file data" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
 
-      // Get these from the already-parsed body
-      const bodyData = { fileName: (req as any).__parsedBody?.fileName, fileType: (req as any).__parsedBody?.fileType, fileBase64: (req as any).__parsedBody?.fileBase64 };
-      
-      // Since body was already consumed, we need to get fileBase64 from the initial parse
-      // The initial parse at line 27 already extracted all fields
-      const actualFileName = (req as any).__fileName || "document";
-      const actualFileType = (req as any).__fileType || "application/pdf"; 
-      const actualFileBase64 = (req as any).__fileBase64 || "";
+      const extractPrompt = `Extract ALL text content from this uploaded document "${fileName}". Preserve all important information, formulas, definitions, key points, headings, and structure. Return the full extracted text content in a well-organized format.`;
 
-      const extractPrompt = `Extract ALL text content from this document. Preserve all important information, formulas, definitions, key points, and structure. Return the full extracted text content.`;
-
+      // Use multimodal with inline_data for the file
+      const mimeType = fileType || "application/pdf";
       const aiMessages: any[] = [
-        { role: "system", content: "You are an expert document content extractor. Extract all educational text content from documents, preserving structure, formulas, and key information." },
+        { role: "system", content: "You are an expert document content extractor. Extract all educational text content from documents, preserving structure, formulas, and key information. Return plain text only." },
         { 
           role: "user", 
           content: [
+            { 
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${fileBase64}` }
+            },
             { type: "text", text: extractPrompt },
           ]
         },
       ];
-
-      // For PDF files, we can describe what was uploaded since Gemini may not support inline PDF
-      // Instead, we'll try sending as text extraction request
-      if (actualFileBase64) {
-        aiMessages[1] = {
-          role: "user",
-          content: extractPrompt + `\n\nDocument filename: ${actualFileName}\nThis is a ${actualFileType} document. Please extract all text content from it.`,
-        };
-      }
 
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -375,7 +363,10 @@ ${combinedContent.substring(0, 60000)}`;
         }),
       });
 
-      if (!aiResponse.ok) throw new Error("Failed to extract file content");
+      if (!aiResponse.ok) {
+        console.error("AI extract_file error:", aiResponse.status, await aiResponse.text());
+        throw new Error("Failed to extract file content");
+      }
 
       const aiData = await aiResponse.json();
       const extractedContent = aiData.choices?.[0]?.message?.content || "";
