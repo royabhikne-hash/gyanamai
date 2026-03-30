@@ -1,64 +1,95 @@
 
 
-# Progress Tracking Redesign — Minimal & Data-Focused
+# Real Progress Tracking System — Topic-Level Mastery
 
-## Current Problems
-- Too many charts crammed together (6 charts + stat cards + lists)
-- Visual noise — gradients, highlights, rings everywhere
-- "AI Feedback" section has a branding bug ("AI Gyanam AI")
-- Mobile experience is cluttered with 6-column stat grids
-- No clear visual hierarchy — everything competes for attention
+## Problem
+Current tracking is shallow:
+- Weak/strong analysis is only at **subject level** from weekly tests
+- Study session topic-level data (weak_areas, strong_areas from AI) is **never shown** on the progress page
+- MCQ attempts and quiz attempts data is **not combined** into the progress view
+- Student gets no actionable topic-level guidance
 
-## Design Approach
-Clean, Google Analytics-inspired layout. White/neutral cards, clear typography, sparse use of color only for key indicators. Remove decorative gradients, reduce chart count, prioritize scannable data.
+## Solution
+Build a **topic-level mastery system** that combines ALL data sources into one unified progress view with real, actionable insights.
+
+## Data Sources (already exist, just not aggregated)
+
+```text
+┌─────────────────────┐   ┌──────────────────┐   ┌──────────────────┐
+│  study_sessions     │   │  quiz_attempts   │   │  weekly_tests    │
+│  - weak_areas[]     │   │  - accuracy %    │   │  - weak_subjects │
+│  - strong_areas[]   │   │  - session_id    │   │  - strong_subj   │
+│  - understanding    │   │  - correct_count │   │  - accuracy %    │
+│  - subject/topic    │   └──────────────────┘   └──────────────────┘
+└─────────────────────┘
+         │                        │                       │
+         └────────────────────────┴───────────────────────┘
+                              │
+                    ┌─────────────────────┐
+                    │  NEW: topic_mastery  │
+                    │  - topic + subject   │
+                    │  - mastery_score     │
+                    │  - attempt_count     │
+                    │  - last_practiced    │
+                    │  - trend (improving/ │
+                    │    declining/stable) │
+                    └─────────────────────┘
+```
 
 ## Plan
 
-### 1. Simplify Header
-- Remove gradient icon box and grade badge from header
-- Clean single-line header: back arrow + "Progress" title + PDF download button
-- Student name and class as subtitle text only
+### 1. Create `topic_mastery` Table
+New table to aggregate topic-level performance:
+- `student_id`, `subject`, `topic`, `mastery_score` (0-100), `attempt_count`, `last_practiced`, `trend` (improving/declining/stable), `source` (study_session/quiz/weekly_test)
+- RLS: students can only view/update their own data
+- Updated automatically when sessions end or tests complete
 
-### 2. Redesign Hero Section — Key Metrics Row
-Replace the WPS hero circle + 6 stat cards with a single clean row of 4 key metrics:
-- **WPS Score** (big number with small trend arrow)
-- **Avg Accuracy** (percentage)
-- **Study Time** (total hours)
-- **Streak** (days)
+### 2. Create Edge Function: `update-topic-mastery`
+Runs after each study session or test completion. Aggregates:
+- Study session AI analysis (weak_areas → low mastery, strong_areas → high mastery)
+- Quiz attempt accuracy per topic
+- Weekly test subject performance
+- Calculates trend by comparing last 3 data points
 
-Each metric: large number, small label below, minimal card with thin border. No gradients, no colored icon backgrounds.
+### 3. Redesign Progress Page with Real Data
+Replace current static aggregation with live topic mastery data:
 
-### 3. Reduce Charts to 3 Essential Views
-Remove radar chart, pie chart, and composed chart. Keep only:
-- **WPS + Accuracy Trend** (area chart, spanning full width) — clean single chart with two lines
-- **Subject Performance** (horizontal bar chart) — half width
-- **Weekly Study Pattern** (bar chart by day) — half width
+**Section 1: Key Metrics** (keep current 4 cards — they work)
 
-All charts: remove grid lines, use subtle axis labels, monochrome primary color with one accent.
+**Section 2: Topic Mastery Map** (NEW — replaces Subject Health)
+- List of ALL topics the student has studied
+- Each topic shows: mastery score bar (0-100), attempt count, trend arrow
+- Color-coded: Red (0-40), Yellow (40-70), Green (70-100)
+- Sorted: weakest first (so student sees what to focus on)
 
-### 4. Simplify Strong/Weak Subjects
-Replace the two separate colored cards with a single "Subject Health" section:
-- Simple list with green/red dot indicators and subject name
-- No numbered circles, no background colors on rows
+**Section 3: Weak Topics Action Card** (NEW)
+- Top 5 weakest topics with "Study Now" button linking to StudyChat with that topic pre-selected
+- Shows how many times attempted + current score
+- Real actionable guidance
 
-### 5. Clean Test History
-- Keep the test history list but simplify each row
-- Remove WPS per-test display (keep only accuracy + correct/total)
-- Cleaner date formatting
+**Section 4: Charts** (keep WPS Trend + Study Pattern, remove Subject Performance bar)
 
-### 6. Fix & Simplify AI Feedback
-- Fix "AI Gyanam AI" → "Gyanam AI"
-- Reduce to max 3 feedback items
-- Simple text list with bullet points instead of numbered circles
+**Section 5: Recent Activity Timeline** (replaces Test History)
+- Combined feed: study sessions + quizzes + weekly tests
+- Shows what was studied, score achieved, topics covered
+- Last 10 activities
 
-### 7. Mobile Optimization
-- 2-column metric grid on mobile (instead of 6)
-- Charts stack vertically and fill width
-- Generous spacing between sections
+**Section 6: AI Insights** (improved)
+- Use actual topic mastery data for insights
+- "Your weakest topic is X — studied 3 times but mastery still at 35%"
+- "Y improved from 40% to 78% — great progress!"
 
-## Files to Edit
-- `src/pages/StudentProgress.tsx` — full UI rewrite of the render section + StatCard component
+### 4. Call `update-topic-mastery` After Sessions & Tests
+- In `StudyPage.tsx` `handleEndStudy`: call the edge function after saving session
+- In `WeeklyTest.tsx` after test submission: call the edge function
 
-## No Backend Changes
-All data fetching and calculations remain the same. This is a pure UI redesign.
+## Files to Create/Edit
+- **New migration**: Create `topic_mastery` table with RLS
+- **New edge function**: `supabase/functions/update-topic-mastery/index.ts`
+- **Edit**: `src/pages/StudentProgress.tsx` — new UI with topic mastery data
+- **Edit**: `src/pages/StudyPage.tsx` — trigger mastery update after session
+- **Edit**: `src/pages/WeeklyTest.tsx` — trigger mastery update after test
+
+## No Breaking Changes
+All existing data stays. New table is populated going forward + can backfill from existing study_sessions data.
 
