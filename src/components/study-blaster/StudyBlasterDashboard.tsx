@@ -87,36 +87,36 @@ const StudyBlasterDashboard = ({ projectId, studentId, onBack }: Props) => {
   const faqs = (project.ai_faqs as any[]) || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
+        <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 rounded-xl">
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <div className="flex-1">
-          <h2 className="text-xl font-bold text-foreground">{project.title}</h2>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg sm:text-xl font-bold text-foreground truncate">{project.title}</h2>
           {project.description && (
-            <p className="text-sm text-muted-foreground">{project.description}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">{project.description}</p>
           )}
         </div>
         {daysLeft !== null && (
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-medium shrink-0 ${
             daysLeft <= 3 ? "bg-destructive/10 text-destructive" :
             daysLeft <= 7 ? "bg-yellow-500/10 text-yellow-600" :
             "bg-accent/10 text-accent"
           }`}>
-            <Target className="w-3.5 h-3.5" />
-            {daysLeft > 0 ? `${daysLeft} days left` : daysLeft === 0 ? "Due today!" : "Overdue"}
+            <Target className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            {daysLeft > 0 ? `${daysLeft}d left` : daysLeft === 0 ? "Due today!" : "Overdue"}
           </div>
         )}
       </div>
 
       <Tabs defaultValue="sources" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 glass-card h-auto p-1">
-          <TabsTrigger value="sources" className="text-xs py-2 gap-1"><FileText className="w-3.5 h-3.5" /> Sources</TabsTrigger>
-          <TabsTrigger value="guide" className="text-xs py-2 gap-1"><BookOpen className="w-3.5 h-3.5" /> Guide</TabsTrigger>
-          <TabsTrigger value="faqs" className="text-xs py-2 gap-1"><HelpCircle className="w-3.5 h-3.5" /> FAQs</TabsTrigger>
-          <TabsTrigger value="chat" className="text-xs py-2 gap-1"><Sparkles className="w-3.5 h-3.5" /> Chat</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 glass-card h-auto p-1 gap-0.5">
+          <TabsTrigger value="sources" className="text-[10px] sm:text-xs py-2 gap-1 rounded-xl data-[state=active]:shadow-sm"><FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden sm:inline">Sources</span><span className="sm:hidden">Src</span></TabsTrigger>
+          <TabsTrigger value="guide" className="text-[10px] sm:text-xs py-2 gap-1 rounded-xl data-[state=active]:shadow-sm"><BookOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Guide</TabsTrigger>
+          <TabsTrigger value="faqs" className="text-[10px] sm:text-xs py-2 gap-1 rounded-xl data-[state=active]:shadow-sm"><HelpCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> FAQs</TabsTrigger>
+          <TabsTrigger value="chat" className="text-[10px] sm:text-xs py-2 gap-1 rounded-xl data-[state=active]:shadow-sm"><Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Chat</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sources" className="mt-4 space-y-4">
@@ -129,7 +129,7 @@ const StudyBlasterDashboard = ({ projectId, studentId, onBack }: Props) => {
           <Button
             onClick={handleAnalyze}
             disabled={analyzing || sources.length === 0}
-            className="w-full gap-2"
+            className="w-full gap-2 rounded-xl"
             size="lg"
           >
             {analyzing ? (
@@ -140,23 +140,22 @@ const StudyBlasterDashboard = ({ projectId, studentId, onBack }: Props) => {
           </Button>
         </TabsContent>
 
-        <TabsContent value="guide" className="mt-4 space-y-6">
+        <TabsContent value="guide" className="mt-4 space-y-4 sm:space-y-6">
           {project.processing_status !== "completed" ? (
-            <div className="text-center py-12 glass-card rounded-2xl">
-              <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-              <p className="text-muted-foreground">Add sources and click "Analyze" to generate your study guide</p>
+            <div className="text-center py-10 sm:py-12 glass-card rounded-2xl">
+              <BookOpen className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground px-4">Add sources and click "Analyze" to generate your study guide</p>
             </div>
           ) : (
             <>
-              {/* Key Concepts */}
               {keyConcepts.length > 0 && (
-                <div className="glass-card rounded-2xl p-5 border border-primary/10">
-                  <h3 className="font-bold text-foreground flex items-center gap-2 mb-3">
+                <div className="glass-card rounded-2xl p-4 sm:p-5 border border-primary/10">
+                  <h3 className="font-bold text-foreground flex items-center gap-2 mb-3 text-sm sm:text-base">
                     <Sparkles className="w-4 h-4 text-primary" /> Key Concepts
                   </h3>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     {keyConcepts.map((concept, i) => (
-                      <span key={i} className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                      <span key={i} className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium bg-primary/10 text-primary border border-primary/20">
                         {concept}
                       </span>
                     ))}
@@ -164,49 +163,46 @@ const StudyBlasterDashboard = ({ projectId, studentId, onBack }: Props) => {
                 </div>
               )}
 
-              {/* Summary */}
               {project.ai_summary && (
-                <div className="glass-card rounded-2xl p-5 border border-primary/10">
-                  <h3 className="font-bold text-foreground flex items-center gap-2 mb-3">
+                <div className="glass-card rounded-2xl p-4 sm:p-5 border border-primary/10">
+                  <h3 className="font-bold text-foreground flex items-center gap-2 mb-3 text-sm sm:text-base">
                     <FileText className="w-4 h-4 text-primary" /> Summary
                   </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
                     {project.ai_summary}
                   </p>
                 </div>
               )}
 
-              {/* Study Guide */}
               {studyGuide.length > 0 && (
-                <div className="glass-card rounded-2xl p-5 border border-primary/10">
-                  <h3 className="font-bold text-foreground flex items-center gap-2 mb-3">
+                <div className="glass-card rounded-2xl p-4 sm:p-5 border border-primary/10">
+                  <h3 className="font-bold text-foreground flex items-center gap-2 mb-3 text-sm sm:text-base">
                     <BookOpen className="w-4 h-4 text-primary" /> Study Guide
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-2.5 sm:space-y-3">
                     {studyGuide.map((item, i) => (
                       <div key={i} className="p-3 rounded-xl bg-background/50 border border-border/50">
-                        <p className="font-semibold text-sm text-foreground">{item.topic}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{item.explanation}</p>
+                        <p className="font-semibold text-xs sm:text-sm text-foreground">{item.topic}</p>
+                        <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 leading-relaxed">{item.explanation}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Target Date Guidance */}
               {project.target_date && daysLeft !== null && (
-                <div className={`glass-card rounded-2xl p-5 border ${
+                <div className={`glass-card rounded-2xl p-4 sm:p-5 border ${
                   daysLeft <= 3 ? "border-destructive/20" : "border-accent/20"
                 }`}>
-                  <h3 className="font-bold text-foreground flex items-center gap-2 mb-2">
+                  <h3 className="font-bold text-foreground flex items-center gap-2 mb-2 text-sm sm:text-base">
                     <Calendar className="w-4 h-4 text-primary" /> Study Timeline
                   </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Target: {format(new Date(project.target_date), "MMMM dd, yyyy")} ({daysLeft > 0 ? `${daysLeft} days remaining` : "Due today!"})
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Target: {format(new Date(project.target_date), "MMM dd, yyyy")} ({daysLeft > 0 ? `${daysLeft} days remaining` : "Due today!"})
                   </p>
                   {studyGuide.length > 0 && daysLeft > 0 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      📋 Recommendation: Cover ~{Math.ceil(studyGuide.length / Math.max(daysLeft, 1))} topic(s) per day to finish on time.
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-2">
+                      📋 Cover ~{Math.ceil(studyGuide.length / Math.max(daysLeft, 1))} topic(s) per day to finish on time.
                     </p>
                   )}
                 </div>
@@ -217,19 +213,19 @@ const StudyBlasterDashboard = ({ projectId, studentId, onBack }: Props) => {
 
         <TabsContent value="faqs" className="mt-4">
           {faqs.length === 0 ? (
-            <div className="text-center py-12 glass-card rounded-2xl">
-              <HelpCircle className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-              <p className="text-muted-foreground">Analyze your sources to generate FAQs</p>
+            <div className="text-center py-10 sm:py-12 glass-card rounded-2xl">
+              <HelpCircle className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground">Analyze your sources to generate FAQs</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5 sm:space-y-3">
               {faqs.map((faq, i) => (
                 <details key={i} className="glass-card rounded-xl border border-primary/10 group">
-                  <summary className="p-4 cursor-pointer font-medium text-sm text-foreground flex items-center gap-2 list-none">
-                    <HelpCircle className="w-4 h-4 text-primary shrink-0" />
-                    {faq.question}
+                  <summary className="p-3 sm:p-4 cursor-pointer font-medium text-xs sm:text-sm text-foreground flex items-center gap-2 list-none">
+                    <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary shrink-0" />
+                    <span className="leading-snug">{faq.question}</span>
                   </summary>
-                  <div className="px-4 pb-4 text-sm text-muted-foreground border-t border-border/30 pt-3 ml-6">
+                  <div className="px-3 sm:px-4 pb-3 sm:pb-4 text-xs sm:text-sm text-muted-foreground border-t border-border/30 pt-3 ml-5 sm:ml-6 leading-relaxed">
                     {faq.answer}
                   </div>
                 </details>
@@ -239,7 +235,7 @@ const StudyBlasterDashboard = ({ projectId, studentId, onBack }: Props) => {
         </TabsContent>
 
         <TabsContent value="chat" className="mt-4">
-          <div className="glass-card rounded-2xl p-4 border border-primary/10 h-[500px] flex flex-col">
+          <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm overflow-hidden h-[calc(100vh-280px)] sm:h-[500px] flex flex-col">
             <StudyBlasterChat projectId={projectId} projectTitle={project.title} />
           </div>
         </TabsContent>

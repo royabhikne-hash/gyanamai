@@ -223,30 +223,30 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-        <FileText className="w-5 h-5 text-primary" />
+      <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+        <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
         Source Library ({sources.length})
       </h3>
 
       <Tabs defaultValue="upload" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 glass-card">
-          <TabsTrigger value="upload" className="gap-1 text-xs"><Upload className="w-3 h-3" /> Upload</TabsTrigger>
-          <TabsTrigger value="url" className="gap-1 text-xs"><Link2 className="w-3 h-3" /> Web Link</TabsTrigger>
-          <TabsTrigger value="note" className="gap-1 text-xs"><StickyNote className="w-3 h-3" /> Notes</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 glass-card h-auto p-0.5">
+          <TabsTrigger value="upload" className="gap-1 text-[10px] sm:text-xs py-1.5 sm:py-2 rounded-xl"><Upload className="w-3 h-3" /> Upload</TabsTrigger>
+          <TabsTrigger value="url" className="gap-1 text-[10px] sm:text-xs py-1.5 sm:py-2 rounded-xl"><Link2 className="w-3 h-3" /> Web Link</TabsTrigger>
+          <TabsTrigger value="note" className="gap-1 text-[10px] sm:text-xs py-1.5 sm:py-2 rounded-xl"><StickyNote className="w-3 h-3" /> Notes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="upload" className="mt-3">
           <div
-            className="border-2 border-dashed border-primary/20 rounded-xl p-6 text-center cursor-pointer hover:border-primary/40 transition-colors"
+            className="border-2 border-dashed border-primary/20 rounded-xl p-5 sm:p-6 text-center cursor-pointer hover:border-primary/40 transition-colors active:scale-[0.99]"
             onClick={() => fileInputRef.current?.click()}
           >
             {uploading ? (
-              <Loader2 className="w-8 h-8 mx-auto text-primary animate-spin" />
+              <Loader2 className="w-7 h-7 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
             ) : (
-              <Upload className="w-8 h-8 mx-auto text-muted-foreground/50" />
+              <Upload className="w-7 h-7 sm:w-8 sm:h-8 mx-auto text-muted-foreground/50" />
             )}
-            <p className="text-sm text-muted-foreground mt-2">
-              {uploading ? "Uploading..." : "Click to upload PDF, DOCX, or TXT files (max 25MB)"}
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+              {uploading ? "Uploading..." : "Tap to upload PDF, DOCX, or TXT (max 25MB)"}
             </p>
           </div>
           <input
@@ -265,9 +265,9 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
               value={webUrl}
               onChange={(e) => setWebUrl(e.target.value)}
               placeholder="https://example.com/article"
-              className="flex-1"
+              className="flex-1 text-sm"
             />
-            <Button onClick={handleAddUrl} disabled={processingUrl || !webUrl.trim()} size="sm">
+            <Button onClick={handleAddUrl} disabled={processingUrl || !webUrl.trim()} size="sm" className="rounded-xl shrink-0">
               {processingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}
             </Button>
           </div>
@@ -279,29 +279,31 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
             onChange={(e) => setNoteTitle(e.target.value)}
             placeholder="Note title"
             maxLength={100}
+            className="text-sm"
           />
           <Textarea
             value={noteContent}
             onChange={(e) => setNoteContent(e.target.value)}
             placeholder="Type your study notes here..."
-            rows={4}
+            rows={3}
             maxLength={10000}
+            className="text-sm min-h-[80px]"
           />
-          <Button onClick={handleAddNote} disabled={savingNote || !noteTitle.trim() || !noteContent.trim()} size="sm" className="w-full">
+          <Button onClick={handleAddNote} disabled={savingNote || !noteTitle.trim() || !noteContent.trim()} size="sm" className="w-full rounded-xl">
             {savingNote ? "Saving..." : "Add Note"}
           </Button>
         </TabsContent>
       </Tabs>
 
       {sources.length > 0 && (
-        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+        <div className="space-y-1.5 sm:space-y-2 max-h-[250px] sm:max-h-[300px] overflow-y-auto pr-1">
           {sources.map((source) => (
-            <div key={source.id} className="flex items-center justify-between p-3 glass-card rounded-xl border border-primary/5 hover:border-primary/15 transition-colors">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div key={source.id} className="flex items-center justify-between p-2.5 sm:p-3 glass-card rounded-xl border border-primary/5 hover:border-primary/15 transition-colors">
+              <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
                 {getSourceIcon(source.source_type)}
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{source.title}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs sm:text-sm font-medium text-foreground truncate">{source.title}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
                     {source.source_type === "file" && source.file_size
                       ? `${(source.file_size / 1024).toFixed(0)} KB`
                       : source.source_type === "url"
@@ -318,7 +320,7 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
                 onClick={() => handleDelete(source.id)}
                 className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
           ))}
