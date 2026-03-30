@@ -394,7 +394,7 @@ const StudentProgress = () => {
       pdf.rect(0, pageHeight - 12, pageWidth, 12, "F");
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(8);
-      pdf.text("Gyanam AI - Your Personal Study Buddy", pageWidth / 2, pageHeight - 5, { align: "center" });
+      pdf.text("Gyanam AI - Your Personal Gyanam AI", pageWidth / 2, pageHeight - 5, { align: "center" });
 
       pdf.save(`${studentName.replace(/\s+/g, "_")}_Progress_${new Date().toISOString().split("T")[0]}.pdf`);
       toast({ title: "PDF Downloaded!", description: "Your progress report has been saved." });
@@ -719,7 +719,7 @@ const StudentProgress = () => {
         <div className="edu-card p-6 bg-gradient-to-br from-primary/5 via-accent/5 to-background border border-primary/20">
           <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
             <Brain className="w-5 h-5 text-primary" />
-            AI Study Buddy Feedback
+            AI Gyanam AI Feedback
           </h3>
           <div className="space-y-3">
             {(() => {
@@ -747,7 +747,7 @@ const StudentProgress = () => {
               }
 
               if (weakSubs.length > 0) {
-                feedback.push(`Focus extra on '${weakSubs[0][0]}' - it was weak in ${weakSubs[0][1]} tests. Study with Study Buddy and ace the next test!`);
+                feedback.push(`Focus extra on '${weakSubs[0][0]}' - it was weak in ${weakSubs[0][1]} tests. Study with Gyanam AI and ace the next test!`);
               }
 
               if (strongSubs.length > 0) {
