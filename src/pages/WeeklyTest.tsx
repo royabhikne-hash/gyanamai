@@ -188,6 +188,24 @@ const WeeklyTest = () => {
         week_start: weekStart,
         week_end: weekEnd,
       });
+      // Trigger topic mastery update
+      try {
+        await supabase.functions.invoke("update-topic-mastery", {
+          body: {
+            studentId,
+            source: "weekly_test",
+            testData: {
+              subjectResults: Object.fromEntries(
+                Object.keys(subjectTotal).map(sub => [sub, { correct: subjectCorrect[sub] || 0, total: subjectTotal[sub] }])
+              ),
+              weakSubjects,
+              strongSubjects,
+            },
+          },
+        });
+      } catch (masteryErr) {
+        console.error("Error updating topic mastery:", masteryErr);
+      }
     } catch (err) {
       console.error("Error saving weekly test:", err);
     }

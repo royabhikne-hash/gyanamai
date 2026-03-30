@@ -8,8 +8,9 @@ import {
   TrendingDown,
   Download,
   Loader2,
-  ClipboardList,
   Minus,
+  BookOpen,
+  Target,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,6 +58,25 @@ interface StudySession {
   created_at: string;
 }
 
+interface TopicMastery {
+  id: string;
+  subject: string;
+  topic: string;
+  mastery_score: number;
+  attempt_count: number;
+  last_practiced: string;
+  trend: string;
+}
+
+interface ActivityItem {
+  id: string;
+  type: "session" | "test" | "quiz";
+  title: string;
+  detail: string;
+  score?: number;
+  date: string;
+}
+
 const StudentProgress = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -64,8 +84,10 @@ const StudentProgress = () => {
   const { user, loading } = useAuth();
   const [weeklyTests, setWeeklyTests] = useState<WeeklyTestRecord[]>([]);
   const [sessions, setSessions] = useState<StudySession[]>([]);
+  const [topicMastery, setTopicMastery] = useState<TopicMastery[]>([]);
   const [studentName, setStudentName] = useState("Student");
   const [studentClass, setStudentClass] = useState("");
+  const [studentId, setStudentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
@@ -87,23 +109,31 @@ const StudentProgress = () => {
       if (student) {
         setStudentName(student.full_name);
         setStudentClass(student.class);
+        setStudentId(student.id);
 
-        const { data: testsData } = await supabase
-          .from("weekly_tests")
-          .select("*")
-          .eq("student_id", student.id)
-          .order("created_at", { ascending: true });
+        // Fetch all data in parallel
+        const [testsRes, sessionsRes, masteryRes] = await Promise.all([
+          supabase
+            .from("weekly_tests")
+            .select("*")
+            .eq("student_id", student.id)
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("study_sessions")
+            .select("id, topic, subject, time_spent, understanding_level, weak_areas, strong_areas, created_at")
+            .eq("student_id", student.id)
+            .not("time_spent", "eq", 0)
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("topic_mastery")
+            .select("id, subject, topic, mastery_score, attempt_count, last_practiced, trend")
+            .eq("student_id", student.id)
+            .order("mastery_score", { ascending: true }),
+        ]);
 
-        if (testsData) setWeeklyTests(testsData);
-
-        const { data: sessionData } = await supabase
-          .from("study_sessions")
-          .select("id, topic, subject, time_spent, understanding_level, weak_areas, strong_areas, created_at")
-          .eq("student_id", student.id)
-          .not("time_spent", "eq", 0)
-          .order("created_at", { ascending: true });
-
-        if (sessionData) setSessions(sessionData);
+        if (testsRes.data) setWeeklyTests(testsRes.data);
+        if (sessionsRes.data) setSessions(sessionsRes.data);
+        if (masteryRes.data) setTopicMastery(masteryRes.data as TopicMastery[]);
       }
     } catch (error) {
       console.error("Error loading progress data:", error);
@@ -117,89 +147,31 @@ const StudentProgress = () => {
     if (weeklyTests.length === 0) return 0;
     const test = weeklyTests[testIndex];
     const accuracy = test.accuracy_percentage;
-
     const prevTest = testIndex > 0 ? weeklyTests[testIndex - 1] : null;
     const improvement = prevTest ? Math.max(0, accuracy - prevTest.accuracy_percentage) : 0;
-
     const currentWeak = (test.weak_subjects || []).length;
     const prevWeak = prevTest ? (prevTest.weak_subjects || []).length : currentWeak;
     const weakReduction = prevWeak > 0 ? Math.max(0, ((prevWeak - currentWeak) / prevWeak) * 100) : (currentWeak === 0 ? 100 : 0);
-
     const weekStart = new Date(test.week_start);
     const weekEnd = new Date(test.week_end);
-    const weekSessions = sessions.filter(s => {
-      const d = new Date(s.created_at);
-      return d >= weekStart && d <= weekEnd;
-    });
+    const weekSessions = sessions.filter(s => { const d = new Date(s.created_at); return d >= weekStart && d <= weekEnd; });
     const uniqueDays = new Set(weekSessions.map(s => new Date(s.created_at).toDateString())).size;
     const consistency = (uniqueDays / 7) * 100;
-
-    return Math.round(
-      (accuracy * 0.5) +
-      (improvement * 0.25) +
-      (weakReduction * 0.15) +
-      (consistency * 0.10)
-    );
+    return Math.round((accuracy * 0.5) + (improvement * 0.25) + (weakReduction * 0.15) + (consistency * 0.10));
   };
 
-  const getLatestWPS = () => {
-    if (weeklyTests.length === 0) return 0;
-    return calculateWPS(weeklyTests.length - 1);
-  };
+  const getLatestWPS = () => weeklyTests.length === 0 ? 0 : calculateWPS(weeklyTests.length - 1);
 
-  const getWPSTrendData = () => {
-    return weeklyTests.map((test, i) => ({
-      week: `W${i + 1}`,
-      wps: calculateWPS(i),
-      accuracy: test.accuracy_percentage,
-      label: new Date(test.week_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-    }));
-  };
-
-  const getSubjectPerformance = () => {
-    const subjectStats: Record<string, { strong: number; weak: number; neutral: number; tests: number }> = {};
-    weeklyTests.forEach(test => {
-      (test.subjects_tested || []).forEach(sub => {
-        if (!subjectStats[sub]) subjectStats[sub] = { strong: 0, weak: 0, neutral: 0, tests: 0 };
-        subjectStats[sub].tests++;
-        if ((test.strong_subjects || []).includes(sub)) subjectStats[sub].strong++;
-        else if ((test.weak_subjects || []).includes(sub)) subjectStats[sub].weak++;
-        else subjectStats[sub].neutral++;
-      });
-    });
-
-    return Object.entries(subjectStats)
-      .map(([subject, data]) => {
-        const totalClassified = data.strong + data.weak + data.neutral;
-        const score = totalClassified > 0
-          ? Math.round(((data.strong * 100) + (data.neutral * 50)) / totalClassified)
-          : 0;
-        return { subject: subject.length > 14 ? subject.slice(0, 14) + "…" : subject, score, tests: data.tests };
-      })
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 6);
-  };
-
-  const getWeakSubjects = () => {
-    const weakCount: Record<string, number> = {};
-    weeklyTests.forEach(test => {
-      (test.weak_subjects || []).forEach(sub => { weakCount[sub] = (weakCount[sub] || 0) + 1; });
-    });
-    return Object.entries(weakCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  };
-
-  const getStrongSubjects = () => {
-    const strongCount: Record<string, number> = {};
-    weeklyTests.forEach(test => {
-      (test.strong_subjects || []).forEach(sub => { strongCount[sub] = (strongCount[sub] || 0) + 1; });
-    });
-    return Object.entries(strongCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  };
+  const getWPSTrendData = () => weeklyTests.map((test, i) => ({
+    week: `W${i + 1}`,
+    wps: calculateWPS(i),
+    accuracy: test.accuracy_percentage,
+    label: new Date(test.week_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+  }));
 
   const getStudyStats = () => {
     const totalSessions = sessions.length;
     const totalMinutes = sessions.reduce((acc, s) => acc + (s.time_spent || 0), 0);
-
     let streak = 0;
     const today = new Date();
     for (let i = 0; i < 30; i++) {
@@ -209,23 +181,60 @@ const StudentProgress = () => {
       if (hasSession) streak++;
       else if (i > 0) break;
     }
-
     const totalTests = weeklyTests.length;
-    const avgAccuracy = totalTests > 0
-      ? Math.round(weeklyTests.reduce((acc, t) => acc + t.accuracy_percentage, 0) / totalTests)
-      : 0;
-
+    const avgAccuracy = totalTests > 0 ? Math.round(weeklyTests.reduce((acc, t) => acc + t.accuracy_percentage, 0) / totalTests) : 0;
     return { totalSessions, totalMinutes, streak, totalTests, avgAccuracy };
   };
 
   const getStudyPatterns = () => {
     const dayData: Record<string, number> = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    sessions.forEach(s => {
-      const day = days[new Date(s.created_at).getDay()];
-      dayData[day] += s.time_spent || 0;
-    });
+    sessions.forEach(s => { const day = days[new Date(s.created_at).getDay()]; dayData[day] += s.time_spent || 0; });
     return Object.entries(dayData).map(([day, minutes]) => ({ day, minutes }));
+  };
+
+  // ===== Topic Mastery Helpers =====
+  const weakTopics = topicMastery.filter(t => t.mastery_score < 50).slice(0, 5);
+  const strongTopics = topicMastery.filter(t => t.mastery_score >= 70);
+
+  // ===== Activity Timeline =====
+  const getActivityTimeline = (): ActivityItem[] => {
+    const items: ActivityItem[] = [];
+    
+    sessions.slice(-10).forEach(s => {
+      items.push({
+        id: s.id,
+        type: "session",
+        title: s.topic || "Study Session",
+        detail: `${s.time_spent || 0}min · ${s.understanding_level || "N/A"}`,
+        date: s.created_at,
+      });
+    });
+
+    weeklyTests.slice(-5).forEach(t => {
+      items.push({
+        id: t.id,
+        type: "test",
+        title: `Weekly Test`,
+        detail: `${t.correct_count}/${t.total_questions} correct`,
+        score: t.accuracy_percentage,
+        date: t.created_at,
+      });
+    });
+
+    return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10);
+  };
+
+  const getMasteryColor = (score: number) => {
+    if (score >= 70) return "bg-green-500";
+    if (score >= 40) return "bg-yellow-500";
+    return "bg-red-500";
+  };
+
+  const getMasteryTextColor = (score: number) => {
+    if (score >= 70) return "text-green-600 dark:text-green-400";
+    if (score >= 40) return "text-yellow-600 dark:text-yellow-400";
+    return "text-red-600 dark:text-red-400";
   };
 
   const handleDownloadPdf = async () => {
@@ -258,40 +267,56 @@ const StudentProgress = () => {
       pdf.text(`Class: ${studentClass} | WPS: ${wps}%`, margin, yPos + 7);
       yPos += 20;
 
+      // Stats
       pdf.setFontSize(12);
       pdf.setFont("helvetica", "bold");
-      pdf.text("Weekly Performance Score (WPS)", margin, yPos);
+      pdf.text("Key Metrics", margin, yPos);
       yPos += 8;
       pdf.setFontSize(9);
       pdf.setFont("helvetica", "normal");
-
       const statsText = [
         `WPS Score: ${wps}%`,
-        `Total Weekly Tests: ${stats.totalTests}`,
-        `Average Test Accuracy: ${stats.avgAccuracy}%`,
-        `Total Study Sessions: ${stats.totalSessions}`,
+        `Average Accuracy: ${stats.avgAccuracy}%`,
         `Total Study Time: ${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`,
         `Current Streak: ${stats.streak} days`,
+        `Total Sessions: ${stats.totalSessions}`,
       ];
       statsText.forEach(text => { pdf.text(`• ${text}`, margin + 5, yPos); yPos += 6; });
 
-      const weakSubs = getWeakSubjects();
-      const strongSubs = getStrongSubjects();
-      if (strongSubs.length > 0) {
+      // Topic mastery
+      if (topicMastery.length > 0) {
         yPos += 4;
         pdf.setFont("helvetica", "bold");
-        pdf.text("Strong Subjects:", margin, yPos);
-        yPos += 6;
+        pdf.setFontSize(12);
+        pdf.text("Topic Mastery", margin, yPos);
+        yPos += 8;
+        pdf.setFontSize(9);
         pdf.setFont("helvetica", "normal");
-        strongSubs.forEach(([sub]) => { pdf.text(`  ✓ ${sub}`, margin + 5, yPos); yPos += 5; });
-      }
-      if (weakSubs.length > 0) {
-        yPos += 4;
-        pdf.setFont("helvetica", "bold");
-        pdf.text("Weak Subjects (Need Focus):", margin, yPos);
-        yPos += 6;
-        pdf.setFont("helvetica", "normal");
-        weakSubs.forEach(([sub]) => { pdf.text(`  ⚠ ${sub}`, margin + 5, yPos); yPos += 5; });
+        
+        const weakTopicsPdf = topicMastery.filter(t => t.mastery_score < 50).slice(0, 5);
+        const strongTopicsPdf = topicMastery.filter(t => t.mastery_score >= 70).slice(0, 5);
+        
+        if (weakTopicsPdf.length > 0) {
+          pdf.setFont("helvetica", "bold");
+          pdf.text("Weak Topics (Need Practice):", margin + 5, yPos);
+          yPos += 6;
+          pdf.setFont("helvetica", "normal");
+          weakTopicsPdf.forEach(t => {
+            pdf.text(`  ⚠ ${t.topic} (${t.subject}) — ${t.mastery_score}%`, margin + 5, yPos);
+            yPos += 5;
+          });
+        }
+        if (strongTopicsPdf.length > 0) {
+          yPos += 2;
+          pdf.setFont("helvetica", "bold");
+          pdf.text("Strong Topics:", margin + 5, yPos);
+          yPos += 6;
+          pdf.setFont("helvetica", "normal");
+          strongTopicsPdf.forEach(t => {
+            pdf.text(`  ✓ ${t.topic} (${t.subject}) — ${t.mastery_score}%`, margin + 5, yPos);
+            yPos += 5;
+          });
+        }
       }
 
       pdf.setFillColor(59, 130, 246);
@@ -304,7 +329,7 @@ const StudentProgress = () => {
       toast({ title: "PDF Downloaded!", description: "Your progress report has been saved." });
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast({ title: t("progress.downloadFailedTitle"), description: t("progress.downloadFailedDesc"), variant: "destructive" });
+      toast({ title: "Download Failed", description: "Could not generate PDF.", variant: "destructive" });
     } finally {
       setDownloadingPdf(false);
     }
@@ -313,14 +338,11 @@ const StudentProgress = () => {
   if (loading || isLoading) return <ProgressSkeleton />;
 
   const wpsTrend = getWPSTrendData();
-  const subjectData = getSubjectPerformance();
   const patternData = getStudyPatterns();
-  const weakSubs = getWeakSubjects();
-  const strongSubs = getStrongSubjects();
   const stats = getStudyStats();
   const latestWPS = getLatestWPS();
+  const activityTimeline = getActivityTimeline();
 
-  // WPS trend direction
   const wpsDelta = weeklyTests.length >= 2
     ? calculateWPS(weeklyTests.length - 1) - calculateWPS(weeklyTests.length - 2)
     : 0;
@@ -334,7 +356,7 @@ const StudentProgress = () => {
 
   return (
     <div className="min-h-screen bg-background pb-16 sm:pb-0">
-      {/* Clean Header */}
+      {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -358,28 +380,83 @@ const StudentProgress = () => {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Key Metrics Row */}
+        {/* Key Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <MetricCard
-            label="WPS Score"
-            value={`${latestWPS}%`}
-            trend={wpsDelta}
-          />
-          <MetricCard
-            label="Avg Accuracy"
-            value={`${stats.avgAccuracy}%`}
-          />
-          <MetricCard
-            label="Study Time"
-            value={`${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`}
-          />
-          <MetricCard
-            label="Streak"
-            value={`${stats.streak} days`}
-          />
+          <MetricCard label="WPS Score" value={`${latestWPS}%`} trend={wpsDelta} />
+          <MetricCard label="Avg Accuracy" value={`${stats.avgAccuracy}%`} />
+          <MetricCard label="Study Time" value={`${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`} />
+          <MetricCard label="Streak" value={`${stats.streak} days`} />
         </div>
 
-        {/* WPS + Accuracy Trend — full width area chart */}
+        {/* Topic Mastery Map */}
+        {topicMastery.length > 0 && (
+          <section className="rounded-lg border border-border bg-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium text-muted-foreground">Topic Mastery</h3>
+              <span className="text-xs text-muted-foreground">{topicMastery.length} topics tracked</span>
+            </div>
+            <div className="space-y-3">
+              {topicMastery.slice(0, 12).map((tm) => (
+                <div key={tm.id} className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium truncate">{tm.topic}</span>
+                      {tm.trend === "improving" && <TrendingUp className="w-3 h-3 text-green-500 shrink-0" />}
+                      {tm.trend === "declining" && <TrendingDown className="w-3 h-3 text-red-500 shrink-0" />}
+                      {tm.trend === "stable" && <Minus className="w-3 h-3 text-muted-foreground shrink-0" />}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${getMasteryColor(tm.mastery_score)}`}
+                          style={{ width: `${tm.mastery_score}%` }}
+                        />
+                      </div>
+                      <span className={`text-xs font-semibold tabular-nums w-8 text-right ${getMasteryTextColor(tm.mastery_score)}`}>
+                        {tm.mastery_score}%
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {tm.subject} · {tm.attempt_count} attempts
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Weak Topics Action Card */}
+        {weakTopics.length > 0 && (
+          <section className="rounded-lg border border-destructive/30 bg-destructive/5 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Target className="w-4 h-4 text-destructive" />
+              <h3 className="text-sm font-medium">Focus Areas — Practice These</h3>
+            </div>
+            <div className="space-y-2.5">
+              {weakTopics.map((tm) => (
+                <div key={tm.id} className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{tm.topic}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {tm.subject} · {tm.mastery_score}% mastery · {tm.attempt_count} attempts
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs shrink-0"
+                    onClick={() => navigate(`/study?topic=${encodeURIComponent(tm.topic)}`)}
+                  >
+                    <BookOpen className="w-3 h-3 mr-1" /> Study
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* WPS + Accuracy Trend */}
         <section className="rounded-lg border border-border bg-card p-5">
           <h3 className="text-sm font-medium text-muted-foreground mb-4">WPS & Accuracy Trend</h3>
           {wpsTrend.length > 0 ? (
@@ -403,115 +480,84 @@ const StudentProgress = () => {
           )}
         </section>
 
-        {/* Two charts side by side */}
-        <div className="grid md:grid-cols-2 gap-4">
-          {/* Subject Performance — horizontal bar */}
-          <section className="rounded-lg border border-border bg-card p-5">
-            <h3 className="text-sm font-medium text-muted-foreground mb-4">Subject Performance</h3>
-            {subjectData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={subjectData} layout="vertical" margin={{ left: 0 }}>
-                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} />
-                  <YAxis dataKey="subject" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} width={90} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="score" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Score" barSize={16} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <EmptyState text="No subject data yet" />
-            )}
-          </section>
+        {/* Study Pattern */}
+        <section className="rounded-lg border border-border bg-card p-5">
+          <h3 className="text-sm font-medium text-muted-foreground mb-4">{t("progress.weeklyStudyPattern")}</h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={patternData}>
+              <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value} min`, 'Study Time']} />
+              <Bar dataKey="minutes" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={24} />
+            </BarChart>
+          </ResponsiveContainer>
+        </section>
 
-          {/* Weekly Study Pattern */}
+        {/* Recent Activity Timeline */}
+        {activityTimeline.length > 0 && (
           <section className="rounded-lg border border-border bg-card p-5">
-            <h3 className="text-sm font-medium text-muted-foreground mb-4">{t("progress.weeklyStudyPattern")}</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={patternData}>
-                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value} min`, 'Study Time']} />
-                <Bar dataKey="minutes" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={24} />
-              </BarChart>
-            </ResponsiveContainer>
-          </section>
-        </div>
-
-        {/* Subject Health */}
-        {(strongSubs.length > 0 || weakSubs.length > 0) && (
-          <section className="rounded-lg border border-border bg-card p-5">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Subject Health</h3>
-            <div className="space-y-2">
-              {strongSubs.map(([sub, count]) => (
-                <div key={sub} className="flex items-center gap-3 py-1.5">
-                  <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
-                  <span className="text-sm flex-1">{sub}</span>
-                  <span className="text-xs text-muted-foreground">{count} tests</span>
-                </div>
-              ))}
-              {weakSubs.map(([sub, count]) => (
-                <div key={sub} className="flex items-center gap-3 py-1.5">
-                  <span className="w-2 h-2 rounded-full bg-destructive shrink-0" />
-                  <span className="text-sm flex-1">{sub}</span>
-                  <span className="text-xs text-muted-foreground">{count} tests</span>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Test History */}
-        {weeklyTests.length > 0 && (
-          <section className="rounded-lg border border-border bg-card p-5">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Test History</h3>
-            <div className="space-y-2">
-              {[...weeklyTests].reverse().slice(0, 6).map((test) => (
-                <div key={test.id} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {new Date(test.week_start).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – {new Date(test.week_end).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                    </p>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Recent Activity</h3>
+            <div className="space-y-3">
+              {activityTimeline.map((item) => (
+                <div key={item.id} className="flex items-start gap-3 py-2 border-b border-border/50 last:border-0">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                    item.type === "test" ? "bg-primary" : item.type === "quiz" ? "bg-yellow-500" : "bg-muted-foreground"
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      {item.score !== undefined && (
+                        <span className={`text-xs font-semibold tabular-nums ${
+                          item.score >= 70 ? "text-green-600 dark:text-green-400" : item.score >= 50 ? "text-yellow-600" : "text-red-600 dark:text-red-400"
+                        }`}>
+                          {item.score}%
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      {test.correct_count}/{test.total_questions} correct · {Math.floor(test.time_taken_seconds / 60)}m
+                      {item.detail} · {new Date(item.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                     </p>
                   </div>
-                  <span className={`text-sm font-semibold tabular-nums ${test.accuracy_percentage >= 70 ? "text-accent" : test.accuracy_percentage >= 50 ? "text-muted-foreground" : "text-destructive"}`}>
-                    {test.accuracy_percentage}%
-                  </span>
                 </div>
               ))}
             </div>
           </section>
         )}
 
-        {/* AI Feedback — clean, max 3 items */}
+        {/* AI Insights */}
         <section className="rounded-lg border border-border bg-card p-5">
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Gyanam AI Insights</h3>
           <ul className="space-y-2">
             {(() => {
               const feedback: string[] = [];
 
-              if (weeklyTests.length === 0) {
-                feedback.push("Take your first weekly test to unlock personalized insights.");
-              } else {
-                if (latestWPS >= 75) {
-                  feedback.push(`WPS ${latestWPS}% — Excellent performance. Stay consistent.`);
-                } else if (latestWPS >= 50) {
-                  feedback.push(`WPS ${latestWPS}% — Good progress. Focus on weak subjects to reach 75+.`);
-                } else {
-                  feedback.push(`WPS ${latestWPS}% — Study daily and revise weak topics for improvement.`);
+              if (topicMastery.length > 0) {
+                const weakest = topicMastery[0];
+                if (weakest && weakest.mastery_score < 50) {
+                  feedback.push(`"${weakest.topic}" needs attention — ${weakest.mastery_score}% mastery after ${weakest.attempt_count} attempts.`);
+                }
+                const improving = topicMastery.filter(t => t.trend === "improving");
+                if (improving.length > 0) {
+                  feedback.push(`${improving.length} topic${improving.length > 1 ? "s" : ""} improving — keep it up!`);
                 }
               }
 
-              if (stats.streak >= 7) {
-                feedback.push(`${stats.streak}-day streak. Outstanding consistency.`);
-              } else if (stats.streak >= 3) {
-                feedback.push(`${stats.streak}-day streak. Push to 7 days for a WPS boost.`);
+              if (weeklyTests.length === 0 && sessions.length === 0) {
+                feedback.push("Start studying to unlock personalized insights.");
               } else {
-                feedback.push("Start a daily study habit to improve your WPS score.");
-              }
+                if (stats.streak >= 7) {
+                  feedback.push(`${stats.streak}-day streak. Outstanding consistency!`);
+                } else if (stats.streak >= 3) {
+                  feedback.push(`${stats.streak}-day streak. Push to 7 days for better results.`);
+                } else if (stats.streak === 0) {
+                  feedback.push("Start a daily study habit for consistent improvement.");
+                }
 
-              if (weakSubs.length > 0) {
-                feedback.push(`Focus on "${weakSubs[0][0]}" — weak in ${weakSubs[0][1]} tests.`);
+                if (latestWPS > 0) {
+                  if (latestWPS >= 75) feedback.push(`WPS ${latestWPS}% — Excellent performance.`);
+                  else if (latestWPS >= 50) feedback.push(`WPS ${latestWPS}% — Good. Focus on weak topics to reach 75+.`);
+                  else feedback.push(`WPS ${latestWPS}% — Study weak areas daily to improve.`);
+                }
               }
 
               return feedback.slice(0, 3).map((fb, i) => (
@@ -529,14 +575,14 @@ const StudentProgress = () => {
   );
 };
 
-// ===== Minimal Metric Card =====
+// ===== Metric Card =====
 const MetricCard = ({ label, value, trend }: { label: string; value: string; trend?: number }) => (
   <div className="rounded-lg border border-border bg-card p-4">
     <p className="text-xs text-muted-foreground mb-1">{label}</p>
     <div className="flex items-baseline gap-1.5">
       <span className="text-2xl font-semibold tracking-tight">{value}</span>
       {trend !== undefined && trend !== 0 && (
-        <span className={`flex items-center text-xs font-medium ${trend > 0 ? "text-accent" : "text-destructive"}`}>
+        <span className={`flex items-center text-xs font-medium ${trend > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
           {trend > 0 ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
           {Math.abs(trend)}
         </span>

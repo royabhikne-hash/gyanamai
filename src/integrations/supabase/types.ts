@@ -1367,6 +1367,56 @@ export type Database = {
           },
         ]
       }
+      topic_mastery: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          id: string
+          last_practiced: string
+          mastery_score: number
+          score_history: Json
+          student_id: string
+          subject: string
+          topic: string
+          trend: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          last_practiced?: string
+          mastery_score?: number
+          score_history?: Json
+          student_id: string
+          subject: string
+          topic: string
+          trend?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          last_practiced?: string
+          mastery_score?: number
+          score_history?: Json
+          student_id?: string
+          subject?: string
+          topic?: string
+          trend?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_mastery_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       upgrade_requests: {
         Row: {
           created_at: string

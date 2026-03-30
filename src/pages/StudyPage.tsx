@@ -167,6 +167,25 @@ const StudyPage = () => {
             understanding_result: summary.quizResult.understanding,
           });
         }
+        // Trigger topic mastery update
+        try {
+          await supabase.functions.invoke("update-topic-mastery", {
+            body: {
+              studentId,
+              source: summary.quizResult ? "quiz" : "study_session",
+              sessionData: {
+                topic: summary.topic,
+                subject: summary.topic,
+                weakAreas: summary.analysis.weakAreas,
+                strongAreas: summary.analysis.strongAreas,
+                understandingLevel: summary.analysis.currentUnderstanding,
+                accuracy: summary.quizResult?.accuracy,
+              },
+            },
+          });
+        } catch (masteryErr) {
+          console.error("Error updating topic mastery:", masteryErr);
+        }
       } catch (err) {
         console.error("Error saving session:", err);
       }
