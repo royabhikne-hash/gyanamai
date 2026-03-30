@@ -12,7 +12,7 @@ const TermsConditions = () => {
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg">Study Buddy AI</span>
+              <span className="font-bold text-lg">Gyanam AI</span>
             </div>
             <Link 
               to="/" 
@@ -32,7 +32,7 @@ const TermsConditions = () => {
           
           <div className="prose prose-sm max-w-none space-y-6 text-foreground">
             <p className="text-lg">
-              Welcome to <strong>Study Buddy AI</strong>.
+              Welcome to <strong>Gyanam AI</strong>.
               <br />
               By using this application, you agree to the following Terms & Conditions. If you do not agree, do not use the app.
             </p>
@@ -40,7 +40,7 @@ const TermsConditions = () => {
             <section>
               <h2 className="text-xl font-bold text-foreground mb-3">1. Purpose of the App</h2>
               <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                <li>Study Buddy AI is a study support and monitoring platform, not a replacement for school, teachers, or coaching.</li>
+                <li>Gyanam AI is a study support and monitoring platform, not a replacement for school, teachers, or coaching.</li>
                 <li>The AI helps students study, track effort, identify weak/strong areas, and generate progress summaries.</li>
                 <li>The app does not guarantee marks, ranks, or results.</li>
               </ul>
@@ -142,7 +142,7 @@ const TermsConditions = () => {
 
             <section>
               <h2 className="text-xl font-bold text-foreground mb-3">11. Limitation of Liability</h2>
-              <p className="text-muted-foreground mb-2">Study Buddy AI is not responsible for:</p>
+              <p className="text-muted-foreground mb-2">Gyanam AI is not responsible for:</p>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground mb-3">
                 <li>Exam results</li>
                 <li>Academic decisions</li>
@@ -168,7 +168,7 @@ const TermsConditions = () => {
 
             <div className="mt-8 p-4 bg-primary/10 rounded-xl border border-primary/20">
               <p className="text-center font-semibold text-foreground">
-                "By continuing, you agree to the Terms & Conditions of Study Buddy AI."
+                "By continuing, you agree to the Terms & Conditions of Gyanam AI."
               </p>
             </div>
           </div>

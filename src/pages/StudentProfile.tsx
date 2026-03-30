@@ -192,7 +192,7 @@ const StudentProfile = () => {
               <div className="flex items-center gap-3">
                 <img 
                   src="/logo.png" 
-                  alt="Study Buddy AI" 
+                  alt="Gyanam AI" 
                   className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain"
                 />
                 <div>

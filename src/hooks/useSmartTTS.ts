@@ -356,7 +356,7 @@ export const useSmartTTS = (studentId: string | null) => {
   }, []);
 
   const previewVoice = useCallback(async (voiceId: string) => {
-    const previewText = "नमस्ते! मैं आपका Study Buddy हूं।";
+    const previewText = "नमस्ते! मैं आपका Gyanam AI हूं।";
     await speak({ text: previewText, voiceId, language: 'hi-IN' });
   }, [speak]);
 

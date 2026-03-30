@@ -857,7 +857,7 @@ const AdminDashboard = () => {
       : '';
     
     const reportMessage = encodeURIComponent(
-      `🎓 *Study Buddy AI*\n` +
+      `🎓 *Gyanam AI*\n` +
       `━━━━━━━━━━━━━━━━━━━━━\n` +
       `📋 *Weekly Progress Report*\n\n` +
       `👤 *Student:* ${student.full_name}\n` +
@@ -874,7 +874,7 @@ const AdminDashboard = () => {
       `✅ Strong & weak subjects\n` +
       `✅ Weekly test scores\n\n` +
       `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `📱 *Study Buddy AI*\n` +
+      `📱 *Gyanam AI*\n` +
       `🌟 AI-Powered Study Partner\n` +
       `📅 ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`
     );

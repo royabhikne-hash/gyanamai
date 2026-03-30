@@ -201,7 +201,7 @@ const whatsAppTranslations: Record<ReportLanguage, WhatsAppTranslations> = {
     improving: "सुधार हो रहा है",
     declining: "गिरावट",
     stable: "स्थिर",
-    signature: "Study Buddy AI",
+    signature: "Gyanam AI",
   },
   en: {
     weeklyReport: "Weekly Report",
@@ -219,7 +219,7 @@ const whatsAppTranslations: Record<ReportLanguage, WhatsAppTranslations> = {
     improving: "Improving",
     declining: "Declining",
     stable: "Stable",
-    signature: "Study Buddy AI",
+    signature: "Gyanam AI",
   },
 };
 
@@ -234,7 +234,7 @@ const generateWhatsAppMessage = (report: DetailedReport, language: ReportLanguag
 
   const date = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  let message = `🎓 *Study Buddy AI*
+  let message = `🎓 *Gyanam AI*
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📋 *${report.studentName} - ${t.weeklyReport}*
 

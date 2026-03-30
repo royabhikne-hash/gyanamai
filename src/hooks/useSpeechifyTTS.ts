@@ -204,7 +204,7 @@ export const useSpeechifyTTS = () => {
     if (!voice) return;
 
     // Use English preview text
-    const previewText = "Hello! I am your Study Buddy. What would you like to study today?";
+    const previewText = "Hello! I am your Gyanam AI. What would you like to study today?";
 
     await speak({ text: previewText, voiceId, language: 'en-IN' });
   }, [speak]);

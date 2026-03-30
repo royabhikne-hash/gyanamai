@@ -292,7 +292,7 @@ Deno.serve(async (req) => {
           whatsappNotifications.push({
             phone: student.parent_whatsapp,
             studentName: student.full_name,
-            message: `${rankEmoji} *Study Buddy AI Achievement Alert!*\n\n🎉 Congratulations! Your child *${student.full_name}* has achieved *Rank #${schoolRank}* in their school this week!\n\n${titles[schoolRank - 1]}\n\nKeep encouraging them to maintain this excellent performance! 📚✨`
+            message: `${rankEmoji} *Gyanam AI Achievement Alert!*\n\n🎉 Congratulations! Your child *${student.full_name}* has achieved *Rank #${schoolRank}* in their school this week!\n\n${titles[schoolRank - 1]}\n\nKeep encouraging them to maintain this excellent performance! 📚✨`
           });
         }
       }
@@ -316,7 +316,7 @@ Deno.serve(async (req) => {
           whatsappNotifications.push({
             phone: student.parent_whatsapp,
             studentName: student.full_name,
-            message: `${rankEmoji} *Study Buddy AI Achievement Alert!*\n\n🎉 Amazing news! Your child *${student.full_name}* has achieved *Rank #${districtRank}* in ${student.district} district this week!\n\n${titles[districtRank - 1]}\n\nThis is a remarkable achievement! Keep supporting their learning journey! 📚🌟`
+            message: `${rankEmoji} *Gyanam AI Achievement Alert!*\n\n🎉 Amazing news! Your child *${student.full_name}* has achieved *Rank #${districtRank}* in ${student.district} district this week!\n\n${titles[districtRank - 1]}\n\nThis is a remarkable achievement! Keep supporting their learning journey! 📚🌟`
           });
         }
       }

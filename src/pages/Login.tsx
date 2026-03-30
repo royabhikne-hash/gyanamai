@@ -271,7 +271,7 @@ const Login = () => {
         <div className="w-full max-w-md">
           <div className="glass-card p-4 sm:p-6 md:p-8">
             <div className="text-center mb-6 sm:mb-8">
-              <img src="/logo.png" alt="Study Buddy AI" className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl mx-auto mb-3 sm:mb-4 object-contain drop-shadow-lg" />
+              <img src="/logo.png" alt="Gyanam AI" className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl mx-auto mb-3 sm:mb-4 object-contain drop-shadow-lg" />
               <h1 className="text-xl sm:text-2xl font-bold font-display">
                 {language === 'en' ? 'Welcome Back!' : 'वापस स्वागत है!'}
               </h1>

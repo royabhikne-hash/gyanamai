@@ -129,7 +129,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
       "Yo! Ready for a power study session? 💪\n\nSay \"Start [Subject]\" to kick things off. I'll teach, you learn, and at the end we'll test what you've mastered with a quiz!",
       "Hey champion! 🎯 Another day, another chance to level up!\n\nTell me your subject - \"Start History\", \"Start Biology\", anything! Say \"Finish study\" when you're done and I'll quiz you!",
       "Hi! Let's make today's study session legendary! ⚡\n\nDrop a \"Start [Subject]\" to begin. I'll break down tough concepts into easy bites and give you real-world examples to remember them!",
-      "Hello, future topper! 📚 Your AI Study Buddy is fired up!\n\nSay \"Start Chemistry\" or any subject to dive in. Multiple subjects? No problem - just say \"[Subject] done\" to switch!"
+      "Hello, future topper! 📚 Your AI Gyanam AI is fired up!\n\nSay \"Start Chemistry\" or any subject to dive in. Multiple subjects? No problem - just say \"[Subject] done\" to switch!"
     ];
     return greetings[Math.floor(Math.random() * greetings.length)];
   };
@@ -1096,7 +1096,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
             <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-foreground text-sm sm:text-base">Study Buddy</h3>
+            <h3 className="font-bold text-foreground text-sm sm:text-base">Gyanam AI</h3>
             <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
               {isQuizMode ? (
                 <span className="flex items-center gap-1">
@@ -1308,7 +1308,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
                     <span className="font-semibold text-xs sm:text-sm">
-                      {isUser ? "You" : "Study Buddy"}
+                      {isUser ? "You" : "Gyanam AI"}
                     </span>
                     <span className="text-[10px] sm:text-xs text-muted-foreground">
                       {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -1659,7 +1659,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
               )}
               
               <Input
-                placeholder={isListening ? "Listening..." : "Message Study Buddy..."}
+                placeholder={isListening ? "Listening..." : "Message Gyanam AI..."}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}

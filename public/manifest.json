@@ -1,6 +1,6 @@
 {
-  "name": "Study Buddy AI - AI-Powered Study Partner",
-  "short_name": "Study Buddy AI",
+  "name": "Gyanam AI - AI-Powered Study Partner",
+  "short_name": "Gyanam AI",
   "description": "AI-powered personalized study assistant for students with Hinglish support, adaptive quizzes, and district-level rankings.",
   "start_url": "/",
   "scope": "/",

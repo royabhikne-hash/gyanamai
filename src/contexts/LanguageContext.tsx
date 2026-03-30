@@ -12,7 +12,7 @@ interface Translations {
 // Common translations used across the app - English primary
 export const translations: Translations = {
   // Navigation & Common
-  'app.name': { en: 'Study Buddy AI', hi: 'Study Buddy AI' },
+  'app.name': { en: 'Gyanam AI', hi: 'Gyanam AI' },
   'nav.home': { en: 'Home', hi: 'Home' },
   'nav.login': { en: 'Login', hi: 'Login' },
   'nav.signup': { en: 'Sign Up', hi: 'Sign Up' },

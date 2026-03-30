@@ -33,7 +33,7 @@ const InviteModal: React.FC<Props> = ({ inviteCode, loading, onClose }) => {
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <Card className="w-full max-w-sm bg-card border-border">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">Invite a Study Buddy</CardTitle>
+          <CardTitle className="text-lg">Invite a Gyanam AI</CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>

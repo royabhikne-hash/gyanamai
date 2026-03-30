@@ -466,7 +466,7 @@ const StudentDashboard = () => {
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <img 
                 src="/logo.png" 
-                alt="Study Buddy AI" 
+                alt="Gyanam AI" 
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex-shrink-0 object-contain"
               />
               <div className="min-w-0">

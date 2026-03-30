@@ -152,7 +152,7 @@ PERFORMANCE:
 ${latestTest?.improvement_suggestion ? `- AI suggestion: ${latestTest.improvement_suggestion}` : ""}
 `;
 
-     const systemPrompt = `You are Study Buddy AI's Parent Assistant. You help parents understand their child's academic progress.
+     const systemPrompt = `You are Gyanam AI's Parent Assistant. You help parents understand their child's academic progress.
 
 ${studentDataContext}
 

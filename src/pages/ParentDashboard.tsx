@@ -106,7 +106,7 @@ const ParentDashboard = () => {
       <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Study Buddy AI" className="w-8 h-8 rounded-xl object-contain" />
+            <img src="/logo.png" alt="Gyanam AI" className="w-8 h-8 rounded-xl object-contain" />
             <div>
               <h1 className="font-bold text-lg">Parent Dashboard</h1>
               <p className="text-xs text-muted-foreground">{student.name} · {student.class} · {student.board}</p>
@@ -235,7 +235,7 @@ const ParentDashboard = () => {
 
         <div className="text-center py-4">
           <p className="text-xs text-muted-foreground">
-            Study Buddy AI · Parent View · Read Only
+            Gyanam AI · Parent View · Read Only
           </p>
         </div>
       </main>

@@ -35,7 +35,7 @@ const Landing = () => {
       <header className="container mx-auto py-4 px-4 relative z-10">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <img src="/logo.png" alt="Study Buddy AI" className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex-shrink-0 object-contain drop-shadow-md" />
+            <img src="/logo.png" alt="Gyanam AI" className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex-shrink-0 object-contain drop-shadow-md" />
             <span className="text-base sm:text-xl font-extrabold text-foreground truncate font-display">{t('app.name')}</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
@@ -65,9 +65,10 @@ const Landing = () => {
 
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-[1.08] tracking-tight animate-slide-up font-display">
               {language === 'en' ? (
-                <>Your Personal<br /><span className="text-gradient-shimmer">AI Study Buddy</span><br />is Here</>
+                <>Your Personal<br /><span className="text-gradient-shimmer">Gyanam AI</span><br />is Here</>
               ) : (
-                <>Tera Personal<br /><span className="text-gradient-shimmer">AI Study Buddy</span><br />Aa Gaya</>
+                <>Tera Personal<br /><span className="text-gradient-shimmer">Gyanam AI</span><br />Aa Gaya</>
+
               )}
             </h1>
 
@@ -209,14 +210,14 @@ const Landing = () => {
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2.5">
-              <img src="/logo.png" alt="Study Buddy AI" className="w-8 h-8 rounded-lg object-contain" />
-              <span className="font-bold font-display">Study Buddy AI</span>
+              <img src="/logo.png" alt="Gyanam AI" className="w-8 h-8 rounded-lg object-contain" />
+              <span className="font-bold font-display">Gyanam AI</span>
             </div>
             <button onClick={() => navigate("/terms")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Terms & Conditions
             </button>
             <p className="text-sm text-muted-foreground">
-              © 2025 Study Buddy AI. Making education better for every student.
+              © 2025 Gyanam AI. Making education better for every student.
             </p>
           </div>
         </div>

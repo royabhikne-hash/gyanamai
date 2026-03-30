@@ -106,7 +106,7 @@ SUBJECTS COMPLETED IN THIS SESSION: ${completedSubjects.join(", ")}
 The student has already studied these subjects today. If they ask about them, acknowledge their earlier study.
 ` : "";
 
-  return `You are Study Buddy AI - a brilliant, friendly personal tutor for Indian school students (Class 6-12).
+  return `You are Gyanam AI - a brilliant, friendly personal tutor for Indian school students (Class 6-12).
 
 ${studentInfo}
 ${subjectInstruction}

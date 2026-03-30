@@ -22,7 +22,7 @@ const ParentChatbot = ({ token, studentName }: ParentChatbotProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: `Hello! I'm Study Buddy AI's Parent Assistant. Ask me anything about ${studentName}'s study progress, performance, or how you can help them improve! You can also ask in Hindi if you prefer.`,
+      content: `Hello! I'm Gyanam AI's Parent Assistant. Ask me anything about ${studentName}'s study progress, performance, or how you can help them improve! You can also ask in Hindi if you prefer.`,
     },
   ]);
   const [input, setInput] = useState("");

@@ -377,11 +377,11 @@ const Signup = () => {
             <div className="text-center mb-6 sm:mb-8">
               <img 
                 src="/logo.png" 
-                alt="Study Buddy AI" 
+                alt="Gyanam AI" 
                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl mx-auto mb-3 sm:mb-4 object-contain drop-shadow-lg"
               />
               <h1 className="text-xl sm:text-2xl font-bold font-display">Create Your Account</h1>
-              <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Join Study Buddy AI and start improving</p>
+              <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Join Gyanam AI and start improving</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
@@ -681,7 +681,7 @@ const Signup = () => {
                   <Link to="/terms" className="text-primary hover:underline font-medium" target="_blank">
                     Terms & Conditions
                   </Link>{" "}
-                  of Study Buddy AI
+                  of Gyanam AI
                 </label>
               </div>
 

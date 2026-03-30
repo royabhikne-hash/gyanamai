@@ -61,7 +61,7 @@ const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     
     const previewText = voice.lang.startsWith('hi') 
       ? "नमस्ते! मैं आपका स्टडी बडी हूं। आज क्या पढ़ना है?"
-      : "Hello! I am your Study Buddy. What would you like to study today?";
+      : "Hello! I am your Gyanam AI. What would you like to study today?";
     
     const utterance = new SpeechSynthesisUtterance(previewText);
     utterance.voice = voice;
