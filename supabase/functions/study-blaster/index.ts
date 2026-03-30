@@ -24,7 +24,8 @@ serve(async (req) => {
       });
     }
 
-    const { action, projectId, messages, content } = await req.json();
+    const body = await req.json();
+    const { action, projectId, messages, content, fileName, fileType, fileBase64 } = body;
 
     // Validate user
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
@@ -297,10 +298,8 @@ ${combinedContent.substring(0, 60000)}`;
       });
 
     } else if (action === "process_url") {
-      // Extract content from URL
-      const { sourceId, url } = await req.json().catch(() => ({ sourceId: null, url: content }));
-      
-      const extractPrompt = `Extract and summarize the main educational content from this URL: ${content || url}. Return the key text content suitable for study purposes. If you cannot access the URL, explain why.`;
+      // Extract content from URL - content already parsed from initial req.json()
+      const extractPrompt = `Extract and summarize the main educational content from this URL: ${content}. Return the key text content suitable for study purposes. If you cannot access the URL, explain why.`;
 
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -326,8 +325,58 @@ ${combinedContent.substring(0, 60000)}`;
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
 
+    } else if (action === "extract_file") {
+      // Extract content from base64 file using multimodal Gemini
+      if (!fileBase64 || !fileName) {
+        return new Response(JSON.stringify({ error: "Missing file data" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      const extractPrompt = `Extract ALL text content from this uploaded document "${fileName}". Preserve all important information, formulas, definitions, key points, headings, and structure. Return the full extracted text content in a well-organized format.`;
+
+      // Use multimodal with inline_data for the file
+      const mimeType = fileType || "application/pdf";
+      const aiMessages: any[] = [
+        { role: "system", content: "You are an expert document content extractor. Extract all educational text content from documents, preserving structure, formulas, and key information. Return plain text only." },
+        { 
+          role: "user", 
+          content: [
+            { 
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${fileBase64}` }
+            },
+            { type: "text", text: extractPrompt },
+          ]
+        },
+      ];
+
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: aiMessages,
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        console.error("AI extract_file error:", aiResponse.status, await aiResponse.text());
+        throw new Error("Failed to extract file content");
+      }
+
+      const aiData = await aiResponse.json();
+      const extractedContent = aiData.choices?.[0]?.message?.content || "";
+
+      return new Response(JSON.stringify({ success: true, extractedContent }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+
     } else if (action === "process_text") {
-      // Process uploaded text/document content
+      // Process plain text content
       const extractPrompt = `Organize and structure the following study material content. Preserve all important information, formulas, definitions, and key points:\n\n${content?.substring(0, 80000)}`;
 
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

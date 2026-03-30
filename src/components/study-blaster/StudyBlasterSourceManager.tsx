@@ -42,6 +42,18 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const readFileAsBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -65,16 +77,14 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from("study-blaster-files")
-          .getPublicUrl(filePath);
-
-        // Read file content for text files
+        // Extract content based on file type
         let extractedContent = "";
         if (file.type === "text/plain" || file.name.endsWith(".txt")) {
           extractedContent = await file.text();
         } else {
-          // For PDF/DOCX, send to AI for processing
+          // For PDF/DOCX, read as base64 and send to AI for extraction
+          toast({ title: "Processing...", description: `Extracting content from ${file.name}` });
+          const base64Content = await readFileAsBase64(file);
           const { data: session } = await supabase.auth.getSession();
           const response = await fetch(
             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/study-blaster`,
@@ -85,12 +95,17 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
                 Authorization: `Bearer ${session.session?.access_token}`,
               },
               body: JSON.stringify({
-                action: "process_text",
-                content: `File: ${file.name} (${file.type}). Content needs to be extracted from uploaded file at ${publicUrl}`,
+                action: "extract_file",
+                fileName: file.name,
+                fileType: file.type,
+                fileBase64: base64Content,
               }),
             }
           );
           const result = await response.json();
+          if (result.error) {
+            console.error("File extraction error:", result.error);
+          }
           extractedContent = result.extractedContent || "";
         }
 
