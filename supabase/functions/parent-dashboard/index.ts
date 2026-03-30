@@ -16,7 +16,7 @@ serve(async (req) => {
 
     if (!token) {
       return new Response(JSON.stringify({ error: "Token required" }), {
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -34,7 +34,7 @@ serve(async (req) => {
 
     if (tokenError || !tokenData || !tokenData.is_active) {
       return new Response(JSON.stringify({ error: "Invalid or expired link" }), {
-        status: 403,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -47,7 +47,7 @@ serve(async (req) => {
       .update({ last_accessed_at: new Date().toISOString() })
       .eq("token", token);
 
-    // Get student info (no sensitive data)
+    // Get student info
     const { data: student } = await supabase
       .from("students")
       .select("full_name, class, board, school_id, district, state")
@@ -56,7 +56,7 @@ serve(async (req) => {
 
     if (!student) {
       return new Response(JSON.stringify({ error: "Student not found" }), {
-        status: 404,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -76,44 +76,28 @@ serve(async (req) => {
     const weekStart = new Date(now);
     weekStart.setDate(now.getDate() - now.getDay());
     weekStart.setHours(0, 0, 0, 0);
-
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // Study sessions this week
-    const { data: weekSessions } = await supabase
-      .from("study_sessions")
-      .select("time_spent, subject, created_at")
-      .eq("student_id", studentId)
-      .gte("created_at", weekStart.toISOString());
+    // Fetch all data in parallel
+    const [weekSessionsRes, monthSessionsRes, mcqRes, weeklyTestsRes, lastWeekRes, masteryRes] = await Promise.all([
+      supabase.from("study_sessions").select("time_spent, subject, created_at").eq("student_id", studentId).gte("created_at", weekStart.toISOString()),
+      supabase.from("study_sessions").select("time_spent, subject, created_at").eq("student_id", studentId).gte("created_at", monthStart.toISOString()),
+      supabase.from("mcq_attempts").select("accuracy_percentage, subject, created_at").eq("student_id", studentId).order("created_at", { ascending: false }).limit(50),
+      supabase.from("weekly_tests").select("accuracy_percentage, strong_subjects, weak_subjects, created_at, subjects_tested").eq("student_id", studentId).order("created_at", { ascending: false }).limit(10),
+      supabase.from("study_sessions").select("time_spent").eq("student_id", studentId).gte("created_at", new Date(weekStart.getTime() - 7 * 86400000).toISOString()).lt("created_at", weekStart.toISOString()),
+      supabase.from("topic_mastery").select("subject, topic, mastery_score, attempt_count, trend, last_practiced").eq("student_id", studentId).order("mastery_score", { ascending: true }).limit(20),
+    ]);
 
-    // Study sessions this month
-    const { data: monthSessions } = await supabase
-      .from("study_sessions")
-      .select("time_spent, subject, created_at")
-      .eq("student_id", studentId)
-      .gte("created_at", monthStart.toISOString());
+    const weekSessions = weekSessionsRes.data;
+    const monthSessions = monthSessionsRes.data;
+    const mcqAttempts = mcqRes.data;
+    const weeklyTests = weeklyTestsRes.data;
+    const lastWeekSessions = lastWeekRes.data;
+    const topicMastery = masteryRes.data || [];
 
-    // MCQ attempts
-    const { data: mcqAttempts } = await supabase
-      .from("mcq_attempts")
-      .select("accuracy_percentage, subject, created_at")
-      .eq("student_id", studentId)
-      .order("created_at", { ascending: false })
-      .limit(50);
-
-    // Weekly tests
-    const { data: weeklyTests } = await supabase
-      .from("weekly_tests")
-      .select("accuracy_percentage, strong_subjects, weak_subjects, created_at, subjects_tested")
-      .eq("student_id", studentId)
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    // Calculate stats
     const weeklyMinutes = weekSessions?.reduce((a, s) => a + (s.time_spent || 0), 0) || 0;
     const monthlyMinutes = monthSessions?.reduce((a, s) => a + (s.time_spent || 0), 0) || 0;
 
-    const weekSubjects = new Set(weekSessions?.map(s => s.subject).filter(Boolean));
     const allSubjects = new Set([
       ...(weekSessions?.map(s => s.subject).filter(Boolean) || []),
       ...(mcqAttempts?.map(a => a.subject).filter(Boolean) || []),
@@ -124,27 +108,13 @@ serve(async (req) => {
       ? Math.round((mcqAttempts!.reduce((a, m) => a + Number(m.accuracy_percentage), 0)) / totalMcqs)
       : 0;
 
-    // Days active this week
-    const activeDays = new Set(
-      weekSessions?.map(s => new Date(s.created_at).toDateString())
-    ).size;
-
-    // Progress trend - compare this week avg to last week
-    const lastWeekStart = new Date(weekStart);
-    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-    const { data: lastWeekSessions } = await supabase
-      .from("study_sessions")
-      .select("time_spent")
-      .eq("student_id", studentId)
-      .gte("created_at", lastWeekStart.toISOString())
-      .lt("created_at", weekStart.toISOString());
+    const activeDays = new Set(weekSessions?.map(s => new Date(s.created_at).toDateString())).size;
 
     const lastWeekMinutes = lastWeekSessions?.reduce((a, s) => a + (s.time_spent || 0), 0) || 0;
     let progressTrend: "up" | "down" | "stable" = "stable";
     if (weeklyMinutes > lastWeekMinutes * 1.1) progressTrend = "up";
     else if (weeklyMinutes < lastWeekMinutes * 0.9) progressTrend = "down";
 
-    // Strong/weak subjects from latest weekly test
     const latestTest = weeklyTests?.[0];
     const strongSubjects = latestTest?.strong_subjects || [];
     const weakSubjects = latestTest?.weak_subjects || [];
@@ -172,6 +142,14 @@ serve(async (req) => {
         weakSubjects,
         daysActiveThisWeek: activeDays,
         progressTrend,
+        topicMastery: topicMastery.map(t => ({
+          subject: t.subject,
+          topic: t.topic,
+          score: t.mastery_score,
+          attempts: t.attempt_count,
+          trend: t.trend,
+          lastPracticed: t.last_practiced,
+        })),
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
