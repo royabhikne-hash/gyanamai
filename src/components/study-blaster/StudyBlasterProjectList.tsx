@@ -71,17 +71,17 @@ const StudyBlasterProjectList = ({ projects, studentId, onSelectProject, onRefre
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-[hsl(var(--edu-purple))] bg-clip-text text-transparent flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary" />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary to-[hsl(var(--edu-purple))] bg-clip-text text-transparent flex items-center gap-2">
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
             Study Blaster
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">Create projects, upload sources, and study with AI</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Create projects, upload sources, and study with AI</p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2 glass-card border-primary/20 hover:border-primary/40">
+            <Button className="gap-2 glass-card border-primary/20 hover:border-primary/40 w-full sm:w-auto shrink-0">
               <Plus className="w-4 h-4" /> New Project
             </Button>
           </DialogTrigger>
