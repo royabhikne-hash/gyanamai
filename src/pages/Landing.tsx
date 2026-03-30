@@ -65,9 +65,10 @@ const Landing = () => {
 
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-[1.08] tracking-tight animate-slide-up font-display">
               {language === 'en' ? (
-                <>Your Personal<br /><span className="text-gradient-shimmer">AI Gyanam AI</span><br />is Here</>
+                <>Your Personal<br /><span className="text-gradient-shimmer">Gyanam AI</span><br />is Here</>
               ) : (
-                <>Tera Personal<br /><span className="text-gradient-shimmer">AI Gyanam AI</span><br />Aa Gaya</>
+                <>Tera Personal<br /><span className="text-gradient-shimmer">Gyanam AI</span><br />Aa Gaya</>
+
               )}
             </h1>
 
