@@ -474,7 +474,7 @@ const StudentProgress = () => {
                       {test.correct_count}/{test.total_questions} correct · {Math.floor(test.time_taken_seconds / 60)}m
                     </p>
                   </div>
-                  <span className={`text-sm font-semibold tabular-nums ${test.accuracy_percentage >= 70 ? "text-emerald-600 dark:text-emerald-400" : test.accuracy_percentage >= 50 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                  <span className={`text-sm font-semibold tabular-nums ${test.accuracy_percentage >= 70 ? "text-accent" : test.accuracy_percentage >= 50 ? "text-muted-foreground" : "text-destructive"}`}>
                     {test.accuracy_percentage}%
                   </span>
                 </div>
@@ -536,7 +536,7 @@ const MetricCard = ({ label, value, trend }: { label: string; value: string; tre
     <div className="flex items-baseline gap-1.5">
       <span className="text-2xl font-semibold tracking-tight">{value}</span>
       {trend !== undefined && trend !== 0 && (
-        <span className={`flex items-center text-xs font-medium ${trend > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+        <span className={`flex items-center text-xs font-medium ${trend > 0 ? "text-accent" : "text-destructive"}`}>
           {trend > 0 ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
           {Math.abs(trend)}
         </span>
