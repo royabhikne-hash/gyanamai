@@ -1623,9 +1623,9 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
 
       {/* ChatGPT-style Input - Mobile Optimized */}
       {!isQuizMode && (
-        <div className="border-t border-border/50 bg-background p-2 sm:p-3 pb-safe">
+        <div className="border-t border-border/40 bg-background p-2 sm:p-3 pb-safe">
           <div className="max-w-2xl mx-auto">
-            <div className="flex items-center gap-1.5 sm:gap-2 bg-muted/50 border border-border/50 rounded-full px-2 sm:px-3 py-1.5 sm:py-2 focus-within:border-primary/50 transition-colors">
+            <div className="relative flex items-center gap-1.5 sm:gap-2 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all duration-200">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1637,7 +1637,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                 variant="ghost"
                 size="icon"
                 onClick={() => fileInputRef.current?.click()}
-                className="shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted"
               >
                 <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </Button>
@@ -1648,9 +1648,9 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                   variant="ghost"
                   size="icon"
                   onClick={toggleListening}
-                  className={`shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-full transition-colors ${
+                  className={`shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-xl transition-colors ${
                     isListening 
-                      ? "bg-destructive/20 text-destructive hover:bg-destructive/30" 
+                      ? "bg-destructive/10 text-destructive hover:bg-destructive/20" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}
                 >
@@ -1659,7 +1659,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
               )}
               
               <Input
-                placeholder={isListening ? "Listening..." : "Message..."}
+                placeholder={isListening ? "Listening..." : "Message Study Buddy..."}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -1670,7 +1670,8 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                 size="icon"
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim() && !selectedImage}
-                className="shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-full"
+                className="shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-xl"
+                variant={inputValue.trim() ? "default" : "ghost"}
               >
                 {isLoading ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               </Button>
