@@ -3,23 +3,13 @@ import BottomNavBar from "@/components/BottomNavBar";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  BookOpen,
   ArrowLeft,
   TrendingUp,
   TrendingDown,
-  Calendar,
-  Clock,
-  Target,
-  Brain,
-  BarChart3,
-  Award,
-  Flame,
-  Zap,
-  Star,
-  CheckCircle,
   Download,
   Loader2,
   ClipboardList,
+  Minus,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,27 +19,15 @@ import LanguageToggle from "@/components/LanguageToggle";
 import jsPDF from "jspdf";
 import { ProgressSkeleton } from "@/components/DashboardSkeleton";
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
   AreaChart,
   Area,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  ComposedChart,
-  Legend,
+  Line,
 } from "recharts";
 
 interface WeeklyTestRecord {
@@ -78,8 +56,6 @@ interface StudySession {
   strong_areas: string[] | null;
   created_at: string;
 }
-
-const COLORS = ["hsl(var(--primary))", "hsl(var(--accent))", "#8b5cf6", "#f59e0b", "#ef4444"];
 
 const StudentProgress = () => {
   const navigate = useNavigate();
@@ -112,7 +88,6 @@ const StudentProgress = () => {
         setStudentName(student.full_name);
         setStudentClass(student.class);
 
-        // Fetch weekly tests (primary progress data)
         const { data: testsData } = await supabase
           .from("weekly_tests")
           .select("*")
@@ -121,7 +96,6 @@ const StudentProgress = () => {
 
         if (testsData) setWeeklyTests(testsData);
 
-        // Fetch study sessions (for study tracking data)
         const { data: sessionData } = await supabase
           .from("study_sessions")
           .select("id, topic, subject, time_spent, understanding_level, weak_areas, strong_areas, created_at")
@@ -144,16 +118,13 @@ const StudentProgress = () => {
     const test = weeklyTests[testIndex];
     const accuracy = test.accuracy_percentage;
 
-    // Improvement: current - previous week accuracy
     const prevTest = testIndex > 0 ? weeklyTests[testIndex - 1] : null;
     const improvement = prevTest ? Math.max(0, accuracy - prevTest.accuracy_percentage) : 0;
 
-    // Weak topic reduction
     const currentWeak = (test.weak_subjects || []).length;
     const prevWeak = prevTest ? (prevTest.weak_subjects || []).length : currentWeak;
     const weakReduction = prevWeak > 0 ? Math.max(0, ((prevWeak - currentWeak) / prevWeak) * 100) : (currentWeak === 0 ? 100 : 0);
 
-    // Consistency: days studied that week
     const weekStart = new Date(test.week_start);
     const weekEnd = new Date(test.week_end);
     const weekSessions = sessions.filter(s => {
@@ -163,7 +134,6 @@ const StudentProgress = () => {
     const uniqueDays = new Set(weekSessions.map(s => new Date(s.created_at).toDateString())).size;
     const consistency = (uniqueDays / 7) * 100;
 
-    // WPS Formula
     return Math.round(
       (accuracy * 0.5) +
       (improvement * 0.25) +
@@ -177,7 +147,6 @@ const StudentProgress = () => {
     return calculateWPS(weeklyTests.length - 1);
   };
 
-  // WPS trend over weeks
   const getWPSTrendData = () => {
     return weeklyTests.map((test, i) => ({
       week: `W${i + 1}`,
@@ -187,47 +156,34 @@ const StudentProgress = () => {
     }));
   };
 
-  // Subject performance from weekly tests
   const getSubjectPerformance = () => {
     const subjectStats: Record<string, { strong: number; weak: number; neutral: number; tests: number }> = {};
     weeklyTests.forEach(test => {
       (test.subjects_tested || []).forEach(sub => {
         if (!subjectStats[sub]) subjectStats[sub] = { strong: 0, weak: 0, neutral: 0, tests: 0 };
         subjectStats[sub].tests++;
-        if ((test.strong_subjects || []).includes(sub)) {
-          subjectStats[sub].strong++;
-        } else if ((test.weak_subjects || []).includes(sub)) {
-          subjectStats[sub].weak++;
-        } else {
-          subjectStats[sub].neutral++;
-        }
+        if ((test.strong_subjects || []).includes(sub)) subjectStats[sub].strong++;
+        else if ((test.weak_subjects || []).includes(sub)) subjectStats[sub].weak++;
+        else subjectStats[sub].neutral++;
       });
     });
 
     return Object.entries(subjectStats)
       .map(([subject, data]) => {
-        // Score: strong=100%, neutral=50%, weak=0% weighted average
         const totalClassified = data.strong + data.weak + data.neutral;
-        const score = totalClassified > 0 
-          ? Math.round(((data.strong * 100) + (data.neutral * 50)) / totalClassified) 
+        const score = totalClassified > 0
+          ? Math.round(((data.strong * 100) + (data.neutral * 50)) / totalClassified)
           : 0;
-        return {
-          subject: subject.length > 12 ? subject.slice(0, 12) + "..." : subject,
-          score,
-          tests: data.tests,
-        };
+        return { subject: subject.length > 14 ? subject.slice(0, 14) + "…" : subject, score, tests: data.tests };
       })
-      .sort((a, b) => b.tests - a.tests)
-      .slice(0, 8);
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6);
   };
 
-  // All weak subjects across tests
   const getWeakSubjects = () => {
     const weakCount: Record<string, number> = {};
     weeklyTests.forEach(test => {
-      (test.weak_subjects || []).forEach(sub => {
-        weakCount[sub] = (weakCount[sub] || 0) + 1;
-      });
+      (test.weak_subjects || []).forEach(sub => { weakCount[sub] = (weakCount[sub] || 0) + 1; });
     });
     return Object.entries(weakCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
   };
@@ -235,22 +191,15 @@ const StudentProgress = () => {
   const getStrongSubjects = () => {
     const strongCount: Record<string, number> = {};
     weeklyTests.forEach(test => {
-      (test.strong_subjects || []).forEach(sub => {
-        strongCount[sub] = (strongCount[sub] || 0) + 1;
-      });
+      (test.strong_subjects || []).forEach(sub => { strongCount[sub] = (strongCount[sub] || 0) + 1; });
     });
     return Object.entries(strongCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
   };
 
-  // Study tracking data
   const getStudyStats = () => {
     const totalSessions = sessions.length;
     const totalMinutes = sessions.reduce((acc, s) => acc + (s.time_spent || 0), 0);
-    const last30Days = sessions.filter(s => new Date(s.created_at) >= new Date(Date.now() - 30 * 86400000));
-    const daysStudied = new Set(last30Days.map(s => new Date(s.created_at).toDateString())).size;
-    const consistency = Math.round((daysStudied / 30) * 100);
 
-    // Streak
     let streak = 0;
     const today = new Date();
     for (let i = 0; i < 30; i++) {
@@ -266,10 +215,9 @@ const StudentProgress = () => {
       ? Math.round(weeklyTests.reduce((acc, t) => acc + t.accuracy_percentage, 0) / totalTests)
       : 0;
 
-    return { totalSessions, totalMinutes, consistency, streak, totalTests, avgAccuracy };
+    return { totalSessions, totalMinutes, streak, totalTests, avgAccuracy };
   };
 
-  // Study patterns by day of week
   const getStudyPatterns = () => {
     const dayData: Record<string, number> = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -278,41 +226,6 @@ const StudentProgress = () => {
       dayData[day] += s.time_spent || 0;
     });
     return Object.entries(dayData).map(([day, minutes]) => ({ day, minutes }));
-  };
-
-  // Weekly test accuracy trend
-  const getAccuracyTrend = () => {
-    return weeklyTests.map((test, i) => ({
-      week: `W${i + 1}`,
-      accuracy: test.accuracy_percentage,
-      correct: test.correct_count,
-      wrong: test.wrong_count,
-      label: new Date(test.week_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-    }));
-  };
-
-  // Skill radar from weekly test data
-  const getSkillRadar = () => {
-    const stats = getStudyStats();
-    const latestWPS = getLatestWPS();
-    return [
-      { skill: "WPS Score", value: latestWPS, fullMark: 100 },
-      { skill: "Consistency", value: stats.consistency, fullMark: 100 },
-      { skill: "Test Accuracy", value: stats.avgAccuracy, fullMark: 100 },
-      { skill: "Engagement", value: Math.min(100, (stats.totalMinutes / 60) * 2), fullMark: 100 },
-      { skill: "Streak", value: Math.min(100, stats.streak * 14), fullMark: 100 },
-    ];
-  };
-
-  // Grade based on WPS
-  const calculateGrade = () => {
-    const wps = getLatestWPS();
-    if (wps >= 85) return { grade: "A+", color: "#22c55e", label: "Excellent" };
-    if (wps >= 75) return { grade: "A", color: "#22c55e", label: "Very Good" };
-    if (wps >= 65) return { grade: "B+", color: "#3b82f6", label: "Good" };
-    if (wps >= 55) return { grade: "B", color: "#3b82f6", label: "Above Average" };
-    if (wps >= 45) return { grade: "C", color: "#f59e0b", label: "Average" };
-    return { grade: "D", color: "#ef4444", label: "Needs Improvement" };
   };
 
   const handleDownloadPdf = async () => {
@@ -324,10 +237,8 @@ const StudentProgress = () => {
       let yPos = 15;
       const margin = 15;
       const stats = getStudyStats();
-      const gradeInfo = calculateGrade();
       const wps = getLatestWPS();
 
-      // Header
       pdf.setFillColor(59, 130, 246);
       pdf.rect(0, 0, pageWidth, 30, "F");
       pdf.setTextColor(255, 255, 255);
@@ -339,13 +250,12 @@ const StudentProgress = () => {
 
       yPos = 40;
       pdf.setTextColor(0, 0, 0);
-
       pdf.setFontSize(14);
       pdf.setFont("helvetica", "bold");
       pdf.text(studentName, margin, yPos);
       pdf.setFontSize(10);
       pdf.setFont("helvetica", "normal");
-      pdf.text(`Class: ${studentClass} | Grade: ${gradeInfo.grade} (${gradeInfo.label}) | WPS: ${wps}%`, margin, yPos + 7);
+      pdf.text(`Class: ${studentClass} | WPS: ${wps}%`, margin, yPos + 7);
       yPos += 20;
 
       pdf.setFontSize(12);
@@ -361,15 +271,10 @@ const StudentProgress = () => {
         `Average Test Accuracy: ${stats.avgAccuracy}%`,
         `Total Study Sessions: ${stats.totalSessions}`,
         `Total Study Time: ${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`,
-        `Consistency (30 days): ${stats.consistency}%`,
         `Current Streak: ${stats.streak} days`,
       ];
-      statsText.forEach(text => {
-        pdf.text(`• ${text}`, margin + 5, yPos);
-        yPos += 6;
-      });
+      statsText.forEach(text => { pdf.text(`• ${text}`, margin + 5, yPos); yPos += 6; });
 
-      // Weak/Strong
       const weakSubs = getWeakSubjects();
       const strongSubs = getStrongSubjects();
       if (strongSubs.length > 0) {
@@ -389,12 +294,11 @@ const StudentProgress = () => {
         weakSubs.forEach(([sub]) => { pdf.text(`  ⚠ ${sub}`, margin + 5, yPos); yPos += 5; });
       }
 
-      // Footer
       pdf.setFillColor(59, 130, 246);
       pdf.rect(0, pageHeight - 12, pageWidth, 12, "F");
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(8);
-      pdf.text("Gyanam AI - Your Personal Gyanam AI", pageWidth / 2, pageHeight - 5, { align: "center" });
+      pdf.text("Gyanam AI - Your Study Companion", pageWidth / 2, pageHeight - 5, { align: "center" });
 
       pdf.save(`${studentName.replace(/\s+/g, "_")}_Progress_${new Date().toISOString().split("T")[0]}.pdf`);
       toast({ title: "PDF Downloaded!", description: "Your progress report has been saved." });
@@ -414,396 +318,238 @@ const StudentProgress = () => {
   const weakSubs = getWeakSubjects();
   const strongSubs = getStrongSubjects();
   const stats = getStudyStats();
-  const skillRadarData = getSkillRadar();
-  const accuracyTrend = getAccuracyTrend();
-  const gradeInfo = calculateGrade();
   const latestWPS = getLatestWPS();
 
+  // WPS trend direction
+  const wpsDelta = weeklyTests.length >= 2
+    ? calculateWPS(weeklyTests.length - 1) - calculateWPS(weeklyTests.length - 2)
+    : 0;
+
+  const tooltipStyle = {
+    backgroundColor: "hsl(var(--card))",
+    border: "1px solid hsl(var(--border))",
+    borderRadius: "8px",
+    fontSize: "12px",
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-16 sm:pb-0">
-      {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
+    <div className="min-h-screen bg-background pb-16 sm:pb-0">
+      {/* Clean Header */}
+      <header className="border-b border-border bg-card sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="hover:bg-primary/10">
-                <ArrowLeft className="w-5 h-5" />
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="h-9 w-9">
+                <ArrowLeft className="w-4 h-4" />
               </Button>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-                  <BarChart3 className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="font-bold text-xl">{t("progress.title")}</h1>
-                  <p className="text-sm text-muted-foreground">{studentName} • {studentClass}</p>
-                </div>
+              <div>
+                <h1 className="font-semibold text-lg leading-tight">{t("progress.title")}</h1>
+                <p className="text-xs text-muted-foreground">{studentName} · Class {studentClass}</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <LanguageToggle />
-              <div className="hidden sm:flex items-center gap-3 px-4 py-2 rounded-xl bg-gradient-to-r from-muted/50 to-muted/30 border border-border/50">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-md" style={{ backgroundColor: gradeInfo.color }}>
-                  {gradeInfo.grade}
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{t("progress.overallGrade")}</p>
-                  <p className="font-semibold text-sm">{gradeInfo.label}</p>
-                </div>
-              </div>
-              <Button variant="default" size="sm" onClick={handleDownloadPdf} disabled={downloadingPdf} className="bg-gradient-to-r from-primary to-primary/80">
-                {downloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4 mr-2" />{t("progress.downloadPdf")}</>}
+              <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={downloadingPdf} className="h-8 text-xs">
+                {downloadingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Download className="w-3.5 h-3.5 mr-1.5" />PDF</>}
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Mobile Grade Badge */}
-        <div className="sm:hidden mb-6 flex justify-center">
-          <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-card border border-border shadow-sm">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg" style={{ backgroundColor: gradeInfo.color }}>
-              {gradeInfo.grade}
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t("progress.overallGrade")}</p>
-              <p className="font-bold text-lg">{gradeInfo.label}</p>
-            </div>
-          </div>
+      <main className="container mx-auto px-4 py-6 space-y-6">
+        {/* Key Metrics Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <MetricCard
+            label="WPS Score"
+            value={`${latestWPS}%`}
+            trend={wpsDelta}
+          />
+          <MetricCard
+            label="Avg Accuracy"
+            value={`${stats.avgAccuracy}%`}
+          />
+          <MetricCard
+            label="Study Time"
+            value={`${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`}
+          />
+          <MetricCard
+            label="Streak"
+            value={`${stats.streak} days`}
+          />
         </div>
 
-        {/* WPS Hero Card */}
-        <div className="edu-card p-6 mb-8 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/5 border-primary/20">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="w-32 h-32 rounded-full border-4 border-primary flex items-center justify-center flex-shrink-0">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-primary">{latestWPS}%</p>
-                <p className="text-xs text-muted-foreground">WPS Score</p>
-              </div>
-            </div>
-            <div className="flex-1 text-center md:text-left">
-              <h2 className="text-xl font-bold mb-2">Weekly Performance Score</h2>
-              <p className="text-sm text-muted-foreground mb-3">
-                Your overall study performance based on test accuracy, improvement, and consistency.
-              </p>
-              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                  {stats.totalTests} Weekly Tests
-                </span>
-                <span className="px-3 py-1 bg-accent/10 text-accent rounded-full text-xs font-medium">
-                  {stats.avgAccuracy}% Avg Accuracy
-                </span>
-                <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium">
-                  {stats.streak} Day Streak
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-          <StatCard icon={<Zap className="w-5 h-5" />} label="WPS Score" value={`${latestWPS}%`} color="primary" highlight={latestWPS >= 75} />
-          <StatCard icon={<ClipboardList className="w-5 h-5" />} label="Weekly Tests" value={stats.totalTests.toString()} color="accent" />
-          <StatCard icon={<Target className="w-5 h-5" />} label="Test Accuracy" value={`${stats.avgAccuracy}%`} color="primary" />
-          <StatCard icon={<Calendar className="w-5 h-5" />} label="Study Sessions" value={stats.totalSessions.toString()} color="accent" />
-          <StatCard icon={<Clock className="w-5 h-5" />} label="Study Time" value={`${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`} color="primary" />
-          <StatCard icon={<Flame className="w-5 h-5" />} label="Streak" value={`${stats.streak} days`} color="accent" highlight={stats.streak >= 3} />
-        </div>
-
-        {/* Charts Row 1 */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {/* WPS Trend */}
-          <div className="edu-card p-6 lg:col-span-2">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              WPS Trend (Weekly)
-            </h3>
-            {wpsTrend.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={wpsTrend}>
-                  <defs>
-                    <linearGradient id="wpsGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} domain={[0, 100]} />
-                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
-                  <Area type="monotone" dataKey="wps" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#wpsGradient)" name="WPS" />
-                  <Line type="monotone" dataKey="accuracy" stroke="hsl(var(--accent))" strokeWidth={2} strokeDasharray="5 5" name="Accuracy" />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[280px] flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <ClipboardList className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Take your first weekly test to see progress!</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Skill Radar */}
-          <div className="edu-card p-6">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <Star className="w-5 h-5 text-primary" />
-              {t("progress.skillAssessment")}
-            </h3>
-            <ResponsiveContainer width="100%" height={280}>
-              <RadarChart data={skillRadarData}>
-                <PolarGrid stroke="hsl(var(--border))" />
-                <PolarAngleAxis dataKey="skill" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9 }} />
-                <Radar name="Skills" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.4} />
-                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
-              </RadarChart>
+        {/* WPS + Accuracy Trend — full width area chart */}
+        <section className="rounded-lg border border-border bg-card p-5">
+          <h3 className="text-sm font-medium text-muted-foreground mb-4">WPS & Accuracy Trend</h3>
+          {wpsTrend.length > 0 ? (
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={wpsTrend}>
+                <defs>
+                  <linearGradient id="wpsGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Area type="monotone" dataKey="wps" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#wpsGrad)" name="WPS" />
+                <Line type="monotone" dataKey="accuracy" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Accuracy" />
+              </AreaChart>
             </ResponsiveContainer>
-          </div>
-        </div>
+          ) : (
+            <EmptyState text="Take your first weekly test to see trends" />
+          )}
+        </section>
 
-        {/* Charts Row 2 */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {/* Subject Performance */}
-          <div className="edu-card p-6">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-primary" />
-              Subject Performance (Tests)
-            </h3>
+        {/* Two charts side by side */}
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Subject Performance — horizontal bar */}
+          <section className="rounded-lg border border-border bg-card p-5">
+            <h3 className="text-sm font-medium text-muted-foreground mb-4">Subject Performance</h3>
             {subjectData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={subjectData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={10} domain={[0, 100]} />
-                  <YAxis dataKey="subject" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} width={80} />
-                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
-                  <Bar dataKey="score" fill="hsl(var(--accent))" radius={[0, 4, 4, 0]} name="Strong %" />
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={subjectData} layout="vertical" margin={{ left: 0 }}>
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} />
+                  <YAxis dataKey="subject" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} width={90} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="score" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Score" barSize={16} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[250px] flex items-center justify-center text-muted-foreground">No test data yet</div>
+              <EmptyState text="No subject data yet" />
             )}
-          </div>
+          </section>
 
-          {/* Weekly Test Accuracy */}
-          <div className="edu-card p-6">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <Award className="w-5 h-5 text-primary" />
-              Test Accuracy Trend
-            </h3>
-            {accuracyTrend.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <ComposedChart data={accuracyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
-                  <Legend />
-                  <Bar dataKey="correct" fill="hsl(var(--accent))" name="Correct" radius={[4, 4, 0, 0]} stackId="a" />
-                  <Bar dataKey="wrong" fill="hsl(var(--destructive))" name="Wrong" radius={[4, 4, 0, 0]} stackId="a" />
-                  <Line type="monotone" dataKey="accuracy" stroke="hsl(var(--primary))" strokeWidth={2} name="Accuracy %" />
-                </ComposedChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-muted-foreground">No test data yet</div>
-            )}
-          </div>
-
-          {/* Study Patterns */}
-          <div className="edu-card p-6">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" />
-              {t("progress.weeklyStudyPattern")}
-            </h3>
-            <ResponsiveContainer width="100%" height={250}>
+          {/* Weekly Study Pattern */}
+          <section className="rounded-lg border border-border bg-card p-5">
+            <h3 className="text-sm font-medium text-muted-foreground mb-4">{t("progress.weeklyStudyPattern")}</h3>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={patternData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} formatter={(value: number) => [`${value} min`, 'Study Time']} />
-                <Bar dataKey="minutes" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value} min`, 'Study Time']} />
+                <Bar dataKey="minutes" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={24} />
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </section>
         </div>
 
-        {/* Strong & Weak Areas */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <div className="edu-card p-6">
-            <h3 className="font-bold text-lg mb-4 text-accent flex items-center gap-2">
-              <CheckCircle className="w-5 h-5" />
-              Strong Subjects
-            </h3>
-            {strongSubs.length > 0 ? (
-              <div className="space-y-3">
-                {strongSubs.map(([sub, count], i) => (
-                  <div key={sub} className="flex items-center justify-between p-3 bg-accent/10 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold text-sm">{i + 1}</div>
-                      <span className="font-medium">{sub}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">{count} tests</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-8">Take weekly tests to see your strengths!</p>
-            )}
-          </div>
-
-          <div className="edu-card p-6">
-            <h3 className="font-bold text-lg mb-4 text-destructive flex items-center gap-2">
-              <Target className="w-5 h-5" />
-              Weak Subjects (Focus Here)
-            </h3>
-            {weakSubs.length > 0 ? (
-              <div className="space-y-3">
-                {weakSubs.map(([sub, count], i) => (
-                  <div key={sub} className="flex items-center justify-between p-3 bg-destructive/10 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center text-destructive font-bold text-sm">{i + 1}</div>
-                      <span className="font-medium">{sub}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">{count} tests</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-8">No weak subjects identified yet!</p>
-            )}
-          </div>
-        </div>
-
-        {/* Weekly Test History */}
-        {weeklyTests.length > 0 && (
-          <div className="edu-card p-6 mb-8">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-primary" />
-              Weekly Test History
-            </h3>
-            <div className="space-y-3">
-              {[...weeklyTests].reverse().slice(0, 8).map((test, idx) => {
-                const testIdx = weeklyTests.length - 1 - idx;
-                const wps = calculateWPS(testIdx);
-                const acc = test.accuracy_percentage;
-                return (
-                  <div key={test.id} className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl">
-                    <div>
-                      <p className="font-semibold text-sm">
-                        {new Date(test.week_start).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} - {new Date(test.week_end).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {test.correct_count}/{test.total_questions} correct • {test.subjects_tested.length} subjects • {Math.floor(test.time_taken_seconds / 60)}m
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Accuracy</p>
-                        <p className={`font-bold text-sm ${acc >= 70 ? "text-accent" : acc >= 50 ? "text-yellow-500" : "text-destructive"}`}>{acc}%</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">WPS</p>
-                        <p className={`font-bold text-sm ${wps >= 70 ? "text-primary" : wps >= 50 ? "text-yellow-500" : "text-destructive"}`}>{wps}%</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+        {/* Subject Health */}
+        {(strongSubs.length > 0 || weakSubs.length > 0) && (
+          <section className="rounded-lg border border-border bg-card p-5">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Subject Health</h3>
+            <div className="space-y-2">
+              {strongSubs.map(([sub, count]) => (
+                <div key={sub} className="flex items-center gap-3 py-1.5">
+                  <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+                  <span className="text-sm flex-1">{sub}</span>
+                  <span className="text-xs text-muted-foreground">{count} tests</span>
+                </div>
+              ))}
+              {weakSubs.map(([sub, count]) => (
+                <div key={sub} className="flex items-center gap-3 py-1.5">
+                  <span className="w-2 h-2 rounded-full bg-destructive shrink-0" />
+                  <span className="text-sm flex-1">{sub}</span>
+                  <span className="text-xs text-muted-foreground">{count} tests</span>
+                </div>
+              ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* AI Feedback */}
-        <div className="edu-card p-6 bg-gradient-to-br from-primary/5 via-accent/5 to-background border border-primary/20">
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-            <Brain className="w-5 h-5 text-primary" />
-            AI Gyanam AI Feedback
-          </h3>
-          <div className="space-y-3">
+        {/* Test History */}
+        {weeklyTests.length > 0 && (
+          <section className="rounded-lg border border-border bg-card p-5">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Test History</h3>
+            <div className="space-y-2">
+              {[...weeklyTests].reverse().slice(0, 6).map((test) => (
+                <div key={test.id} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {new Date(test.week_start).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – {new Date(test.week_end).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {test.correct_count}/{test.total_questions} correct · {Math.floor(test.time_taken_seconds / 60)}m
+                    </p>
+                  </div>
+                  <span className={`text-sm font-semibold tabular-nums ${test.accuracy_percentage >= 70 ? "text-accent" : test.accuracy_percentage >= 50 ? "text-muted-foreground" : "text-destructive"}`}>
+                    {test.accuracy_percentage}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* AI Feedback — clean, max 3 items */}
+        <section className="rounded-lg border border-border bg-card p-5">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">Gyanam AI Insights</h3>
+          <ul className="space-y-2">
             {(() => {
               const feedback: string[] = [];
-              const grade = calculateGrade();
-              
+
               if (weeklyTests.length === 0) {
-                feedback.push("You haven't taken any weekly tests yet! Study throughout the week and take the weekly test - that's when real progress shows!");
+                feedback.push("Take your first weekly test to unlock personalized insights.");
               } else {
-                if (grade.grade === "A+" || grade.grade === "A") {
-                  feedback.push(`WPS Score ${latestWPS}% - Excellent! You're a top performer! Stay consistent!`);
-                } else if (grade.grade === "B+" || grade.grade === "B") {
-                  feedback.push(`WPS Score ${latestWPS}% - Good progress! Focus on weak subjects to reach A grade!`);
+                if (latestWPS >= 75) {
+                  feedback.push(`WPS ${latestWPS}% — Excellent performance. Stay consistent.`);
+                } else if (latestWPS >= 50) {
+                  feedback.push(`WPS ${latestWPS}% — Good progress. Focus on weak subjects to reach 75+.`);
                 } else {
-                  feedback.push(`WPS Score ${latestWPS}% - Improvement needed. Study daily, revise weak topics, and your next test will be better!`);
+                  feedback.push(`WPS ${latestWPS}% — Study daily and revise weak topics for improvement.`);
                 }
               }
 
               if (stats.streak >= 7) {
-                feedback.push("7+ day streak - Champion level consistency! Keep it up!");
+                feedback.push(`${stats.streak}-day streak. Outstanding consistency.`);
               } else if (stats.streak >= 3) {
-                feedback.push(`${stats.streak}-day streak - Great going! Push to 7 days for a WPS boost!`);
+                feedback.push(`${stats.streak}-day streak. Push to 7 days for a WPS boost.`);
               } else {
-                feedback.push("Start studying daily! Consistency improves your WPS score!");
+                feedback.push("Start a daily study habit to improve your WPS score.");
               }
 
               if (weakSubs.length > 0) {
-                feedback.push(`Focus extra on '${weakSubs[0][0]}' - it was weak in ${weakSubs[0][1]} tests. Study with Gyanam AI and ace the next test!`);
+                feedback.push(`Focus on "${weakSubs[0][0]}" — weak in ${weakSubs[0][1]} tests.`);
               }
 
-              if (strongSubs.length > 0) {
-                feedback.push(`You're excellent in '${strongSubs[0][0]}'! Use this confidence to master related topics too!`);
-              }
-
-              if (weeklyTests.length >= 2) {
-                const lastWPS = calculateWPS(weeklyTests.length - 1);
-                const prevWPS = calculateWPS(weeklyTests.length - 2);
-                if (lastWPS > prevWPS) {
-                  feedback.push(`📈 WPS ${prevWPS}% → ${lastWPS}% - Improvement showing! Great work!`);
-                } else if (lastWPS < prevWPS) {
-                  feedback.push(`📉 WPS ${prevWPS}% → ${lastWPS}% - Slight decline. More practice and revision needed!`);
-                }
-              }
-
-              return feedback.slice(0, 5).map((fb, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 bg-background/70 rounded-xl border border-border/50">
-                  <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-primary">{i + 1}</span>
-                  </div>
-                  <p className="text-sm leading-relaxed">{fb}</p>
-                </div>
+              return feedback.slice(0, 3).map((fb, i) => (
+                <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
+                  <span className="w-1 h-1 rounded-full bg-muted-foreground mt-2 shrink-0" />
+                  {fb}
+                </li>
               ));
             })()}
-          </div>
-        </div>
+          </ul>
+        </section>
       </main>
       <BottomNavBar />
     </div>
   );
 };
 
-const StatCard = ({
-  icon, label, value, color, highlight = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  color: "primary" | "accent";
-  highlight?: boolean;
-}) => {
-  const colorClasses = {
-    primary: "bg-gradient-to-br from-primary/15 to-primary/5 text-primary",
-    accent: "bg-gradient-to-br from-accent/15 to-accent/5 text-accent",
-  };
-
-  return (
-    <div className={`edu-card p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${highlight ? "ring-2 ring-accent ring-offset-2 ring-offset-background" : ""}`}>
-      <div className={`w-10 h-10 rounded-xl ${colorClasses[color]} flex items-center justify-center mb-3 shadow-sm`}>
-        {icon}
-      </div>
-      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{label}</p>
-      <p className="text-xl font-bold mt-1">{value}</p>
+// ===== Minimal Metric Card =====
+const MetricCard = ({ label, value, trend }: { label: string; value: string; trend?: number }) => (
+  <div className="rounded-lg border border-border bg-card p-4">
+    <p className="text-xs text-muted-foreground mb-1">{label}</p>
+    <div className="flex items-baseline gap-1.5">
+      <span className="text-2xl font-semibold tracking-tight">{value}</span>
+      {trend !== undefined && trend !== 0 && (
+        <span className={`flex items-center text-xs font-medium ${trend > 0 ? "text-accent" : "text-destructive"}`}>
+          {trend > 0 ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
+          {Math.abs(trend)}
+        </span>
+      )}
     </div>
-  );
-};
+  </div>
+);
+
+// ===== Empty State =====
+const EmptyState = ({ text }: { text: string }) => (
+  <div className="h-[220px] flex items-center justify-center">
+    <p className="text-sm text-muted-foreground">{text}</p>
+  </div>
+);
 
 export default StudentProgress;
