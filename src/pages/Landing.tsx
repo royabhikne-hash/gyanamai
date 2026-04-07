@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { BookOpen, Users, GraduationCap, MessageCircle, TrendingUp, FileText, Shield, Zap, Star, Brain, BarChart3, Sparkles, ArrowRight } from "lucide-react";
+import React, { useEffect, memo, useCallback, useMemo } from "react";
+import { BookOpen, Users, GraduationCap, MessageCircle, TrendingUp, FileText, Shield, Zap, Star, Brain, BarChart3, Sparkles, ArrowRight, Volume2, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -19,7 +19,9 @@ const Landing = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'var(--gradient-primary)' }}>
+          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        </div>
       </div>
     );
   }
@@ -30,6 +32,7 @@ const Landing = () => {
       <div className="liquid-orb liquid-orb-blue w-[500px] h-[500px] -top-40 -right-40 opacity-30" />
       <div className="liquid-orb liquid-orb-purple w-[400px] h-[400px] top-[60%] -left-32 opacity-25" style={{ animationDelay: '3s' }} />
       <div className="liquid-orb liquid-orb-green w-[300px] h-[300px] top-[30%] right-[10%] opacity-20" style={{ animationDelay: '5s' }} />
+      <div className="liquid-orb liquid-orb-gold w-[250px] h-[250px] bottom-[20%] left-[20%] opacity-15" style={{ animationDelay: '7s' }} />
 
       {/* Header */}
       <header className="container mx-auto py-4 px-4 relative z-10">
@@ -56,8 +59,8 @@ const Landing = () => {
         <div className="container mx-auto px-4 py-16 md:py-28">
           <div className="max-w-4xl mx-auto text-center">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm px-4 py-2 rounded-full mb-8 animate-fade-in border border-primary/20">
-              <Sparkles className="w-4 h-4 text-primary" />
+            <div className="inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm px-4 py-2 rounded-full mb-8 animate-slide-up border border-primary/20">
+              <Sparkles className="w-4 h-4 text-primary animate-pulse-slow" />
               <span className="text-sm font-bold text-primary">
                 {language === 'en' ? '🚀 India\'s #1 AI Study Companion' : '🚀 India ka #1 AI Study Companion'}
               </span>
@@ -68,18 +71,17 @@ const Landing = () => {
                 <>Your Personal<br /><span className="text-gradient-shimmer">Gyanam AI</span><br />is Here</>
               ) : (
                 <>Tera Personal<br /><span className="text-gradient-shimmer">Gyanam AI</span><br />Aa Gaya</>
-
               )}
             </h1>
 
-            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed animate-slide-up stagger-2">
               {language === 'en'
                 ? "AI-powered study companion for Class 6-12. Smart chat, weekly tests, progress tracking & parent reports — all in one app."
                 : "Class 6-12 ke liye AI study companion. Smart chat, weekly test, progress tracking & parent reports — sab ek app mein."}
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-slide-up stagger-3">
               <Button variant="hero" size="xl" onClick={() => navigate("/signup")} className="font-bold text-base group shadow-lg shadow-primary/25">
                 <GraduationCap className="w-5 h-5" />
                 {language === 'en' ? 'Start Studying Free' : 'Start Studying Free'}
@@ -96,13 +98,14 @@ const Landing = () => {
             </div>
 
             {/* Trust badges */}
-            <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: '0.3s' }}>
+            <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground animate-slide-up stagger-4">
               {[
                 { icon: <Shield className="w-4 h-4 text-accent" />, text: language === 'en' ? 'Safe & Secure' : 'Safe & Secure' },
                 { icon: <Zap className="w-4 h-4 text-primary" />, text: language === 'en' ? 'Instant AI Help' : 'Turant AI Help' },
                 { icon: <Star className="w-4 h-4 text-edu-orange" />, text: language === 'en' ? 'CBSE, ICSE & More' : 'CBSE, ICSE & More' },
+                { icon: <Volume2 className="w-4 h-4 text-edu-purple" />, text: language === 'en' ? 'Voice Support' : 'Voice Support' },
               ].map((badge, i) => (
-                <div key={i} className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm border border-border/50 px-3.5 py-2 rounded-full">
+                <div key={i} className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm border border-border/50 px-3.5 py-2 rounded-full hover:border-primary/30 transition-colors">
                   {badge.icon}
                   <span>{badge.text}</span>
                 </div>
@@ -139,12 +142,12 @@ const Landing = () => {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          <FeatureCard icon={<MessageCircle className="w-6 h-6" />} title="AI Study Chat" description="Chat with AI while studying. Upload notes, ask doubts, get step-by-step explanations instantly." color="primary" />
-          <FeatureCard icon={<Brain className="w-6 h-6" />} title="Weekly Smart Test" description="AI generates personalized weekly tests based on what you studied. 70% current + 30% weak topics." color="accent" />
-          <FeatureCard icon={<BarChart3 className="w-6 h-6" />} title="WPS Progress Score" description="Weekly Performance Score tracks accuracy, improvement, weak topics & consistency automatically." color="purple" />
-          <FeatureCard icon={<TrendingUp className="w-6 h-6" />} title="Rankings & Leaderboard" description="Compete with school & district peers. Climb the leaderboard and earn achievement badges." color="primary" />
-          <FeatureCard icon={<FileText className="w-6 h-6" />} title="Parent Reports" description="Weekly PDF reports with WPS score sent to parents via WhatsApp. Full transparency." color="accent" />
-          <FeatureCard icon={<Shield className="w-6 h-6" />} title="School Dashboard" description="Schools and coaching centers manage students, track performance & approve subscriptions." color="purple" />
+          <FeatureCard icon={<MessageCircle className="w-6 h-6" />} title="AI Study Chat" description="Chat with AI while studying. Upload notes, ask doubts, get step-by-step explanations instantly." color="primary" index={0} />
+          <FeatureCard icon={<Brain className="w-6 h-6" />} title="Weekly Smart Test" description="AI generates personalized weekly tests based on what you studied. 70% current + 30% weak topics." color="accent" index={1} />
+          <FeatureCard icon={<BarChart3 className="w-6 h-6" />} title="WPS Progress Score" description="Weekly Performance Score tracks accuracy, improvement, weak topics & consistency automatically." color="purple" index={2} />
+          <FeatureCard icon={<TrendingUp className="w-6 h-6" />} title="Rankings & Leaderboard" description="Compete with school & district peers. Climb the leaderboard and earn achievement badges." color="primary" index={3} />
+          <FeatureCard icon={<FileText className="w-6 h-6" />} title="Parent Reports" description="Weekly PDF reports with WPS score sent to parents via WhatsApp. Full transparency." color="accent" index={4} />
+          <FeatureCard icon={<Shield className="w-6 h-6" />} title="School Dashboard" description="Schools and coaching centers manage students, track performance & approve subscriptions." color="purple" index={5} />
         </div>
       </section>
 
@@ -176,13 +179,15 @@ const Landing = () => {
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-20 relative z-10">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="glass-card relative overflow-hidden p-10 md:p-14">
+          <div className="glass-card relative overflow-hidden p-10 md:p-14 mesh-bg">
             {/* Background decoration */}
             <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-primary/8 blur-3xl" />
             <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-accent/8 blur-3xl" />
             
             <div className="relative z-10">
-              <Sparkles className="w-10 h-10 text-primary mx-auto mb-4" />
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ background: 'var(--gradient-primary)' }}>
+                <Trophy className="w-8 h-8 text-white" />
+              </div>
               <h2 className="text-3xl md:text-4xl font-extrabold mb-4 font-display">
                 Ready to Start Your <span className="text-gradient-shimmer">Journey?</span>
               </h2>
@@ -228,62 +233,59 @@ const Landing = () => {
 
 /* ── Sub-components ────────────────────────────── */
 
-const StatItem = React.forwardRef<HTMLDivElement, { value: string; label: string; icon: React.ReactNode }>(
-  ({ value, label, icon }, ref) => (
-    <div ref={ref} className="flex flex-col items-center gap-2">
-      <div className="w-11 h-11 rounded-xl bg-card/60 backdrop-blur-sm border border-border/30 flex items-center justify-center mb-1">
-        {icon}
-      </div>
-      <p className="text-2xl md:text-3xl font-extrabold gradient-text font-display">{value}</p>
-      <p className="text-sm text-muted-foreground font-medium">{label}</p>
+const StatItem = memo(({ value, label, icon }: { value: string; label: string; icon: React.ReactNode }) => (
+  <div className="flex flex-col items-center gap-2 animate-counter">
+    <div className="w-11 h-11 rounded-xl bg-card/60 backdrop-blur-sm border border-border/30 flex items-center justify-center mb-1 hover:scale-110 transition-transform">
+      {icon}
     </div>
-  )
-);
+    <p className="text-2xl md:text-3xl font-extrabold gradient-text font-display">{value}</p>
+    <p className="text-sm text-muted-foreground font-medium">{label}</p>
+  </div>
+));
 StatItem.displayName = "StatItem";
 
-const FeatureCard = React.forwardRef<HTMLDivElement, { icon: React.ReactNode; title: string; description: string; color?: string }>(
-  ({ icon, title, description, color = "primary" }, ref) => {
-    const colorClasses: Record<string, string> = {
-      primary: "text-primary",
-      accent: "text-accent",
-      purple: "text-edu-purple",
-    };
-    const bgClasses: Record<string, string> = {
-      primary: "bg-primary/10",
-      accent: "bg-accent/10",
-      purple: "bg-edu-purple/10",
-    };
-    const glowClasses: Record<string, string> = {
-      primary: "group-hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)]",
-      accent: "group-hover:shadow-[0_0_20px_hsl(var(--accent)/0.15)]",
-      purple: "group-hover:shadow-[0_0_20px_hsl(var(--edu-purple)/0.15)]",
-    };
-    return (
-      <div ref={ref} className={`feature-card group ${glowClasses[color]}`}>
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${bgClasses[color]} ${colorClasses[color]} transition-transform duration-300 group-hover:scale-110`}>
-          {icon}
-        </div>
-        <h3 className="text-lg font-bold mb-2 font-display">{title}</h3>
-        <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
+const FeatureCard = memo(({ icon, title, description, color = "primary", index = 0 }: { icon: React.ReactNode; title: string; description: string; color?: string; index?: number }) => {
+  const colorClasses: Record<string, string> = {
+    primary: "text-primary",
+    accent: "text-accent",
+    purple: "text-edu-purple",
+  };
+  const bgClasses: Record<string, string> = {
+    primary: "bg-primary/10",
+    accent: "bg-accent/10",
+    purple: "bg-edu-purple/10",
+  };
+  const borderGlow: Record<string, string> = {
+    primary: "hover:border-primary/30 hover:shadow-[0_0_25px_hsl(var(--primary)/0.12)]",
+    accent: "hover:border-accent/30 hover:shadow-[0_0_25px_hsl(var(--accent)/0.12)]",
+    purple: "hover:border-edu-purple/30 hover:shadow-[0_0_25px_hsl(var(--edu-purple)/0.12)]",
+  };
+  return (
+    <div 
+      className={`feature-card group ${borderGlow[color]} animate-slide-up`}
+      style={{ animationDelay: `${index * 0.08}s` }}
+    >
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${bgClasses[color]} ${colorClasses[color]} transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+        {icon}
       </div>
-    );
-  }
-);
+      <h3 className="text-lg font-bold mb-2 font-display">{title}</h3>
+      <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
+    </div>
+  );
+});
 FeatureCard.displayName = "FeatureCard";
 
-const StepCard = React.forwardRef<HTMLDivElement, { step: number; title: string; description: string }>(
-  ({ step, title, description }, ref) => (
-    <div ref={ref} className="text-center relative z-10">
-      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 font-extrabold text-xl text-primary-foreground shadow-lg shadow-primary/25 font-display"
-        style={{ background: 'var(--gradient-primary)' }}
-      >
-        {step}
-      </div>
-      <h3 className="font-bold mb-1.5 font-display">{title}</h3>
-      <p className="text-sm text-muted-foreground">{description}</p>
+const StepCard = memo(({ step, title, description }: { step: number; title: string; description: string }) => (
+  <div className="text-center relative z-10 animate-slide-up" style={{ animationDelay: `${step * 0.1}s` }}>
+    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 font-extrabold text-xl text-primary-foreground shadow-lg shadow-primary/25 font-display hover:scale-110 transition-transform"
+      style={{ background: 'var(--gradient-primary)' }}
+    >
+      {step}
     </div>
-  )
-);
+    <h3 className="font-bold mb-1.5 font-display">{title}</h3>
+    <p className="text-sm text-muted-foreground">{description}</p>
+  </div>
+));
 StepCard.displayName = "StepCard";
 
 export default Landing;
