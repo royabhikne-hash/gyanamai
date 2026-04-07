@@ -35,18 +35,22 @@
     --edu-green-light: 160 60% 93%;
     --edu-orange: 25 95% 53%;
     --edu-purple: 262 68% 52%;
+    --edu-gold: 45 93% 47%;
 
     --primary-glow: 221 83% 60%;
     --accent-glow: 160 84% 48%;
 
     --gradient-primary: linear-gradient(135deg, hsl(221 83% 53%) 0%, hsl(262 68% 52%) 100%);
     --gradient-success: linear-gradient(135deg, hsl(160 84% 39%) 0%, hsl(160 84% 48%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(25 95% 53%) 0%, hsl(45 93% 47%) 100%);
     --gradient-bg: linear-gradient(180deg, hsl(210 100% 97%) 0%, hsl(214 90% 94%) 100%);
+    --gradient-aurora: linear-gradient(135deg, hsl(221 83% 53% / 0.08) 0%, hsl(262 68% 52% / 0.05) 50%, hsl(160 84% 39% / 0.08) 100%);
 
     --shadow-sm: 0 1px 3px rgba(59, 130, 246, 0.08);
     --shadow-md: 0 4px 12px -2px rgba(59, 130, 246, 0.12), 0 2px 4px -2px rgba(59, 130, 246, 0.06);
     --shadow-lg: 0 10px 25px -5px rgba(59, 130, 246, 0.15), 0 4px 10px -4px rgba(59, 130, 246, 0.08);
     --shadow-xl: 0 20px 40px -8px rgba(59, 130, 246, 0.18), 0 8px 16px -6px rgba(59, 130, 246, 0.1);
+    --shadow-glow: 0 0 30px -5px hsl(221 83% 53% / 0.2);
 
     --sidebar-background: 210 80% 96%;
     --sidebar-foreground: 222 47% 11%;
@@ -87,18 +91,22 @@
     --edu-green-light: 160 30% 14%;
     --edu-orange: 25 95% 60%;
     --edu-purple: 262 72% 62%;
+    --edu-gold: 45 93% 55%;
 
     --primary-glow: 217 91% 68%;
     --accent-glow: 160 84% 52%;
 
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(262 72% 62%) 100%);
     --gradient-success: linear-gradient(135deg, hsl(160 84% 45%) 0%, hsl(160 84% 52%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(25 95% 60%) 0%, hsl(45 93% 55%) 100%);
     --gradient-bg: linear-gradient(180deg, hsl(220 50% 8%) 0%, hsl(220 45% 12%) 100%);
+    --gradient-aurora: linear-gradient(135deg, hsl(217 91% 60% / 0.06) 0%, hsl(262 72% 62% / 0.04) 50%, hsl(160 84% 45% / 0.06) 100%);
 
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
     --shadow-xl: 0 20px 40px -8px rgba(0, 0, 0, 0.7);
+    --shadow-glow: 0 0 30px -5px hsl(217 91% 60% / 0.15);
 
     --sidebar-background: 220 50% 8%;
     --sidebar-foreground: 210 40% 96%;
@@ -127,6 +135,7 @@
     background: var(--gradient-bg);
     background-attachment: fixed;
     min-height: 100vh;
+    min-height: 100dvh;
     padding-top: env(safe-area-inset-top, 0px);
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
@@ -134,6 +143,8 @@
     -webkit-overflow-scrolling: touch;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent pull-to-refresh on Android */
+    overscroll-behavior-y: contain;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold tracking-tight;
@@ -144,6 +155,12 @@
   h3 { @apply text-xl font-semibold; }
 
   img, a, button { -webkit-touch-callout: none; }
+
+  /* Prevent text selection on interactive elements for mobile */
+  button, a, [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
 
   ::selection {
     background: hsl(var(--primary) / 0.15);
@@ -162,6 +179,11 @@
   .dark ::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground) / 0.25);
   }
+
+  /* Android keyboard fix - prevent layout jump */
+  @supports (height: 100dvh) {
+    .h-screen-safe { height: 100dvh; }
+  }
 }
 
 /* ── COMPONENTS ────────────────────────────────── */
@@ -172,6 +194,7 @@
     @apply bg-card rounded-2xl border border-border transition-all duration-300;
     box-shadow: var(--shadow-md);
     transform: perspective(1000px) rotateX(0deg);
+    will-change: transform, box-shadow;
   }
   .edu-card:hover {
     box-shadow: var(--shadow-xl);
@@ -190,6 +213,7 @@
     background: hsl(var(--card) / 0.82);
     backdrop-filter: blur(24px) saturate(1.6);
     box-shadow: var(--shadow-md), inset 0 1px 0 0 hsl(0 0% 100% / 0.12), inset 0 0 0 0.5px hsl(0 0% 100% / 0.06);
+    will-change: transform;
   }
   .glass-card:hover {
     box-shadow: var(--shadow-xl), inset 0 1px 0 0 hsl(0 0% 100% / 0.18);
@@ -199,6 +223,27 @@
     @apply backdrop-blur-xl border-border;
     background: hsl(var(--card) / 0.88);
     backdrop-filter: blur(20px) saturate(1.5);
+  }
+
+  /* ▸ AURORA CARD ──────────────────────────────── */
+  .aurora-card {
+    @apply rounded-2xl border border-border/50 overflow-hidden relative;
+    background: var(--gradient-aurora);
+    backdrop-filter: blur(20px);
+  }
+  .aurora-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: hsl(var(--card) / 0.85);
+    z-index: 0;
+  }
+  .aurora-card > * {
+    position: relative;
+    z-index: 1;
   }
 
   /* ▸ LIQUID BACKGROUND ─────────────────────────── */
@@ -217,6 +262,7 @@
     pointer-events: none;
     animation: liquid-float 8s ease-in-out infinite;
     z-index: 0;
+    will-change: transform;
   }
   .liquid-orb-blue {
     background: radial-gradient(circle, hsl(221 83% 53% / 0.55), hsl(214 95% 70% / 0.22));
@@ -227,10 +273,35 @@
   .liquid-orb-green {
     background: radial-gradient(circle, hsl(160 84% 39% / 0.25), hsl(160 84% 60% / 0.08));
   }
+  .liquid-orb-gold {
+    background: radial-gradient(circle, hsl(45 93% 47% / 0.25), hsl(25 95% 53% / 0.1));
+  }
   @keyframes liquid-float {
     0%, 100% { transform: translate(0, 0) scale(1); }
     33% { transform: translate(15px, -20px) scale(1.05); }
     66% { transform: translate(-10px, 15px) scale(0.95); }
+  }
+
+  /* ▸ MESH GRADIENT BACKGROUND ─────────────────── */
+  .mesh-bg {
+    position: relative;
+    overflow: hidden;
+  }
+  .mesh-bg::before {
+    content: '';
+    position: absolute;
+    inset: -50%;
+    background: 
+      radial-gradient(ellipse at 20% 50%, hsl(var(--primary) / 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, hsl(var(--edu-purple) / 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 80%, hsl(var(--accent) / 0.05) 0%, transparent 50%);
+    animation: mesh-rotate 20s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes mesh-rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 
   /* ▸ HERO GRADIENT ─────────────────────────────── */
@@ -293,13 +364,35 @@
     animation: gradient-shift 3s ease-in-out infinite;
   }
 
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-warm);
+  }
+
   /* ▸ CARD HOVER LIFT ──────────────────────────── */
   .card-hover-lift {
     @apply transition-all duration-300;
+    will-change: transform;
   }
   .card-hover-lift:hover {
     transform: translateY(-6px);
     box-shadow: var(--shadow-xl), 0 0 30px hsl(var(--primary) / 0.08);
+  }
+
+  /* ▸ INTERACTIVE CARD ─────────────────────────── */
+  .interactive-card {
+    @apply bg-card rounded-2xl border border-border transition-all duration-300 cursor-pointer;
+    box-shadow: var(--shadow-sm);
+    will-change: transform;
+  }
+  .interactive-card:hover {
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+    transform: translateY(-4px) scale(1.01);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+  .interactive-card:active {
+    transform: scale(0.98);
+    box-shadow: var(--shadow-sm);
   }
 
   /* ▸ CHAT BUBBLES ─────────────────────────────── */
@@ -382,6 +475,11 @@
     background: var(--gradient-primary);
     box-shadow: 0 2px 8px hsl(var(--primary) / 0.3);
   }
+  .progress-bar-fill-accent {
+    @apply h-full rounded-full transition-all duration-700 ease-out;
+    background: var(--gradient-success);
+    box-shadow: 0 2px 8px hsl(var(--accent) / 0.3);
+  }
 
   /* ▸ STATUS BADGES ────────────────────────────── */
   .status-badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold; }
@@ -402,10 +500,23 @@
     100% { background-position: -200% 0; }
   }
 
+  /* ▸ SKELETON PULSE ──────────────────────────── */
+  .skeleton-pulse {
+    @apply rounded-xl;
+    background: linear-gradient(110deg, hsl(var(--muted)) 8%, hsl(var(--muted-foreground) / 0.08) 18%, hsl(var(--muted)) 33%);
+    background-size: 200% 100%;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes skeleton-pulse {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
   /* ▸ FEATURE CARD ─────────────────────────────── */
   .feature-card {
     @apply bg-card rounded-2xl border border-border p-6 transition-all duration-300;
     box-shadow: var(--shadow-sm);
+    will-change: transform;
   }
   .feature-card:hover {
     box-shadow: var(--shadow-lg);
@@ -436,6 +547,49 @@
     transform: translateX(4px);
     box-shadow: var(--shadow-sm);
   }
+
+  /* ▸ FLOATING ACTION BUTTON ──────────────────── */
+  .fab {
+    @apply fixed z-50 rounded-full shadow-lg transition-all duration-300;
+    background: var(--gradient-primary);
+    box-shadow: 0 8px 25px hsl(var(--primary) / 0.35);
+    will-change: transform;
+  }
+  .fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 35px hsl(var(--primary) / 0.45);
+  }
+  .fab:active {
+    transform: scale(0.95);
+  }
+
+  /* ▸ NOTIFICATION DOT ────────────────────────── */
+  .notification-dot {
+    @apply absolute w-2.5 h-2.5 rounded-full;
+    background: hsl(var(--destructive));
+    top: -2px;
+    right: -2px;
+    animation: notification-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  @keyframes notification-ping {
+    75%, 100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+
+  /* ▸ STREAK BADGE ────────────────────────────── */
+  .streak-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold;
+    background: var(--gradient-warm);
+    color: white;
+    box-shadow: 0 2px 10px hsl(var(--edu-orange) / 0.3);
+    animation: streak-glow 2s ease-in-out infinite;
+  }
+  @keyframes streak-glow {
+    0%, 100% { box-shadow: 0 2px 10px hsl(var(--edu-orange) / 0.3); }
+    50% { box-shadow: 0 4px 20px hsl(var(--edu-orange) / 0.5); }
+  }
 }
 
 /* ── UTILITIES ─────────────────────────────────── */
@@ -449,6 +603,46 @@
   }
   .animate-pulse-slow {
     animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-bounce-gentle {
+    animation: bounce-gentle 2s ease-in-out infinite;
+  }
+  @keyframes bounce-gentle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.5s ease-out both;
+  }
+  @keyframes slide-up {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-slide-in-left {
+    animation: slide-in-left 0.4s ease-out both;
+  }
+  @keyframes slide-in-left {
+    0% { opacity: 0; transform: translateX(-20px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+
+  .animate-scale-pop {
+    animation: scale-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes scale-pop {
+    0% { opacity: 0; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  .animate-counter {
+    animation: counter-up 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  }
+  @keyframes counter-up {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
 
   .animate-sound-wave {
@@ -493,5 +687,35 @@
 
   .font-display {
     font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  }
+
+  /* GPU acceleration for animations */
+  .gpu-accelerate {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+
+  /* Stagger animation delays */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+  .stagger-6 { animation-delay: 0.3s; }
+
+  /* Touch-friendly hit areas */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Reduced motion respect */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
