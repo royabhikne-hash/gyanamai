@@ -25,7 +25,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, projectId, messages, content, fileName, fileType, fileBase64 } = body;
+    const { action, projectId, messages, content, fileName, fileType, fileBase64, exchanges } = body;
 
     // Validate user
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
