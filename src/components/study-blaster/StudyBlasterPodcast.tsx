@@ -16,6 +16,8 @@ interface Turn {
 interface PodcastScript {
   title: string;
   turns: Turn[];
+  teacherName?: string;
+  studentName?: string;
 }
 
 interface Props {
@@ -236,8 +238,10 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
 
   const downloadTranscript = () => {
     if (!script) return;
+    const tName = script.teacherName || "Teacher";
+    const sName = script.studentName || "Student";
     const text = script.turns
-      .map(t => `${t.speaker === "teacher" ? "Priya Ma'am" : "Arjun"}: ${t.text}`)
+      .map(t => `${t.speaker === "teacher" ? tName : sName}: ${t.text}`)
       .join("\n\n");
     const blob = new Blob([`${script.title}\n\n${text}`], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -259,7 +263,9 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-foreground text-sm sm:text-base">AI Study Podcast</h3>
             <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
-              Priya Ma'am (teacher) & Arjun (student) explain & debate your notes in conversation.
+              {script?.teacherName && script?.studentName
+                ? `${script.teacherName} (teacher) & ${script.studentName} (student) explain & debate your notes.`
+                : "A teacher & student duo explain & debate your notes in conversation. Hosts change every time!"}
             </p>
           </div>
         </div>
@@ -392,7 +398,7 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`text-[11px] font-semibold ${isTeacher ? "text-pink-600" : "text-blue-600"}`}>
-                      {isTeacher ? "Priya Ma'am" : "Arjun"}
+                      {isTeacher ? (script?.teacherName || "Teacher") : (script?.studentName || "Student")}
                       {isActive && <span className="ml-2 inline-flex items-center gap-1 text-[9px] text-primary animate-pulse">● Speaking</span>}
                     </p>
                     <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed mt-0.5">{turn.text}</p>
