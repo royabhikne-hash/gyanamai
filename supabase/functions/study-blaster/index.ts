@@ -402,6 +402,132 @@ ${combinedContent.substring(0, 60000)}`;
       return new Response(JSON.stringify({ success: true, extractedContent }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
+    } else if (action === "generate_podcast") {
+      // Generate teacher+student dialogue podcast script grounded in project sources
+      const numExchanges = Math.min(Math.max(parseInt(String(exchanges)) || 20, 6), 50);
+
+      const { data: sources } = await supabase
+        .from("study_sources")
+        .select("title, extracted_content")
+        .eq("project_id", projectId)
+        .eq("student_id", student.id);
+
+      if (!sources || sources.length === 0) {
+        return new Response(JSON.stringify({ error: "No sources found. Add notes/PDFs first." }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      const { data: project } = await supabase
+        .from("study_projects")
+        .select("title")
+        .eq("id", projectId)
+        .single();
+
+      const combinedContent = sources
+        .map((s: any) => `[Source: ${s.title}]\n${s.extracted_content || ""}`)
+        .join("\n\n---\n\n")
+        .substring(0, 70000);
+
+      const podcastPrompt = `You are scripting an educational podcast titled "${project?.title || "Study Podcast"}".
+
+Format: A friendly DIALOGUE between two hosts:
+- TEACHER (female voice): "Priya Ma'am" — patient, clear, expert, explains concepts deeply with real-world examples and analogies.
+- STUDENT (male voice): "Arjun" — curious learner who asks smart, probing questions, sometimes challenges/debates points to dig deeper, occasionally summarizes back what he understood.
+
+Rules:
+- Generate EXACTLY ${numExchanges} alternating turns (start with TEACHER introducing the topic).
+- Each turn must be 2-5 sentences (long enough to be substantive, short enough to feel like real conversation).
+- Ground EVERY explanation strictly in the source materials below — do not invent facts.
+- Cover the most important concepts in depth: definitions, why-it-matters, examples, common confusions, and quick recaps.
+- Include 1-2 light debate moments where Arjun pushes back or proposes a different angle and Priya Ma'am clarifies.
+- End with Priya Ma'am giving a crisp summary + motivational sign-off.
+- Keep language simple, warm, conversational. Mix English with occasional Hindi/Hinglish phrases ONLY in Arjun's lines (1-2 times max) for relatability — Priya Ma'am stays in clear English.
+- No stage directions, no markdown, no asterisks. Just the dialogue text.
+
+Return JSON with a "turns" array, each item: { "speaker": "teacher" | "student", "text": "..." }
+
+SOURCE MATERIALS:
+${combinedContent}`;
+
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: "You are an expert educational podcast scriptwriter. Always respond using the provided tool." },
+            { role: "user", content: podcastPrompt },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "generate_podcast_script",
+                description: "Generate a teacher-student dialogue podcast script",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    turns: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          speaker: { type: "string", enum: ["teacher", "student"] },
+                          text: { type: "string" },
+                        },
+                        required: ["speaker", "text"],
+                      },
+                    },
+                  },
+                  required: ["title", "turns"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          ],
+          tool_choice: { type: "function", function: { name: "generate_podcast_script" } },
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        const status = aiResponse.status;
+        if (status === 429) {
+          return new Response(JSON.stringify({ error: "AI rate limit. Try again in a minute." }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+        if (status === 402) {
+          return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+        throw new Error("AI gateway error");
+      }
+
+      const aiData = await aiResponse.json();
+      const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+      let script: any = { title: project?.title || "Podcast", turns: [] };
+      if (toolCall) {
+        try { script = JSON.parse(toolCall.function.arguments); } catch (_) { /* keep default */ }
+      }
+
+      await supabase.from("ai_usage_log").insert({
+        student_id: student.id,
+        action: "study_blaster_podcast",
+        model: "google/gemini-3-flash-preview",
+        input_tokens: combinedContent.length,
+        output_tokens: JSON.stringify(script).length,
+        estimated_cost_inr: 0.7,
+      });
+
+      return new Response(JSON.stringify({ success: true, script }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
 
     return new Response(JSON.stringify({ error: "Invalid action" }), {
