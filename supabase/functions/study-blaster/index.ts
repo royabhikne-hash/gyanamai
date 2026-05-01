@@ -406,6 +406,20 @@ ${combinedContent.substring(0, 60000)}`;
       // Generate teacher+student dialogue podcast script grounded in project sources
       const numExchanges = Math.min(Math.max(parseInt(String(exchanges)) || 20, 6), 50);
 
+      // Random Indian teacher (female) + student (male) name pools — change every generation
+      const teacherNames = [
+        "Priya Ma'am", "Anjali Ma'am", "Neha Ma'am", "Kavya Ma'am", "Ritu Ma'am",
+        "Shreya Ma'am", "Pooja Ma'am", "Divya Ma'am", "Meera Ma'am", "Sunita Ma'am",
+        "Nisha Ma'am", "Aditi Ma'am", "Ishita Ma'am", "Radhika Ma'am", "Sneha Ma'am"
+      ];
+      const studentNames = [
+        "Arjun", "Rohan", "Aditya", "Karan", "Vivek",
+        "Rahul", "Aryan", "Siddharth", "Harsh", "Manish",
+        "Yash", "Dev", "Kabir", "Nikhil", "Tanish"
+      ];
+      const teacherName = teacherNames[Math.floor(Math.random() * teacherNames.length)];
+      const studentName = studentNames[Math.floor(Math.random() * studentNames.length)];
+
       const { data: sources } = await supabase
         .from("study_sources")
         .select("title, extracted_content")
@@ -432,17 +446,17 @@ ${combinedContent.substring(0, 60000)}`;
       const podcastPrompt = `You are scripting an educational podcast titled "${project?.title || "Study Podcast"}".
 
 Format: A friendly DIALOGUE between two hosts:
-- TEACHER (female voice): "Priya Ma'am" — patient, clear, expert, explains concepts deeply with real-world examples and analogies.
-- STUDENT (male voice): "Arjun" — curious learner who asks smart, probing questions, sometimes challenges/debates points to dig deeper, occasionally summarizes back what he understood.
+- TEACHER (female voice): "${teacherName}" — patient, clear, expert, explains concepts deeply with real-world examples and analogies.
+- STUDENT (male voice): "${studentName}" — curious learner who asks smart, probing questions, sometimes challenges/debates points to dig deeper, occasionally summarizes back what he understood.
 
 Rules:
 - Generate EXACTLY ${numExchanges} alternating turns (start with TEACHER introducing the topic).
 - Each turn must be 2-5 sentences (long enough to be substantive, short enough to feel like real conversation).
 - Ground EVERY explanation strictly in the source materials below — do not invent facts.
 - Cover the most important concepts in depth: definitions, why-it-matters, examples, common confusions, and quick recaps.
-- Include 1-2 light debate moments where Arjun pushes back or proposes a different angle and Priya Ma'am clarifies.
-- End with Priya Ma'am giving a crisp summary + motivational sign-off.
-- Keep language simple, warm, conversational. Mix English with occasional Hindi/Hinglish phrases ONLY in Arjun's lines (1-2 times max) for relatability — Priya Ma'am stays in clear English.
+- Include 1-2 light debate moments where ${studentName} pushes back or proposes a different angle and ${teacherName} clarifies.
+- End with ${teacherName} giving a crisp summary + motivational sign-off.
+- Keep language simple, warm, conversational. Mix English with occasional Hindi/Hinglish phrases ONLY in ${studentName}'s lines (1-2 times max) for relatability — ${teacherName} stays in clear English.
 - No stage directions, no markdown, no asterisks. Just the dialogue text.
 
 Return JSON with a "turns" array, each item: { "speaker": "teacher" | "student", "text": "..." }
@@ -515,6 +529,9 @@ ${combinedContent}`;
       if (toolCall) {
         try { script = JSON.parse(toolCall.function.arguments); } catch (_) { /* keep default */ }
       }
+      // Attach the chosen host names so the UI can display them
+      script.teacherName = teacherName;
+      script.studentName = studentName;
 
       await supabase.from("ai_usage_log").insert({
         student_id: student.id,
