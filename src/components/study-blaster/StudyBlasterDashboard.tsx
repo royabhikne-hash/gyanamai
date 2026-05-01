@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Sparkles, BookOpen, HelpCircle, FileText, Loader2, Calendar, Target } from "lucide-react";
+import { ArrowLeft, Sparkles, BookOpen, HelpCircle, FileText, Loader2, Calendar, Target, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import StudyBlasterSourceManager from "./StudyBlasterSourceManager";
 import StudyBlasterChat from "./StudyBlasterChat";
+import StudyBlasterPodcast from "./StudyBlasterPodcast";
 import { format, differenceInDays } from "date-fns";
 
 interface Props {
@@ -112,10 +113,11 @@ const StudyBlasterDashboard = ({ projectId, studentId, onBack }: Props) => {
       </div>
 
       <Tabs defaultValue="sources" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 glass-card h-auto p-1 gap-0.5">
+        <TabsList className="grid w-full grid-cols-5 glass-card h-auto p-1 gap-0.5">
           <TabsTrigger value="sources" className="text-[10px] sm:text-xs py-2 gap-1 rounded-xl data-[state=active]:shadow-sm"><FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden sm:inline">Sources</span><span className="sm:hidden">Src</span></TabsTrigger>
           <TabsTrigger value="guide" className="text-[10px] sm:text-xs py-2 gap-1 rounded-xl data-[state=active]:shadow-sm"><BookOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Guide</TabsTrigger>
           <TabsTrigger value="faqs" className="text-[10px] sm:text-xs py-2 gap-1 rounded-xl data-[state=active]:shadow-sm"><HelpCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> FAQs</TabsTrigger>
+          <TabsTrigger value="podcast" className="text-[10px] sm:text-xs py-2 gap-1 rounded-xl data-[state=active]:shadow-sm"><Mic className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden sm:inline">Podcast</span><span className="sm:hidden">Pod</span></TabsTrigger>
           <TabsTrigger value="chat" className="text-[10px] sm:text-xs py-2 gap-1 rounded-xl data-[state=active]:shadow-sm"><Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Chat</TabsTrigger>
         </TabsList>
 
@@ -238,6 +240,10 @@ const StudyBlasterDashboard = ({ projectId, studentId, onBack }: Props) => {
           <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm overflow-hidden h-[calc(100vh-280px)] sm:h-[500px] flex flex-col">
             <StudyBlasterChat projectId={projectId} projectTitle={project.title} />
           </div>
+        </TabsContent>
+
+        <TabsContent value="podcast" className="mt-4">
+          <StudyBlasterPodcast projectId={projectId} hasSources={sources.length > 0} />
         </TabsContent>
       </Tabs>
     </div>
