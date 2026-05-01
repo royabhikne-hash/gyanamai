@@ -16,6 +16,8 @@ interface Turn {
 interface PodcastScript {
   title: string;
   turns: Turn[];
+  teacherName?: string;
+  studentName?: string;
 }
 
 interface Props {
