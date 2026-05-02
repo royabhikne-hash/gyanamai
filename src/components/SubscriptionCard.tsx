@@ -50,6 +50,12 @@ export const SubscriptionCard = ({ studentId, onRefresh }: SubscriptionCardProps
   const daysRemaining = getDaysRemaining();
   const usagePercent = getTTSUsagePercent();
   const isPro = subscription.plan === 'pro';
+  const isExpired = statusLabel === 'Expired';
+  // Show upgrade button when on Basic OR when Pro has expired
+  const canRequestUpgrade =
+    (!isPro || isExpired) &&
+    statusLabel !== 'Pending Approval' &&
+    statusLabel !== 'Blocked';
 
   const handleRequestUpgrade = async () => {
     setRequesting(true);
@@ -156,12 +162,21 @@ export const SubscriptionCard = ({ studentId, onRefresh }: SubscriptionCardProps
         </div>
       )}
 
-      {/* Basic Plan - Show upgrade button */}
-      {!isPro && statusLabel !== 'Pending Approval' && statusLabel !== 'Blocked' && (
+      {/* Basic Plan or Expired Pro - Show upgrade button */}
+      {canRequestUpgrade && (
         <div className="mt-3">
           <div className="text-sm text-muted-foreground mb-3">
-            <p>📢 Basic: Browser voice only</p>
-            <p className="mt-1">✨ Pro: Premium AI voice + Hindi support</p>
+            {isExpired ? (
+              <>
+                <p className="text-destructive font-medium">⚠️ Your Pro plan has expired</p>
+                <p className="mt-1">Renew to keep premium voice + Hindi support</p>
+              </>
+            ) : (
+              <>
+                <p>📢 Basic: Browser voice only</p>
+                <p className="mt-1">✨ Pro: Premium AI voice + Hindi support</p>
+              </>
+            )}
           </div>
           <Button 
             onClick={handleRequestUpgrade}
@@ -173,7 +188,7 @@ export const SubscriptionCard = ({ studentId, onRefresh }: SubscriptionCardProps
             ) : (
               <ArrowUpCircle className="w-4 h-4 mr-2" />
             )}
-            Request Pro Plan (₹299/month)
+            {isExpired ? 'Renew Pro Plan (₹299/month)' : 'Request Pro Plan (₹299/month)'}
           </Button>
         </div>
       )}

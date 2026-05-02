@@ -60,16 +60,26 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
   }, []);
 
   const { femaleVoice, maleVoice } = useMemo(() => {
+    // Prefer Indian English voices, then Hindi (en-IN / hi-IN), then any English
+    const indian = voices.filter(v => /(en[-_]IN|hi[-_]IN)/i.test(v.lang));
     const en = voices.filter(v => /^en/i.test(v.lang));
-    const pool = en.length ? en : voices;
-    const findBy = (...needles: string[]) =>
-      pool.find(v => needles.some(n => v.name.toLowerCase().includes(n)));
+    const pool = indian.length ? indian : (en.length ? en : voices);
+
+    const findBy = (list: SpeechSynthesisVoice[], ...needles: string[]) =>
+      list.find(v => needles.some(n => v.name.toLowerCase().includes(n)));
+
+    // Indian female voice names across platforms (Google, Microsoft, Apple)
     const female =
-      findBy("female", "samantha", "victoria", "karen", "tessa", "fiona", "google uk english female", "google us english", "priya", "veena", "aditi", "zira") ||
-      pool[0];
+      findBy(pool, "heera", "swara", "kalpana", "priya", "veena", "aditi", "raveena", "neerja", "isha", "lekha", "shruti", "google हिन्दी", "google india", "female") ||
+      findBy(voices, "heera", "swara", "priya", "veena", "aditi", "raveena", "neerja", "isha", "lekha", "shruti") ||
+      pool[0] || voices[0];
+
+    // Indian male voice names
     const male =
-      findBy("male", "daniel", "alex", "fred", "google uk english male", "ravi", "rishi", "david", "mark") ||
-      pool[1] || pool[0];
+      findBy(pool, "hemant", "ravi", "rishi", "kabir", "prabhat", "madhur", "google इंडिया", "male") ||
+      findBy(voices, "hemant", "ravi", "rishi", "kabir", "prabhat", "madhur") ||
+      pool.find(v => v !== female) || pool[1] || voices[1] || voices[0];
+
     return { femaleVoice: female, maleVoice: male };
   }, [voices]);
 
@@ -113,7 +123,7 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
       const u = new SpeechSynthesisUtterance(turn.text);
       const v = turn.speaker === "teacher" ? femaleVoice : maleVoice;
       if (v) u.voice = v;
-      u.lang = v?.lang || "en-US";
+      u.lang = v?.lang || "en-IN";
       u.rate = turn.speaker === "teacher" ? 0.95 : 1.02;
       u.pitch = turn.speaker === "teacher" ? 1.1 : 0.9;
       u.onend = () => resolve();
