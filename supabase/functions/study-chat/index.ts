@@ -190,7 +190,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, studentId, analyzeSession, currentSubject, completedSubjects, subject, chapter, studentClass, studentBoard } = await req.json();
+    const { messages, analyzeSession, currentSubject, completedSubjects, subject, chapter, studentClass, studentBoard } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -198,7 +198,44 @@ serve(async (req) => {
       throw new Error("AI service is not configured");
     }
 
-    if (studentId && !checkRateLimit(studentId)) {
+    // Authenticate user and derive canonical studentId server-side
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", response: "Please sign in to continue." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const authClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", response: "Please sign in to continue." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const userId = claimsData.claims.sub;
+    const supabase = createClient(supabaseUrl, serviceKey);
+    const { data: studentRow } = await supabase
+      .from("students")
+      .select("id, class, board")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const studentId = studentRow?.id as string | undefined;
+    if (!studentId) {
+      return new Response(
+        JSON.stringify({ error: "Student profile not found", response: "Please complete your profile first." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!checkRateLimit(studentId)) {
       return new Response(
         JSON.stringify({ 
           error: "Rate limit exceeded. Please wait a moment before sending more messages.",
@@ -220,22 +257,11 @@ serve(async (req) => {
       board: studentBoard
     };
 
-    if (studentId) {
+    {
       try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
-        if (!studentClass) {
-          const { data: student } = await supabase
-            .from("students")
-            .select("class, board")
-            .eq("id", studentId)
-            .single();
-          if (student) {
-            studentProfile.studentClass = student.class;
-            studentProfile.board = student.board;
-          }
+        if (!studentClass && studentRow) {
+          studentProfile.studentClass = studentRow.class;
+          studentProfile.board = studentRow.board;
         }
 
         const { data: sessions } = await supabase
