@@ -63,13 +63,43 @@ serve(async (req) => {
   }
 
   try {
-    const { question, correctAnswer, studentAnswer, topic, questionType, studentId }: AnalyzeRequest = await req.json();
+    const { question, correctAnswer, studentAnswer, topic, questionType }: AnalyzeRequest = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
       console.error("LOVABLE_API_KEY is not configured");
       throw new Error("AI service is not configured");
     }
+
+    // Auth: derive studentId from JWT
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const authClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const adminClient = createClient(supabaseUrl, serviceKey);
+    const { data: studentRow } = await adminClient
+      .from("students")
+      .select("id")
+      .eq("user_id", claimsData.claims.sub)
+      .maybeSingle();
+    const studentId = studentRow?.id as string | undefined;
 
     // Rate limit check
     if (studentId && !checkRateLimit(studentId)) {
