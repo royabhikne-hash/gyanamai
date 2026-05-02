@@ -71,6 +71,27 @@ function getISTDateString(): string {
   return istDate.toISOString().split('T')[0];
 }
 
+// Auto-downgrade expired Pro subscriptions to Basic so all limits/quotas
+// fall back to the Basic plan immediately on read.
+async function autoDowngradeIfExpired(admin: any, sub: any): Promise<any> {
+  if (!sub) return sub;
+  const isExpired = sub.plan === 'pro' && sub.end_date && new Date(sub.end_date) < new Date();
+  if (!isExpired) return sub;
+  const { data: updated } = await admin
+    .from('subscriptions')
+    .update({
+      plan: 'basic',
+      end_date: null,
+      is_active: true,
+      tts_used: 0,
+      tts_limit: 0,
+    })
+    .eq('id', sub.id)
+    .select('*')
+    .maybeSingle();
+  return updated || { ...sub, plan: 'basic', end_date: null, is_active: true, tts_used: 0, tts_limit: 0 };
+}
+
 // Verify student belongs to institution
 async function verifyStudentInstitution(
   supabase: any, studentId: string, institutionId: string, institutionType: 'school' | 'coaching'
@@ -195,9 +216,10 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        const { data: subscription } = await admin
+        let { data: subscription } = await admin
           .from('subscriptions').select('*')
           .eq('student_id', body.studentId).maybeSingle();
+        subscription = await autoDowngradeIfExpired(admin, subscription);
 
         const { data: pendingRequest } = await admin
           .from('upgrade_requests').select('*')
@@ -244,9 +266,10 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        const { data: sub } = await admin
-          .from('subscriptions').select('plan')
+        let { data: sub } = await admin
+          .from('subscriptions').select('*')
           .eq('student_id', body.studentId).maybeSingle();
+        sub = await autoDowngradeIfExpired(admin, sub);
 
         const plan = sub?.plan || 'basic';
         const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
@@ -277,9 +300,10 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        const { data: sub } = await admin
-          .from('subscriptions').select('plan')
+        let { data: sub } = await admin
+          .from('subscriptions').select('*')
           .eq('student_id', body.studentId).maybeSingle();
+        sub = await autoDowngradeIfExpired(admin, sub);
 
         const plan = sub?.plan || 'basic';
         const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
