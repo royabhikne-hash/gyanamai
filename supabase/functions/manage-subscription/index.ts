@@ -124,10 +124,17 @@ const handler = async (req: Request): Promise<Response> => {
           .eq('id', body.studentId).maybeSingle();
 
         const { data: sub } = await admin
-          .from('subscriptions').select('plan')
+          .from('subscriptions').select('plan, end_date, is_active')
           .eq('student_id', body.studentId).maybeSingle();
 
-        if (sub?.plan === 'pro') {
+        // Check if Pro has expired (end_date in past or inactive)
+        const proExpired = sub?.plan === 'pro' && (
+          (sub.end_date && new Date(sub.end_date) < new Date()) ||
+          sub.is_active === false
+        );
+
+        // Block only if active Pro that hasn't expired
+        if (sub?.plan === 'pro' && !proExpired) {
           return new Response(
             JSON.stringify({ success: false, error: "You already have a Pro plan" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
