@@ -60,6 +60,13 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
 
     setUploading(true);
     try {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+      if (!userId) {
+        toast({ title: "Not signed in", description: "Please log in again to upload files.", variant: "destructive" });
+        setUploading(false);
+        return;
+      }
       for (const file of Array.from(files)) {
         if (file.size > MAX_FILE_SIZE) {
           toast({ title: "File too large", description: `${file.name} exceeds 25MB limit`, variant: "destructive" });
@@ -70,7 +77,9 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
           continue;
         }
 
-        const filePath = `${studentId}/${projectId}/${Date.now()}_${file.name}`;
+        // Storage RLS requires first folder to equal auth.uid()
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const filePath = `${userId}/${projectId}/${Date.now()}_${safeName}`;
         const { error: uploadError } = await supabase.storage
           .from("study-blaster-files")
           .upload(filePath, file);
