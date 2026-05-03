@@ -759,4 +759,18 @@
       transition-duration: 0.01ms !important;
     }
   }
+
+  /* ▸ MOBILE SAFETY — prevent text overflow & lighten effects on small screens */
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  @media (max-width: 480px) {
+    .liquid-orb { filter: blur(50px); opacity: 0.3; }
+    .glass-card, .glass, .glass-nav { backdrop-filter: blur(12px); }
+  }
 }
