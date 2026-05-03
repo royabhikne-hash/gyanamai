@@ -406,19 +406,29 @@ ${combinedContent.substring(0, 60000)}`;
       // Generate teacher+student dialogue podcast script grounded in project sources
       const numExchanges = Math.min(Math.max(parseInt(String(exchanges)) || 20, 6), 50);
 
-      // Random Indian teacher (female) + student (male) name pools — change every generation
-      const teacherNames = [
+      // Mixed-gender name pools — voices follow gender of chosen name
+      const femaleTeachers = [
         "Priya Ma'am", "Anjali Ma'am", "Neha Ma'am", "Kavya Ma'am", "Ritu Ma'am",
-        "Shreya Ma'am", "Pooja Ma'am", "Divya Ma'am", "Meera Ma'am", "Sunita Ma'am",
-        "Nisha Ma'am", "Aditi Ma'am", "Ishita Ma'am", "Radhika Ma'am", "Sneha Ma'am"
+        "Shreya Ma'am", "Meera Ma'am", "Nisha Ma'am", "Aditi Ma'am", "Radhika Ma'am"
       ];
-      const studentNames = [
+      const maleTeachers = [
+        "Rajesh Sir", "Amit Sir", "Vikram Sir", "Sanjay Sir", "Anil Sir",
+        "Suresh Sir", "Manoj Sir", "Deepak Sir", "Arvind Sir", "Pankaj Sir"
+      ];
+      const femaleStudents = [
+        "Anya", "Ishita", "Tanya", "Riya", "Sneha",
+        "Pari", "Aarohi", "Diya", "Kiara", "Myra"
+      ];
+      const maleStudents = [
         "Arjun", "Rohan", "Aditya", "Karan", "Vivek",
-        "Rahul", "Aryan", "Siddharth", "Harsh", "Manish",
-        "Yash", "Dev", "Kabir", "Nikhil", "Tanish"
+        "Rahul", "Aryan", "Siddharth", "Yash", "Kabir"
       ];
-      const teacherName = teacherNames[Math.floor(Math.random() * teacherNames.length)];
-      const studentName = studentNames[Math.floor(Math.random() * studentNames.length)];
+      const teacherGender: "male" | "female" = Math.random() < 0.5 ? "female" : "male";
+      const studentGender: "male" | "female" = Math.random() < 0.5 ? "female" : "male";
+      const teacherPool = teacherGender === "female" ? femaleTeachers : maleTeachers;
+      const studentPool = studentGender === "female" ? femaleStudents : maleStudents;
+      const teacherName = teacherPool[Math.floor(Math.random() * teacherPool.length)];
+      const studentName = studentPool[Math.floor(Math.random() * studentPool.length)];
 
       const { data: sources } = await supabase
         .from("study_sources")
@@ -446,8 +456,8 @@ ${combinedContent.substring(0, 60000)}`;
       const podcastPrompt = `You are scripting an educational podcast titled "${project?.title || "Study Podcast"}".
 
 Format: A friendly DIALOGUE between two hosts:
-- TEACHER (female voice): "${teacherName}" — patient, clear, expert, explains concepts deeply with real-world examples and analogies.
-- STUDENT (male voice): "${studentName}" — curious learner who asks smart, probing questions, sometimes challenges/debates points to dig deeper, occasionally summarizes back what he understood.
+- TEACHER (${teacherGender}): "${teacherName}" — patient, warm, expert, explains concepts deeply with real-world examples and analogies.
+- STUDENT (${studentGender}): "${studentName}" — curious learner who asks smart, probing questions, sometimes challenges/debates points to dig deeper, occasionally summarizes back what they understood.
 
 Rules:
 - Generate EXACTLY ${numExchanges} alternating turns (start with TEACHER introducing the topic).
@@ -532,6 +542,21 @@ ${combinedContent}`;
       // Attach the chosen host names so the UI can display them
       script.teacherName = teacherName;
       script.studentName = studentName;
+      script.teacherGender = teacherGender;
+      script.studentGender = studentGender;
+
+      // Save to history so student can listen later
+      try {
+        await supabase.from("study_podcasts").insert({
+          project_id: projectId,
+          student_id: student.id,
+          title: script.title || project?.title || "Podcast",
+          script,
+          exchanges: numExchanges,
+          teacher_name: teacherName,
+          student_name: studentName,
+        });
+      } catch (_) { /* non-fatal */ }
 
       await supabase.from("ai_usage_log").insert({
         student_id: student.id,

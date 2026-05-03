@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Mic, Loader2, Play, Pause, SkipForward, SkipBack, Square,
-  Download, Sparkles, GraduationCap, User as UserIcon
+  Download, Sparkles, GraduationCap, User as UserIcon, History, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -18,11 +18,23 @@ interface PodcastScript {
   turns: Turn[];
   teacherName?: string;
   studentName?: string;
+  teacherGender?: "male" | "female";
+  studentGender?: "male" | "female";
 }
 
 interface Props {
   projectId: string;
   hasSources: boolean;
+}
+
+interface PodcastHistoryItem {
+  id: string;
+  title: string;
+  script: PodcastScript;
+  exchanges: number;
+  teacher_name: string | null;
+  student_name: string | null;
+  created_at: string;
 }
 
 const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
@@ -36,6 +48,8 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [recording, setRecording] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [history, setHistory] = useState<PodcastHistoryItem[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   const stoppedRef = useRef(false);
   const indexRef = useRef(0);
@@ -60,7 +74,6 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
   }, []);
 
   const { femaleVoice, maleVoice } = useMemo(() => {
-    // Prefer Indian English voices, then Hindi (en-IN / hi-IN), then any English
     const indian = voices.filter(v => /(en[-_]IN|hi[-_]IN)/i.test(v.lang));
     const en = voices.filter(v => /^en/i.test(v.lang));
     const pool = indian.length ? indian : (en.length ? en : voices);
@@ -68,20 +81,30 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
     const findBy = (list: SpeechSynthesisVoice[], ...needles: string[]) =>
       list.find(v => needles.some(n => v.name.toLowerCase().includes(n)));
 
-    // Indian female voice names across platforms (Google, Microsoft, Apple)
     const female =
       findBy(pool, "heera", "swara", "kalpana", "priya", "veena", "aditi", "raveena", "neerja", "isha", "lekha", "shruti", "google हिन्दी", "google india", "female") ||
-      findBy(voices, "heera", "swara", "priya", "veena", "aditi", "raveena", "neerja", "isha", "lekha", "shruti") ||
+      findBy(voices, "heera", "swara", "priya", "veena", "aditi", "raveena", "neerja", "isha", "lekha", "shruti", "female") ||
       pool[0] || voices[0];
 
-    // Indian male voice names
     const male =
       findBy(pool, "hemant", "ravi", "rishi", "kabir", "prabhat", "madhur", "google इंडिया", "male") ||
-      findBy(voices, "hemant", "ravi", "rishi", "kabir", "prabhat", "madhur") ||
+      findBy(voices, "hemant", "ravi", "rishi", "kabir", "prabhat", "madhur", "male") ||
       pool.find(v => v !== female) || pool[1] || voices[1] || voices[0];
 
     return { femaleVoice: female, maleVoice: male };
   }, [voices]);
+
+  const fetchHistory = async () => {
+    const { data } = await supabase
+      .from("study_podcasts")
+      .select("id,title,script,exchanges,teacher_name,student_name,created_at")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setHistory((data || []) as any);
+  };
+
+  useEffect(() => { fetchHistory(); }, [projectId]);
 
   const handleGenerate = async () => {
     if (!hasSources) {
@@ -110,6 +133,7 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
       if (!data.script?.turns?.length) throw new Error("Empty podcast script");
       setScript(data.script);
       toast({ title: "Podcast ready! 🎙️", description: `${data.script.turns.length} dialogue turns generated.` });
+      fetchHistory();
     } catch (err: any) {
       toast({ title: "Generation failed", description: err.message, variant: "destructive" });
     } finally {
@@ -121,11 +145,18 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
     return new Promise((resolve) => {
       if (stoppedRef.current) { resolve(); return; }
       const u = new SpeechSynthesisUtterance(turn.text);
-      const v = turn.speaker === "teacher" ? femaleVoice : maleVoice;
+      // Pick voice based on speaker's actual gender (not role)
+      const speakerGender =
+        turn.speaker === "teacher"
+          ? (script?.teacherGender || "female")
+          : (script?.studentGender || "male");
+      const v = speakerGender === "female" ? femaleVoice : maleVoice;
       if (v) u.voice = v;
       u.lang = v?.lang || "en-IN";
-      u.rate = turn.speaker === "teacher" ? 0.95 : 1.02;
-      u.pitch = turn.speaker === "teacher" ? 1.1 : 0.9;
+      // Warmer, more natural delivery
+      u.rate = 0.88;
+      u.pitch = speakerGender === "female" ? 1.05 : 0.92;
+      u.volume = 1.0;
       u.onend = () => resolve();
       u.onerror = () => resolve();
       window.speechSynthesis.speak(u);
@@ -262,8 +293,60 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
     URL.revokeObjectURL(url);
   };
 
+  const loadFromHistory = (item: PodcastHistoryItem) => {
+    handleStop();
+    setScript(item.script);
+    setActiveIndex(-1);
+    setDownloadUrl(null);
+    setShowHistory(false);
+    toast({ title: "Loaded podcast", description: item.title });
+  };
+
+  const deleteHistoryItem = async (id: string) => {
+    await supabase.from("study_podcasts").delete().eq("id", id);
+    setHistory(prev => prev.filter(p => p.id !== id));
+  };
+
   return (
     <div className="space-y-4">
+      {/* History toggle */}
+      {history.length > 0 && (
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowHistory(s => !s)}
+            className="gap-2 text-xs"
+          >
+            <History className="w-3.5 h-3.5" />
+            {showHistory ? "Hide" : "Show"} podcast history ({history.length})
+          </Button>
+        </div>
+      )}
+
+      {showHistory && (
+        <div className="glass-card rounded-2xl p-3 sm:p-4 border border-primary/10 space-y-2 max-h-[280px] overflow-y-auto">
+          {history.map(item => (
+            <div key={item.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-background/60 border border-border/40">
+              <button onClick={() => loadFromHistory(item)} className="flex-1 min-w-0 text-left">
+                <p className="text-xs sm:text-sm font-medium text-foreground truncate">🎙️ {item.title}</p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {item.teacher_name} & {item.student_name} • {item.exchanges} exchanges • {new Date(item.created_at).toLocaleDateString()}
+                </p>
+              </button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+                onClick={() => deleteHistoryItem(item.id)}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Generator card */}
       <div className="glass-card rounded-2xl p-4 sm:p-5 border border-primary/10 space-y-4">
         <div className="flex items-start gap-3">
@@ -323,7 +406,7 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
             <h4 className="font-bold text-foreground text-sm sm:text-base truncate">🎙️ {script.title}</h4>
             <p className="text-[11px] text-muted-foreground">
               {script.turns.length} turns • Voices:{" "}
-              <span className="text-foreground">{femaleVoice?.name || "default female"}</span> &{" "}
+              <span className="text-foreground">{femaleVoice?.name || "default female"}</span> /{" "}
               <span className="text-foreground">{maleVoice?.name || "default male"}</span>
             </p>
           </div>
