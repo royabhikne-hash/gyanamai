@@ -48,7 +48,10 @@ const ExamPrepDashboard: React.FC<Props> = ({
 
     try {
       setUploading(sessionId);
-      const filePath = `${access.studentId}/${sessionId}/${Date.now()}_${file.name}`;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `${user.id}/${sessionId}/${Date.now()}_${safeName}`;
       const { error: uploadErr } = await supabase.storage
         .from('exam-prep-materials')
         .upload(filePath, file);
