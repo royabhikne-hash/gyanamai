@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -51,6 +51,21 @@
     --shadow-lg: 0 10px 25px -5px rgba(59, 130, 246, 0.15), 0 4px 10px -4px rgba(59, 130, 246, 0.08);
     --shadow-xl: 0 20px 40px -8px rgba(59, 130, 246, 0.18), 0 8px 16px -6px rgba(59, 130, 246, 0.1);
     --shadow-glow: 0 0 30px -5px hsl(221 83% 53% / 0.2);
+
+    /* ▸ CLAY UI shadows — soft, layered, no heavy blur */
+    --clay-shadow:
+      0 1px 2px hsl(221 60% 30% / 0.06),
+      0 6px 14px -6px hsl(221 60% 40% / 0.10),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.55),
+      inset 0 -2px 0 0 hsl(221 50% 80% / 0.18);
+    --clay-shadow-hover:
+      0 2px 4px hsl(221 60% 30% / 0.08),
+      0 12px 28px -10px hsl(221 60% 40% / 0.18),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.65),
+      inset 0 -2px 0 0 hsl(221 50% 80% / 0.22);
+    --clay-shadow-pressed:
+      inset 0 2px 6px hsl(221 60% 30% / 0.18),
+      inset 0 -1px 0 0 hsl(0 0% 100% / 0.4);
 
     --sidebar-background: 210 80% 96%;
     --sidebar-foreground: 222 47% 11%;
@@ -108,6 +123,18 @@
     --shadow-xl: 0 20px 40px -8px rgba(0, 0, 0, 0.7);
     --shadow-glow: 0 0 30px -5px hsl(217 91% 60% / 0.15);
 
+    --clay-shadow:
+      0 1px 2px hsl(0 0% 0% / 0.45),
+      0 8px 18px -8px hsl(0 0% 0% / 0.55),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.06),
+      inset 0 -2px 0 0 hsl(0 0% 0% / 0.35);
+    --clay-shadow-hover:
+      0 2px 4px hsl(0 0% 0% / 0.5),
+      0 14px 30px -12px hsl(0 0% 0% / 0.65),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.08);
+    --clay-shadow-pressed:
+      inset 0 2px 6px hsl(0 0% 0% / 0.5);
+
     --sidebar-background: 220 50% 8%;
     --sidebar-foreground: 210 40% 96%;
     --sidebar-primary: 217 91% 60%;
@@ -131,7 +158,8 @@
   }
   body {
     @apply text-foreground antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: "ss01", "cv11";
     background: var(--gradient-bg);
     background-attachment: fixed;
     min-height: 100vh;
@@ -143,16 +171,22 @@
     -webkit-overflow-scrolling: touch;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Prevent pull-to-refresh on Android */
     overscroll-behavior-y: contain;
+    /* Mobile-safe text wrapping — never let words break the layout */
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold tracking-tight;
-    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
   }
-  h1 { @apply text-3xl font-extrabold; }
-  h2 { @apply text-2xl font-bold; }
-  h3 { @apply text-xl font-semibold; }
+  /* Fluid, mobile-safe heading sizes — never overflow on 320px screens */
+  h1 { font-size: clamp(1.5rem, 5.5vw, 2rem); font-weight: 800; line-height: 1.15; }
+  h2 { font-size: clamp(1.25rem, 4.5vw, 1.625rem); font-weight: 700; line-height: 1.2; }
+  h3 { font-size: clamp(1.05rem, 3.8vw, 1.25rem); font-weight: 600; line-height: 1.3; }
+  p, span, li { overflow-wrap: anywhere; }
 
   img, a, button { -webkit-touch-callout: none; }
 
@@ -191,17 +225,17 @@
 
   /* ▸ EDU CARD ─────────────────────────────────── */
   .edu-card {
-    @apply bg-card rounded-2xl border border-border transition-all duration-300;
-    box-shadow: var(--shadow-md);
-    transform: perspective(1000px) rotateX(0deg);
-    will-change: transform, box-shadow;
+    @apply bg-card rounded-3xl border border-border/60 transition-all duration-200;
+    box-shadow: var(--clay-shadow);
+    will-change: transform;
   }
   .edu-card:hover {
-    box-shadow: var(--shadow-xl);
-    transform: perspective(1000px) rotateX(-1deg) translateY(-4px);
+    box-shadow: var(--clay-shadow-hover);
+    transform: translateY(-2px);
   }
   .edu-card:active {
-    transform: perspective(1000px) scale(0.98);
+    transform: scale(0.985);
+    box-shadow: var(--clay-shadow-pressed);
   }
 
   .glass {
@@ -209,15 +243,14 @@
     background: hsl(var(--card) / 0.7);
   }
   .glass-card {
-    @apply rounded-2xl border border-border transition-all duration-300;
-    background: hsl(var(--card) / 0.82);
-    backdrop-filter: blur(24px) saturate(1.6);
-    box-shadow: var(--shadow-md), inset 0 1px 0 0 hsl(0 0% 100% / 0.12), inset 0 0 0 0.5px hsl(0 0% 100% / 0.06);
+    @apply rounded-3xl border border-border/60 transition-all duration-200;
+    background: hsl(var(--card) / 0.92);
+    box-shadow: var(--clay-shadow);
     will-change: transform;
   }
   .glass-card:hover {
-    box-shadow: var(--shadow-xl), inset 0 1px 0 0 hsl(0 0% 100% / 0.18);
-    transform: translateY(-4px);
+    box-shadow: var(--clay-shadow-hover);
+    transform: translateY(-2px);
   }
   .glass-nav {
     @apply backdrop-blur-xl border-border;
@@ -315,15 +348,24 @@
 
   /* ▸ BUTTONS ──────────────────────────────────── */
   .edu-button-primary {
-    @apply text-primary-foreground font-semibold rounded-2xl px-6 py-3 transition-all duration-300;
+    @apply text-primary-foreground font-semibold rounded-2xl px-6 py-3 transition-all duration-200;
     background: var(--gradient-primary);
-    box-shadow: 0 4px 15px hsl(var(--primary) / 0.3), inset 0 1px 0 hsl(0 0% 100% / 0.15);
+    box-shadow:
+      0 6px 14px -4px hsl(var(--primary) / 0.45),
+      inset 0 1px 0 hsl(0 0% 100% / 0.35),
+      inset 0 -2px 0 hsl(var(--primary) / 0.4);
   }
   .edu-button-primary:hover {
-    box-shadow: 0 8px 25px hsl(var(--primary) / 0.4), inset 0 1px 0 hsl(0 0% 100% / 0.2);
-    transform: translateY(-2px) scale(1.02);
+    box-shadow:
+      0 10px 22px -6px hsl(var(--primary) / 0.55),
+      inset 0 1px 0 hsl(0 0% 100% / 0.4),
+      inset 0 -2px 0 hsl(var(--primary) / 0.45);
+    transform: translateY(-1px);
   }
-  .edu-button-primary:active { transform: translateY(0) scale(0.98); }
+  .edu-button-primary:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: var(--clay-shadow-pressed);
+  }
 
   .edu-button-secondary {
     @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold rounded-2xl px-6 py-3 transition-all duration-300;
@@ -381,18 +423,18 @@
 
   /* ▸ INTERACTIVE CARD ─────────────────────────── */
   .interactive-card {
-    @apply bg-card rounded-2xl border border-border transition-all duration-300 cursor-pointer;
-    box-shadow: var(--shadow-sm);
+    @apply bg-card rounded-3xl border border-border/60 transition-all duration-200 cursor-pointer;
+    box-shadow: var(--clay-shadow);
     will-change: transform;
   }
   .interactive-card:hover {
-    box-shadow: var(--shadow-lg), var(--shadow-glow);
-    transform: translateY(-4px) scale(1.01);
+    box-shadow: var(--clay-shadow-hover);
+    transform: translateY(-2px);
     border-color: hsl(var(--primary) / 0.3);
   }
   .interactive-card:active {
-    transform: scale(0.98);
-    box-shadow: var(--shadow-sm);
+    transform: scale(0.985);
+    box-shadow: var(--clay-shadow-pressed);
   }
 
   /* ▸ CHAT BUBBLES ─────────────────────────────── */
@@ -449,12 +491,11 @@
 
   /* ▸ STAT CARDS ───────────────────────────────── */
   .stat-card {
-    @apply edu-card p-5 transition-all duration-300;
-    transform: perspective(800px) rotateY(0deg);
+    @apply edu-card p-5;
   }
   .stat-card:hover {
-    transform: perspective(800px) rotateY(-2deg) translateY(-4px);
-    box-shadow: var(--shadow-xl);
+    transform: translateY(-2px);
+    box-shadow: var(--clay-shadow-hover);
   }
   .stat-card-accent {
     @apply stat-card border-accent/20;
@@ -514,13 +555,13 @@
 
   /* ▸ FEATURE CARD ─────────────────────────────── */
   .feature-card {
-    @apply bg-card rounded-2xl border border-border p-6 transition-all duration-300;
-    box-shadow: var(--shadow-sm);
+    @apply bg-card rounded-3xl border border-border/60 p-6 transition-all duration-200;
+    box-shadow: var(--clay-shadow);
     will-change: transform;
   }
   .feature-card:hover {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-6px);
+    box-shadow: var(--clay-shadow-hover);
+    transform: translateY(-3px);
     border-color: hsl(var(--primary) / 0.3);
   }
 
@@ -717,5 +758,19 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+  }
+
+  /* ▸ MOBILE SAFETY — prevent text overflow & lighten effects on small screens */
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  @media (max-width: 480px) {
+    .liquid-orb { filter: blur(50px); opacity: 0.3; }
+    .glass-card, .glass, .glass-nav { backdrop-filter: blur(12px); }
   }
 }
