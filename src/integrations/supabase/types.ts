@@ -1110,6 +1110,42 @@ export type Database = {
           },
         ]
       }
+      study_podcasts: {
+        Row: {
+          created_at: string
+          exchanges: number
+          id: string
+          project_id: string
+          script: Json
+          student_id: string
+          student_name: string | null
+          teacher_name: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          exchanges?: number
+          id?: string
+          project_id: string
+          script?: Json
+          student_id: string
+          student_name?: string | null
+          teacher_name?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          exchanges?: number
+          id?: string
+          project_id?: string
+          script?: Json
+          student_id?: string
+          student_name?: string | null
+          teacher_name?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       study_project_messages: {
         Row: {
           content: string
