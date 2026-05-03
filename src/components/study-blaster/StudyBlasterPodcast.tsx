@@ -406,7 +406,7 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
             <h4 className="font-bold text-foreground text-sm sm:text-base truncate">🎙️ {script.title}</h4>
             <p className="text-[11px] text-muted-foreground">
               {script.turns.length} turns • Voices:{" "}
-              <span className="text-foreground">{femaleVoice?.name || "default female"}</span> &{" "}
+              <span className="text-foreground">{femaleVoice?.name || "default female"}</span> /{" "}
               <span className="text-foreground">{maleVoice?.name || "default male"}</span>
             </p>
           </div>
