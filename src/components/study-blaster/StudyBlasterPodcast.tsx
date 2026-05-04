@@ -81,15 +81,25 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
     const findBy = (list: SpeechSynthesisVoice[], ...needles: string[]) =>
       list.find(v => needles.some(n => v.name.toLowerCase().includes(n)));
 
+    const FEMALE_KEYS = ["heera", "swara", "kalpana", "priya", "veena", "aditi", "raveena", "neerja", "isha", "lekha", "shruti", "zira", "samantha", "victoria", "karen", "tessa", "moira", "fiona", "susan", "female", "woman"];
+    const MALE_KEYS = ["hemant", "ravi", "rishi", "kabir", "prabhat", "madhur", "mark", "david", "george", "daniel", "alex", "fred", "oliver", "thomas", "rishi", "male", "man"];
+
+    const isFemaleName = (v: SpeechSynthesisVoice) => FEMALE_KEYS.some(k => v.name.toLowerCase().includes(k));
+    const isMaleName = (v: SpeechSynthesisVoice) => MALE_KEYS.some(k => v.name.toLowerCase().includes(k));
+
     const female =
-      findBy(pool, "heera", "swara", "kalpana", "priya", "veena", "aditi", "raveena", "neerja", "isha", "lekha", "shruti", "google हिन्दी", "google india", "female") ||
-      findBy(voices, "heera", "swara", "priya", "veena", "aditi", "raveena", "neerja", "isha", "lekha", "shruti", "female") ||
+      findBy(pool, ...FEMALE_KEYS) ||
+      findBy(voices, ...FEMALE_KEYS) ||
       pool[0] || voices[0];
 
+    // For male: explicitly avoid any voice flagged as female by name
     const male =
-      findBy(pool, "hemant", "ravi", "rishi", "kabir", "prabhat", "madhur", "google इंडिया", "male") ||
-      findBy(voices, "hemant", "ravi", "rishi", "kabir", "prabhat", "madhur", "male") ||
-      pool.find(v => v !== female) || pool[1] || voices[1] || voices[0];
+      findBy(pool, ...MALE_KEYS) ||
+      findBy(voices, ...MALE_KEYS) ||
+      pool.find(v => v !== female && !isFemaleName(v)) ||
+      voices.find(v => v !== female && !isFemaleName(v)) ||
+      pool.find(v => v !== female) ||
+      voices[1] || voices[0];
 
     return { femaleVoice: female, maleVoice: male };
   }, [voices]);
@@ -153,9 +163,18 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
       const v = speakerGender === "female" ? femaleVoice : maleVoice;
       if (v) u.voice = v;
       u.lang = v?.lang || "en-IN";
-      // Warmer, more natural delivery
+      // Warmer delivery + strong pitch differentiation so male never sounds female
+      // (some devices only ship a female-leaning voice; lowering pitch significantly
+      //  forces a clearly masculine timbre)
+      const sameVoice = femaleVoice && maleVoice && femaleVoice === maleVoice;
       u.rate = 0.88;
-      u.pitch = speakerGender === "female" ? 1.05 : 0.92;
+      if (speakerGender === "female") {
+        u.pitch = sameVoice ? 1.15 : 1.05;
+      } else {
+        // Push pitch low; if we had to fall back to a female-leaning voice,
+        // drop pitch even further to mask it as masculine.
+        u.pitch = sameVoice ? 0.55 : 0.75;
+      }
       u.volume = 1.0;
       u.onend = () => resolve();
       u.onerror = () => resolve();
