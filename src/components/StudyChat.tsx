@@ -1596,17 +1596,23 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
           </div>
         )}
         
-        {/* Loading indicator - ChatGPT style */}
+        {/* Loading indicator - Professional clay */}
         {isLoading && (
-          <div className="py-5 bg-muted/20">
-            <div className="max-w-2xl mx-auto px-4 flex gap-3">
-              <div className="w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center bg-primary/10 ring-1 ring-primary/20">
-                <Sparkles className="w-3.5 h-3.5 text-primary" />
+          <div className="py-4 sm:py-6 px-3 sm:px-6">
+            <div className="max-w-3xl mx-auto flex gap-2.5 sm:gap-4">
+              <div
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex-shrink-0 flex items-center justify-center bg-primary/10 ring-1 ring-primary/15 text-primary"
+                style={{ boxShadow: 'var(--clay-shadow)' }}
+              >
+                <Sparkles className="w-4 h-4" strokeWidth={2.2} />
               </div>
-              <div className="flex items-center gap-1.5 pt-1">
-                <div className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{animationDelay: "0ms"}}></div>
-                <div className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{animationDelay: "150ms"}}></div>
-                <div className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{animationDelay: "300ms"}}></div>
+              <div
+                className="rounded-3xl rounded-tl-md px-4 py-3.5 bg-card border border-border/50 flex items-center gap-1.5"
+                style={{ boxShadow: 'var(--clay-shadow)' }}
+              >
+                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
@@ -1632,11 +1638,14 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         </div>
       )}
 
-      {/* ChatGPT-style Input - Mobile Optimized */}
+      {/* Professional Clay Input */}
       {!isQuizMode && (
-        <div className="border-t border-border/40 bg-background p-2 sm:p-3 pb-safe">
-          <div className="max-w-2xl mx-auto">
-            <div className="relative flex items-center gap-1.5 sm:gap-2 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all duration-200">
+        <div className="bg-background/80 backdrop-blur-xl p-2.5 sm:p-4 pb-safe">
+          <div className="max-w-3xl mx-auto">
+            <div
+              className="relative flex items-end gap-1.5 sm:gap-2 rounded-3xl border border-border/50 bg-card px-2 sm:px-3 py-2 sm:py-2.5 focus-within:border-primary/40 transition-all duration-200"
+              style={{ boxShadow: 'var(--clay-shadow)' }}
+            >
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1648,9 +1657,9 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                 variant="ghost"
                 size="icon"
                 onClick={() => fileInputRef.current?.click()}
-                className="shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="shrink-0 h-9 w-9 rounded-2xl text-muted-foreground hover:text-foreground hover:bg-muted"
               >
-                <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <Image className="w-[18px] h-[18px]" strokeWidth={2} />
               </Button>
               
               {/* Voice Input Button */}
@@ -1659,13 +1668,13 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                   variant="ghost"
                   size="icon"
                   onClick={toggleListening}
-                  className={`shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-xl transition-colors ${
+                  className={`shrink-0 h-9 w-9 rounded-2xl transition-colors ${
                     isListening 
                       ? "bg-destructive/10 text-destructive hover:bg-destructive/20" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}
                 >
-                  {isListening ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                  {isListening ? <MicOff className="w-[18px] h-[18px]" strokeWidth={2} /> : <Mic className="w-[18px] h-[18px]" strokeWidth={2} />}
                 </Button>
               )}
               
@@ -1674,19 +1683,24 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-0 h-7 sm:h-8 text-xs sm:text-sm"
+                className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 h-9 text-[14px] sm:text-[15px] placeholder:text-muted-foreground/60"
                 disabled={isLoading || isListening}
               />
               <Button
                 size="icon"
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim() && !selectedImage}
-                className="shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-xl"
-                variant={inputValue.trim() ? "default" : "ghost"}
+                className={`shrink-0 h-9 w-9 rounded-2xl transition-all ${
+                  inputValue.trim() || selectedImage ? '' : 'opacity-40'
+                }`}
+                style={(inputValue.trim() || selectedImage) ? { boxShadow: 'var(--clay-shadow)' } : undefined}
               >
-                {isLoading ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                {isLoading ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <Send className="w-[18px] h-[18px]" strokeWidth={2.2} />}
               </Button>
             </div>
+            <p className="text-[10px] sm:text-[11px] text-muted-foreground/60 text-center mt-2 font-medium">
+              Gyanam AI can make mistakes. Verify important info.
+            </p>
             {isListening && (
               <div className="flex flex-col items-center gap-1.5 sm:gap-2 mt-2 sm:mt-3">
                 <VoiceInputIndicator isActive={isListening} />
