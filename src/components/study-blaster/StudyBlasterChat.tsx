@@ -221,58 +221,56 @@ const StudyBlasterChat = ({ projectId, projectTitle }: Props) => {
             </div>
           </div>
         ) : (
-          <div className="space-y-1 py-4">
-            {messages.map((msg, idx) => (
-              <div 
-                key={idx} 
-                className={`px-3 sm:px-4 py-3 ${
-                  msg.role === "assistant" ? "bg-secondary/30" : ""
-                }`}
-              >
-                <div className="max-w-2xl mx-auto flex gap-3">
-                  {/* Avatar */}
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                    msg.role === "assistant" 
-                      ? "bg-primary/10 ring-1 ring-primary/20" 
-                      : "bg-accent/10 ring-1 ring-accent/20"
-                  }`}>
-                    {msg.role === "assistant" 
-                      ? <Sparkles className="w-3.5 h-3.5 text-primary" />
-                      : <User className="w-3.5 h-3.5 text-accent" />
-                    }
-                  </div>
-                  
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-muted-foreground mb-1 block">
-                      {msg.role === "assistant" ? "Study Blaster AI" : "You"}
-                    </span>
-                    {msg.role === "assistant" ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&>pre]:rounded-xl [&>pre]:bg-secondary [&>code]:bg-secondary [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded-md [&>code]:text-xs">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+          <div className="space-y-0 py-3">
+            {messages.map((msg, idx) => {
+              const isUser = msg.role === "user";
+              return (
+                <div key={idx} className="px-3 sm:px-6 py-3 sm:py-4">
+                  <div className={`max-w-3xl mx-auto flex gap-2.5 sm:gap-4 ${isUser ? 'flex-row-reverse' : ''}`}>
+                    <div
+                      className={`w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex items-center justify-center shrink-0 ring-1 ${
+                        isUser ? 'bg-secondary text-secondary-foreground ring-border/60' : 'bg-primary/10 text-primary ring-primary/15'
+                      }`}
+                      style={{ boxShadow: 'var(--clay-shadow)' }}
+                    >
+                      {isUser ? <User className="w-4 h-4" strokeWidth={2.2} /> : <Sparkles className="w-4 h-4" strokeWidth={2.2} />}
+                    </div>
+                    <div className={`flex-1 min-w-0 flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+                      <span className={`text-[12px] font-semibold text-foreground/80 mb-1.5 ${isUser ? 'text-right' : ''}`}>
+                        {isUser ? "You" : "Study Blaster AI"}
+                      </span>
+                      <div
+                        className={`text-[14px] sm:text-[15px] leading-relaxed max-w-full break-words ${
+                          isUser
+                            ? 'rounded-3xl rounded-tr-md px-4 py-2.5 bg-primary text-primary-foreground'
+                            : 'rounded-3xl rounded-tl-md px-4 py-3 bg-card border border-border/50 text-foreground'
+                        }`}
+                        style={!isUser ? { boxShadow: 'var(--clay-shadow)' } : undefined}
+                      >
+                        {isUser ? (
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                        ) : (
+                          <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&_pre]:rounded-xl [&_pre]:bg-secondary [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-xs">
+                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <p className="text-sm text-foreground leading-relaxed">{msg.content}</p>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
-            {/* Typing indicator */}
             {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-              <div className="px-3 sm:px-4 py-3 bg-secondary/30">
-                <div className="max-w-2xl mx-auto flex gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <div className="px-3 sm:px-6 py-3 sm:py-4">
+                <div className="max-w-3xl mx-auto flex gap-2.5 sm:gap-4">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-primary/10 ring-1 ring-primary/15 text-primary flex items-center justify-center shrink-0" style={{ boxShadow: 'var(--clay-shadow)' }}>
+                    <Sparkles className="w-4 h-4" strokeWidth={2.2} />
                   </div>
-                  <div className="flex-1">
-                    <span className="text-xs font-semibold text-muted-foreground mb-1.5 block">Study Blaster AI</span>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
-                    </div>
+                  <div className="rounded-3xl rounded-tl-md px-4 py-3.5 bg-card border border-border/50 flex items-center gap-1.5" style={{ boxShadow: 'var(--clay-shadow)' }}>
+                    <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
                 </div>
               </div>
@@ -294,34 +292,37 @@ const StudyBlasterChat = ({ projectId, projectTitle }: Props) => {
       )}
 
       {/* Input Area - ChatGPT style */}
-      <div className="border-t border-border/40 pt-3 pb-1">
-        <div className="max-w-2xl mx-auto">
-          <div className="relative flex items-end gap-2 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2 focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all duration-200">
+      <div className="pt-3 pb-2 px-2 sm:px-4 bg-background/80 backdrop-blur-xl">
+        <div className="max-w-3xl mx-auto">
+          <div
+            className="relative flex items-end gap-2 rounded-3xl border border-border/50 bg-card px-3 py-2 focus-within:border-primary/40 transition-all duration-200"
+            style={{ boxShadow: 'var(--clay-shadow)' }}
+          >
             <textarea
               ref={textareaRef}
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder="Ask about your study materials..."
-              className="flex-1 bg-transparent border-none outline-none resize-none text-sm text-foreground placeholder:text-muted-foreground/60 min-h-[24px] max-h-[150px] py-1 leading-relaxed"
+              className="flex-1 bg-transparent border-none outline-none resize-none text-[14px] sm:text-[15px] text-foreground placeholder:text-muted-foreground/60 min-h-[24px] max-h-[150px] py-1.5 leading-relaxed"
               rows={1}
             />
             <Button
               onClick={sendMessage}
               disabled={isLoading || !input.trim()}
               size="icon"
-              className="shrink-0 h-8 w-8 rounded-xl transition-all duration-200"
-              variant={input.trim() ? "default" : "ghost"}
+              className={`shrink-0 h-9 w-9 rounded-2xl transition-all ${input.trim() ? '' : 'opacity-40'}`}
+              style={input.trim() ? { boxShadow: 'var(--clay-shadow)' } : undefined}
             >
               {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-[18px] h-[18px] animate-spin" />
               ) : (
-                <Send className="w-4 h-4" />
+                <Send className="w-[18px] h-[18px]" strokeWidth={2.2} />
               )}
             </Button>
           </div>
-          <p className="text-[10px] text-muted-foreground/50 text-center mt-1.5">
-            Answers are grounded in your uploaded sources only
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground/60 text-center mt-2 font-medium">
+            Grounded in your uploaded sources only.
           </p>
         </div>
       </div>
