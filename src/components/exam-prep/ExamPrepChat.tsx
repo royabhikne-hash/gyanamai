@@ -542,50 +542,55 @@ const ExamPrepChat: React.FC<Props> = ({ session, studentName, onSendMessage, on
             </p>
           </div>
         ) : (
-          <div className="space-y-0 py-2">
-            {messages.map((msg, i) => (
-              <div key={i} className={`px-3 sm:px-4 py-3 sm:py-4 ${msg.role === 'assistant' ? 'bg-muted/20' : 'bg-background'} transition-colors`}>
-                <div className="max-w-2xl mx-auto flex gap-2.5 sm:gap-3">
-                  {/* Avatar */}
-                  <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                    msg.role === 'assistant'
-                      ? 'bg-primary/10 ring-1 ring-primary/20'
-                      : 'bg-accent/10 ring-1 ring-accent/20'
-                  }`}>
-                    {msg.role === 'assistant'
-                      ? <Sparkles className="w-3.5 h-3.5 text-primary" />
-                      : <User className="w-3.5 h-3.5 text-accent" />
-                    }
-                  </div>
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-muted-foreground mb-1 block">
-                      {msg.role === 'assistant' ? 'Exam Prep AI' : 'You'}
-                    </span>
-                    {msg.role === 'assistant' ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&>pre]:rounded-xl [&>pre]:bg-secondary [&>code]:bg-secondary [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded-md [&>code]:text-xs">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+          <div className="space-y-0 py-3">
+            {messages.map((msg, i) => {
+              const isUser = msg.role !== 'assistant';
+              return (
+                <div key={i} className="px-3 sm:px-6 py-3 sm:py-4">
+                  <div className={`max-w-3xl mx-auto flex gap-2.5 sm:gap-4 ${isUser ? 'flex-row-reverse' : ''}`}>
+                    <div
+                      className={`w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex items-center justify-center shrink-0 ring-1 ${
+                        isUser ? 'bg-secondary text-secondary-foreground ring-border/60' : 'bg-primary/10 text-primary ring-primary/15'
+                      }`}
+                      style={{ boxShadow: 'var(--clay-shadow)' }}
+                    >
+                      {isUser ? <User className="w-4 h-4" strokeWidth={2.2} /> : <Sparkles className="w-4 h-4" strokeWidth={2.2} />}
+                    </div>
+                    <div className={`flex-1 min-w-0 flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+                      <span className="text-[12px] font-semibold text-foreground/80 mb-1.5">
+                        {isUser ? 'You' : 'Exam Prep AI'}
+                      </span>
+                      <div
+                        className={`text-[14px] sm:text-[15px] leading-relaxed max-w-full break-words ${
+                          isUser
+                            ? 'rounded-3xl rounded-tr-md px-4 py-2.5 bg-primary text-primary-foreground'
+                            : 'rounded-3xl rounded-tl-md px-4 py-3 bg-card border border-border/50 text-foreground'
+                        }`}
+                        style={!isUser ? { boxShadow: 'var(--clay-shadow)' } : undefined}
+                      >
+                        {isUser ? (
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                        ) : (
+                          <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&_pre]:rounded-xl [&_pre]:bg-secondary [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-xs">
+                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <p className="text-sm text-foreground leading-relaxed">{msg.content}</p>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {sending && (
-              <div className="px-3 sm:px-4 py-3 sm:py-4 bg-muted/20">
-                <div className="max-w-2xl mx-auto flex gap-2.5 sm:gap-3">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <div className="px-3 sm:px-6 py-3 sm:py-4">
+                <div className="max-w-3xl mx-auto flex gap-2.5 sm:gap-4">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-primary/10 ring-1 ring-primary/15 text-primary flex items-center justify-center shrink-0" style={{ boxShadow: 'var(--clay-shadow)' }}>
+                    <Sparkles className="w-4 h-4" strokeWidth={2.2} />
                   </div>
-                  <div className="flex-1">
-                    <span className="text-xs font-semibold text-muted-foreground mb-1.5 block">Exam Prep AI</span>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
-                    </div>
+                  <div className="rounded-3xl rounded-tl-md px-4 py-3.5 bg-card border border-border/50 flex items-center gap-1.5" style={{ boxShadow: 'var(--clay-shadow)' }}>
+                    <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
                 </div>
               </div>
@@ -595,27 +600,33 @@ const ExamPrepChat: React.FC<Props> = ({ session, studentName, onSendMessage, on
       </div>
 
       {/* Input - ChatGPT Style */}
-      <div className="border-t border-border/40 p-2.5 sm:p-3 bg-background">
-        <div className="max-w-2xl mx-auto">
-          <div className="relative flex items-end gap-2 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2 focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all duration-200">
+      <div className="p-2.5 sm:p-4 bg-background/80 backdrop-blur-xl">
+        <div className="max-w-3xl mx-auto">
+          <div
+            className="relative flex items-end gap-2 rounded-3xl border border-border/50 bg-card px-3 py-2 focus-within:border-primary/40 transition-all duration-200"
+            style={{ boxShadow: 'var(--clay-shadow)' }}
+          >
             <Input
               ref={inputRef}
               placeholder={hasMaterials ? "Ask your tutor or say 'I am ready' for exam..." : "Upload materials first..."}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-              className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-0 h-8 text-sm"
+              className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 h-9 text-[14px] sm:text-[15px] placeholder:text-muted-foreground/60"
             />
             <Button variant="ghost" size="icon" onClick={toggleVoiceInput}
-              className={`shrink-0 h-8 w-8 rounded-xl ${isListening ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-foreground'}`}>
-              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              className={`shrink-0 h-9 w-9 rounded-2xl ${isListening ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-foreground'}`}>
+              {isListening ? <MicOff className="w-[18px] h-[18px]" strokeWidth={2} /> : <Mic className="w-[18px] h-[18px]" strokeWidth={2} />}
             </Button>
             <Button size="icon" onClick={handleSend} disabled={!input.trim() || sending}
-              className="shrink-0 h-8 w-8 rounded-xl"
-              variant={input.trim() ? "default" : "ghost"}>
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              className={`shrink-0 h-9 w-9 rounded-2xl ${input.trim() ? '' : 'opacity-40'}`}
+              style={input.trim() ? { boxShadow: 'var(--clay-shadow)' } : undefined}>
+              {sending ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <Send className="w-[18px] h-[18px]" strokeWidth={2.2} />}
             </Button>
           </div>
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground/60 text-center mt-2 font-medium">
+            Answers come strictly from your uploaded study material.
+          </p>
         </div>
       </div>
     </div>
