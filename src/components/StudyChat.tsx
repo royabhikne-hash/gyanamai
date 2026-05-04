@@ -1086,21 +1086,21 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   const currentQuestion = quizQuestions[currentQuestionIndex];
 
   return (
-    <div className="flex flex-col h-full w-full bg-gradient-to-b from-background to-muted/20">
+    <div className="flex flex-col h-full w-full bg-background">
       {/* Confetti Celebration */}
       <Confetti trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
-      {/* Enhanced ChatGPT-style Header - Mobile Optimized */}
-      <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border/50 bg-card/95 backdrop-blur-sm shadow-sm sticky top-0 z-10">
+      {/* Professional Clay Header */}
+      <div className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 border-b border-border/40 bg-card/80 backdrop-blur-xl sticky top-0 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md">
-            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center" style={{ boxShadow: 'var(--clay-shadow)' }}>
+            <Sparkles className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" strokeWidth={2.2} />
           </div>
           <div>
-            <h3 className="font-bold text-foreground text-sm sm:text-base">Gyanam AI</h3>
-            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+            <h3 className="font-semibold text-foreground text-sm sm:text-[15px] tracking-tight leading-none">Gyanam AI</h3>
+            <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1 font-medium">
               {isQuizMode ? (
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
                   Q {currentQuestionIndex + 1}/{quizQuestions.length}
                 </span>
               ) : currentSubject ? (
@@ -1116,8 +1116,8 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                 </span>
               ) : (
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
-                  {completedSubjects.length > 0 ? `${completedSubjects.length} subject(s) studied` : "Ready!"}
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  {completedSubjects.length > 0 ? `${completedSubjects.length} subject${completedSubjects.length>1?'s':''} studied` : "Online"}
                 </span>
               )}
             </p>
@@ -1292,48 +1292,59 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
           return (
             <div
               key={message.id}
-              className={`py-3 sm:py-5 px-3 sm:px-4 ${isUser ? "bg-background" : "bg-muted/20"} transition-colors`}
+              className="py-4 sm:py-6 px-3 sm:px-6"
             >
-              <div className="max-w-3xl mx-auto flex gap-2 sm:gap-4">
-                {/* Avatar - Smaller on mobile */}
-                <div className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg flex-shrink-0 flex items-center justify-center shadow-sm ${
-                  isUser 
-                    ? "bg-accent/10 ring-1 ring-accent/20" 
-                    : "bg-primary/10 ring-1 ring-primary/20"
-                }`}>
-                  {isUser ? <User className="w-3 h-3 sm:w-4 sm:h-4 text-accent" /> : <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />}
+              <div className={`max-w-3xl mx-auto flex gap-2.5 sm:gap-4 ${isUser ? 'flex-row-reverse' : ''}`}>
+                {/* Avatar */}
+                <div
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex-shrink-0 flex items-center justify-center ring-1 ${
+                    isUser
+                      ? 'bg-secondary text-secondary-foreground ring-border/60'
+                      : 'bg-primary/10 text-primary ring-primary/15'
+                  }`}
+                  style={{ boxShadow: 'var(--clay-shadow)' }}
+                >
+                  {isUser ? <User className="w-4 h-4" strokeWidth={2.2} /> : <Sparkles className="w-4 h-4" strokeWidth={2.2} />}
                 </div>
-                
+
                 {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-                    <span className="font-semibold text-xs sm:text-sm">
+                <div className={`flex-1 min-w-0 flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+                  <div className={`flex items-center gap-2 mb-1.5 ${isUser ? 'flex-row-reverse' : ''}`}>
+                    <span className="font-semibold text-[12px] sm:text-[13px] text-foreground/90 tracking-tight">
                       {isUser ? "You" : "Gyanam AI"}
                     </span>
-                    <span className="text-[10px] sm:text-xs text-muted-foreground">
+                    <span className="text-[10px] sm:text-[11px] text-muted-foreground/70 font-medium">
                       {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
-                  
+
                   {message.imageUrl && (
                     <img
                       src={message.imageUrl}
                       alt="Uploaded"
-                      className="max-w-[150px] sm:max-w-[200px] rounded-xl mb-2 sm:mb-3 shadow-sm border border-border/50"
+                      className="max-w-[200px] sm:max-w-[260px] rounded-2xl mb-2 border border-border/50"
+                      style={{ boxShadow: 'var(--clay-shadow)' }}
                     />
                   )}
-                  
-                  <div className="text-foreground leading-relaxed text-[13px] sm:text-[15px]">
+
+                  <div
+                    className={`text-foreground leading-relaxed text-[14px] sm:text-[15px] max-w-full break-words ${
+                      isUser
+                        ? 'rounded-3xl rounded-tr-md px-4 py-2.5 bg-primary text-primary-foreground'
+                        : 'rounded-3xl rounded-tl-md px-4 py-3 bg-card border border-border/50'
+                    }`}
+                    style={!isUser ? { boxShadow: 'var(--clay-shadow)' } : undefined}
+                  >
                     {!isUser && message.isTyping && typingMessageId === message.id ? (
-                      <TypingText 
-                        text={message.content} 
+                      <TypingText
+                        text={message.content}
                         speed={12}
                         onComplete={() => handleTypingComplete(message.id, message.content)}
                       />
                     ) : isUser ? (
                       <span className="whitespace-pre-wrap">{message.content}</span>
                     ) : (
-                      <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&>pre]:rounded-xl [&>pre]:bg-secondary [&>code]:bg-secondary [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded-md [&>code]:text-xs">
+                      <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&_pre]:rounded-xl [&_pre]:bg-secondary [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-xs">
                         <ReactMarkdown>{message.content}</ReactMarkdown>
                       </div>
                     )}
@@ -1341,7 +1352,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                   
                   {/* AI message actions - Compact on mobile */}
                   {!isUser && (
-                    <div className="flex items-center gap-0.5 sm:gap-1 mt-2 sm:mt-3">
+                    <div className="flex items-center gap-0.5 sm:gap-1 mt-2">
                       <button
                         onClick={() => speakText(message.content, message.id)}
                         className="p-1 sm:p-1.5 rounded hover:bg-muted transition-colors flex items-center gap-0.5 sm:gap-1"
