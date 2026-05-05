@@ -232,7 +232,115 @@ Deno.serve(async (req) => {
     const userAgent = req.headers.get('user-agent') || 'unknown';
     const rateLimitKey = `${userType}:${identifier || clientIp}`;
 
-    if (action === "login") {
+    if (action === "login_auto") {
+      // Unified login: detect role from DB. Tries admin → school → coaching by id-or-email.
+      const rateCheck = checkRateLimit(`auto:${identifier || clientIp}`);
+      if (!rateCheck.allowed) {
+        return new Response(
+          JSON.stringify({ error: `Too many login attempts. Wait ${rateCheck.waitSeconds}s.`, rateLimited: true, waitSeconds: rateCheck.waitSeconds }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const id = String(identifier || "").trim();
+      if (!id || !password) {
+        return new Response(JSON.stringify({ error: "Identifier and password required" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // 1) Admin
+      const { data: admin } = await supabase
+        .from("admins")
+        .select("*")
+        .or(`admin_id.eq.${id},admin_id.ilike.${id}`)
+        .maybeSingle();
+      if (admin) {
+        const r = await verifyPassword(password, admin.password_hash);
+        if (!r.valid) {
+          recordAttempt(`auto:${id}`, false);
+          return new Response(JSON.stringify({ error: "Invalid credentials" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const requiresPasswordReset = r.isLegacy || admin.password_reset_required;
+        if (r.isLegacy && !requiresPasswordReset) {
+          const newHash = await hashPassword(password);
+          await supabase.from("admins").update({ password_hash: newHash, password_updated_at: new Date().toISOString() }).eq("id", admin.id);
+        }
+        const token = await createSessionToken(supabase, admin.id, 'admin', clientIp, userAgent);
+        recordAttempt(`auto:${id}`, true);
+        return new Response(JSON.stringify({
+          success: true, role: "admin",
+          user: { id: admin.id, name: admin.name, role: admin.role, adminId: admin.admin_id },
+          sessionToken: token, requiresPasswordReset,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // 2) School
+      const { data: school } = await supabase
+        .from("schools")
+        .select("*")
+        .or(`school_id.eq.${id},email.eq.${id}`)
+        .maybeSingle();
+      if (school) {
+        if (school.is_banned) {
+          return new Response(JSON.stringify({ error: "Account suspended" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const r = await verifyPassword(password, school.password_hash);
+        if (!r.valid) {
+          recordAttempt(`auto:${id}`, false);
+          return new Response(JSON.stringify({ error: "Invalid credentials" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const requiresPasswordReset = r.isLegacy || school.password_reset_required;
+        if (r.isLegacy && !requiresPasswordReset) {
+          const newHash = await hashPassword(password);
+          await supabase.from("schools").update({ password_hash: newHash, password_updated_at: new Date().toISOString() }).eq("id", school.id);
+        }
+        const token = await createSessionToken(supabase, school.id, 'school', clientIp, userAgent);
+        recordAttempt(`auto:${id}`, true);
+        return new Response(JSON.stringify({
+          success: true, role: "school",
+          user: { id: school.id, schoolId: school.school_id, name: school.name, feePaid: school.fee_paid },
+          sessionToken: token, requiresPasswordReset,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // 3) Coaching center
+      const { data: coaching } = await supabase
+        .from("coaching_centers")
+        .select("*")
+        .or(`coaching_id.eq.${id},email.eq.${id}`)
+        .maybeSingle();
+      if (coaching) {
+        if (coaching.is_banned) {
+          return new Response(JSON.stringify({ error: "Account suspended" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const r = await verifyPassword(password, coaching.password_hash);
+        if (!r.valid) {
+          recordAttempt(`auto:${id}`, false);
+          return new Response(JSON.stringify({ error: "Invalid credentials" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const requiresPasswordReset = r.isLegacy || coaching.password_reset_required;
+        if (r.isLegacy && !requiresPasswordReset) {
+          const newHash = await hashPassword(password);
+          await supabase.from("coaching_centers").update({ password_hash: newHash, password_updated_at: new Date().toISOString() }).eq("id", coaching.id);
+        }
+        const token = await createSessionToken(supabase, coaching.id, 'school' as any, clientIp, userAgent);
+        recordAttempt(`auto:${id}`, true);
+        return new Response(JSON.stringify({
+          success: true, role: "coaching",
+          user: { id: coaching.id, coachingId: coaching.coaching_id, name: coaching.name },
+          sessionToken: token, requiresPasswordReset,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // No staff match — caller should try student auth path.
+      return new Response(JSON.stringify({ notFound: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } else if (action === "login") {
       const rateCheck = checkRateLimit(rateLimitKey);
       if (!rateCheck.allowed) {
         return new Response(

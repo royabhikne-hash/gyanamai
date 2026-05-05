@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Eye, EyeOff, GraduationCap, Building2, Shield, BookOpen } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +20,7 @@ const Login = () => {
   const { toast } = useToast();
   const { signIn, user, loading: authLoading } = useAuth();
   const { language } = useLanguage();
-  const [role, setRole] = useState<Role>("student");
+  const [detectedRole, setDetectedRole] = useState<Role>("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -82,11 +82,62 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Non-student roles use the secure-auth edge function (admin/school/coaching)
-    if (role !== "student") {
-      return handleSecureAuthLogin();
+    setIsLoading(true);
+    // 1) Try staff auto-login (admin/school/coaching) via edge function
+    try {
+      const { data, error } = await supabase.functions.invoke("secure-auth", {
+        body: { action: "login_auto", identifier: email.trim(), password },
+      });
+      if (!error && data && !data.notFound) {
+        if (data.rateLimited) {
+          toast({ title: "Too Many Attempts", description: `Wait ${Math.ceil((data.waitSeconds || 60) / 60)} minutes.`, variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+        if (data.error) {
+          toast({ title: "Login Failed", description: data.error, variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+        if (data.success) {
+          const r = data.role as Role;
+          setDetectedRole(r);
+          if (r === "admin") {
+            localStorage.setItem("userType", "admin");
+            localStorage.setItem("adminId", data.user.id);
+            localStorage.setItem("adminName", data.user.name);
+            localStorage.setItem("adminRole", data.user.role);
+            localStorage.setItem("adminSessionToken", data.sessionToken);
+          } else if (r === "school") {
+            localStorage.setItem("userType", "school");
+            localStorage.setItem("schoolId", data.user.schoolId);
+            localStorage.setItem("schoolUUID", data.user.id);
+            localStorage.setItem("schoolName", data.user.name);
+            localStorage.setItem("schoolSessionToken", data.sessionToken);
+          } else if (r === "coaching") {
+            localStorage.setItem("userType", "coaching");
+            localStorage.setItem("coachingId", data.user.coachingId || data.user.id);
+            localStorage.setItem("coachingUUID", data.user.id);
+            localStorage.setItem("coachingName", data.user.name);
+            localStorage.setItem("coachingSessionToken", data.sessionToken);
+          }
+          if (data.requiresPasswordReset) {
+            setSessionToken(data.sessionToken);
+            setRequiresPasswordReset(true);
+            toast({ title: "Password Reset Required", description: "Please set a new password to continue." });
+            setIsLoading(false);
+            return;
+          }
+          toast({ title: "Welcome!", description: `Signed in as ${r}.` });
+          navigate(r === "admin" ? "/admin-dashboard" : "/school-dashboard");
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Staff auto-login failed, falling back to student:", err);
     }
 
+    // 2) Fall back to student auth
     const validation = validateForm(loginSchema, { email, password });
     if (!validation.success && 'errors' in validation) {
       const firstError = Object.values(validation.errors)[0];
@@ -95,10 +146,10 @@ const Login = () => {
         description: firstError,
         variant: "destructive",
       });
+      setIsLoading(false);
       return;
     }
-    
-    setIsLoading(true);
+    setDetectedRole("student");
 
     // Global timeout - 30s to handle cold-start backends + slow mobile networks
     const globalTimeout = setTimeout(() => {
@@ -227,90 +278,6 @@ const Login = () => {
     await trySignIn();
   };
 
-  const handleSecureAuthLogin = async () => {
-    setIsLoading(true);
-    const userType = role; // 'admin' | 'school' | 'coaching'
-
-    const tryLogin = async (attempt = 1): Promise<void> => {
-      try {
-        const { data, error } = await supabase.functions.invoke("secure-auth", {
-          body: {
-            action: "login",
-            userType,
-            identifier: email.trim(),
-            password,
-          },
-        });
-
-        if (error) {
-          if (attempt < 3) {
-            await new Promise(r => setTimeout(r, 2000));
-            return tryLogin(attempt + 1);
-          }
-          toast({ title: "Connection Error", description: "Could not reach the server. Please retry.", variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-
-        if (data?.rateLimited) {
-          toast({ title: "Too Many Attempts", description: `Wait ${Math.ceil(data.waitSeconds / 60)} minutes.`, variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-
-        if (data?.error) {
-          toast({ title: "Login Failed", description: data.error, variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-
-        if (data?.success) {
-          if (userType === "admin") {
-            localStorage.setItem("userType", "admin");
-            localStorage.setItem("adminId", data.user.id);
-            localStorage.setItem("adminName", data.user.name);
-            localStorage.setItem("adminRole", data.user.role);
-            localStorage.setItem("adminSessionToken", data.sessionToken);
-          } else if (userType === "school") {
-            localStorage.setItem("userType", "school");
-            localStorage.setItem("schoolId", data.user.schoolId);
-            localStorage.setItem("schoolUUID", data.user.id);
-            localStorage.setItem("schoolName", data.user.name);
-            localStorage.setItem("schoolSessionToken", data.sessionToken);
-          } else if (userType === "coaching") {
-            localStorage.setItem("userType", "coaching");
-            localStorage.setItem("coachingId", data.user.coachingId || data.user.id);
-            localStorage.setItem("coachingUUID", data.user.id);
-            localStorage.setItem("coachingName", data.user.name);
-            localStorage.setItem("coachingSessionToken", data.sessionToken);
-          }
-
-          if (data.requiresPasswordReset) {
-            setSessionToken(data.sessionToken);
-            setRequiresPasswordReset(true);
-            toast({ title: "Password Reset Required", description: "Please set a new password to continue." });
-            setIsLoading(false);
-            return;
-          }
-
-          toast({ title: "Welcome!", description: `Signed in as ${userType}.` });
-          navigate(userType === "admin" ? "/admin-dashboard" : userType === "school" ? "/school-dashboard" : "/school-dashboard");
-        } else {
-          toast({ title: "Login Failed", description: "Please check your credentials.", variant: "destructive" });
-          setIsLoading(false);
-        }
-      } catch (err) {
-        if (attempt < 3) {
-          await new Promise(r => setTimeout(r, 2000));
-          return tryLogin(attempt + 1);
-        }
-        toast({ title: "Login Failed", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
-        setIsLoading(false);
-      }
-    };
-    await tryLogin();
-  };
-
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
@@ -327,24 +294,16 @@ const Login = () => {
         body: { action: "reset_password", sessionToken, newPassword },
       });
       if (error || data?.error) throw new Error(data?.error || "Reset failed");
-      const tokenKey = role === "admin" ? "adminSessionToken" : role === "school" ? "schoolSessionToken" : "coachingSessionToken";
+      const tokenKey = detectedRole === "admin" ? "adminSessionToken" : detectedRole === "school" ? "schoolSessionToken" : "coachingSessionToken";
       localStorage.setItem(tokenKey, data.sessionToken);
       toast({ title: "Success", description: "Password updated." });
-      navigate(role === "admin" ? "/admin-dashboard" : "/school-dashboard");
+      navigate(detectedRole === "admin" ? "/admin-dashboard" : "/school-dashboard");
     } catch (err) {
       toast({ title: "Error", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const roleConfig: Record<Role, { label: string; icon: typeof GraduationCap; idLabel: string; idPlaceholder: string; idType: string }> = {
-    student: { label: "Student", icon: GraduationCap, idLabel: language === "en" ? "Email" : "ईमेल", idPlaceholder: "your.email@example.com", idType: "email" },
-    school: { label: "School", icon: Building2, idLabel: "School ID", idPlaceholder: "Enter School ID", idType: "text" },
-    coaching: { label: "Coaching", icon: BookOpen, idLabel: "Coaching ID", idPlaceholder: "Enter Coaching ID", idType: "text" },
-    admin: { label: "Admin", icon: Shield, idLabel: "Admin ID / Email", idPlaceholder: "superadmin5670@gmail.com", idType: "text" },
-  };
-  const cfg = roleConfig[role];
 
   const checkApprovalAndNavigate = async (userId: string) => {
     try {
@@ -411,27 +370,6 @@ const Login = () => {
               </p>
             </div>
 
-            {/* Role selector */}
-            <div className="grid grid-cols-4 gap-1.5 mb-5 p-1 rounded-2xl bg-muted/40 border border-border/40">
-              {(Object.keys(roleConfig) as Role[]).map(r => {
-                const Icon = roleConfig[r].icon;
-                const active = role === r;
-                return (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => { setRole(r); setRequiresPasswordReset(false); }}
-                    className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10px] sm:text-xs font-semibold transition-all ${
-                      active ? "bg-card text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" strokeWidth={2.2} />
-                    {roleConfig[r].label}
-                  </button>
-                );
-              })}
-            </div>
-
             {requiresPasswordReset ? (
               <form onSubmit={handlePasswordReset} className="space-y-5">
                 <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-xs text-yellow-600 dark:text-yellow-400">
@@ -452,11 +390,11 @@ const Login = () => {
             ) : (
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <Label htmlFor="identifier">{cfg.idLabel}</Label>
+                <Label htmlFor="identifier">{language === 'en' ? 'Email or ID' : 'ईमेल या ID'}</Label>
                 <Input
                   id="identifier"
-                  type={cfg.idType}
-                  placeholder={cfg.idPlaceholder}
+                  type="text"
+                  placeholder={language === 'en' ? 'your.email@example.com' : 'अपना ईमेल या ID'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -471,13 +409,11 @@ const Login = () => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                {role === "student" && (
-                  <div className="flex justify-end mt-2">
-                    <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-                      {language === 'en' ? 'Forgot password?' : 'पासवर्ड भूल गए?'}
-                    </Link>
-                  </div>
-                )}
+                <div className="flex justify-end mt-2">
+                  <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                    {language === 'en' ? 'Forgot password?' : 'पासवर्ड भूल गए?'}
+                  </Link>
+                </div>
               </div>
               <Button type="submit" variant="hero" className="w-full shadow-lg shadow-primary/20" size="lg" disabled={isLoading}>
                 {isLoading ? (language === 'en' ? "Logging in..." : "लॉगिन हो रहा है...") : (language === 'en' ? "Login" : "लॉगिन")}
@@ -494,7 +430,7 @@ const Login = () => {
               </div>
             )}
 
-            {role === "student" && !requiresPasswordReset && (
+            {!requiresPasswordReset && (
               <div className="mt-6 text-center">
                 <p className="text-muted-foreground">
                   {language === 'en' ? "Don't have an account?" : "अकाउंट नहीं है?"}{" "}
