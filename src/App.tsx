@@ -60,9 +60,9 @@ const App = () => (
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/schools" element={<SchoolsDirectory />} />
-                    <Route path="/school-login" element={<SchoolLogin />} />
-                    <Route path="/admin-login" element={<AdminLogin />} />
-                    <Route path="/coaching-login" element={<CoachingLogin />} />
+                    <Route path="/school-login" element={<Navigate to="/login" replace />} />
+                    <Route path="/admin-login" element={<Navigate to="/login" replace />} />
+                    <Route path="/coaching-login" element={<Navigate to="/login" replace />} />
                     <Route path="/dashboard" element={<StudentDashboard />} />
                     <Route path="/progress" element={<StudentProgress />} />
                     <Route path="/profile" element={<StudentProfile />} />
