@@ -370,27 +370,6 @@ const Login = () => {
               </p>
             </div>
 
-            {/* Role selector */}
-            <div className="grid grid-cols-4 gap-1.5 mb-5 p-1 rounded-2xl bg-muted/40 border border-border/40">
-              {(Object.keys(roleConfig) as Role[]).map(r => {
-                const Icon = roleConfig[r].icon;
-                const active = role === r;
-                return (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => { setRole(r); setRequiresPasswordReset(false); }}
-                    className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10px] sm:text-xs font-semibold transition-all ${
-                      active ? "bg-card text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" strokeWidth={2.2} />
-                    {roleConfig[r].label}
-                  </button>
-                );
-              })}
-            </div>
-
             {requiresPasswordReset ? (
               <form onSubmit={handlePasswordReset} className="space-y-5">
                 <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-xs text-yellow-600 dark:text-yellow-400">
@@ -411,11 +390,11 @@ const Login = () => {
             ) : (
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <Label htmlFor="identifier">{cfg.idLabel}</Label>
+                <Label htmlFor="identifier">{language === 'en' ? 'Email or ID' : 'ईमेल या ID'}</Label>
                 <Input
                   id="identifier"
-                  type={cfg.idType}
-                  placeholder={cfg.idPlaceholder}
+                  type="text"
+                  placeholder={language === 'en' ? 'your.email@example.com' : 'अपना ईमेल या ID'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -430,13 +409,11 @@ const Login = () => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                {role === "student" && (
-                  <div className="flex justify-end mt-2">
-                    <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-                      {language === 'en' ? 'Forgot password?' : 'पासवर्ड भूल गए?'}
-                    </Link>
-                  </div>
-                )}
+                <div className="flex justify-end mt-2">
+                  <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                    {language === 'en' ? 'Forgot password?' : 'पासवर्ड भूल गए?'}
+                  </Link>
+                </div>
               </div>
               <Button type="submit" variant="hero" className="w-full shadow-lg shadow-primary/20" size="lg" disabled={isLoading}>
                 {isLoading ? (language === 'en' ? "Logging in..." : "लॉगिन हो रहा है...") : (language === 'en' ? "Login" : "लॉगिन")}
@@ -453,7 +430,7 @@ const Login = () => {
               </div>
             )}
 
-            {role === "student" && !requiresPasswordReset && (
+            {!requiresPasswordReset && (
               <div className="mt-6 text-center">
                 <p className="text-muted-foreground">
                   {language === 'en' ? "Don't have an account?" : "अकाउंट नहीं है?"}{" "}
