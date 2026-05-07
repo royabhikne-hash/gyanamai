@@ -123,20 +123,10 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
     setActiveIndex(-1);
     setDownloadUrl(null);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/study-blaster`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.session?.access_token}`,
-          },
-          body: JSON.stringify({ action: "generate_podcast", projectId, exchanges }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || "Failed to generate");
+      const { data, error } = await supabase.functions.invoke("study-blaster", {
+        body: { action: "generate_podcast", projectId, exchanges },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Failed to generate");
       if (!data.script?.turns?.length) throw new Error("Empty podcast script");
       setScript(data.script);
       toast({ title: "Podcast ready! 🎙️", description: `${data.script.turns.length} dialogue turns generated.` });
