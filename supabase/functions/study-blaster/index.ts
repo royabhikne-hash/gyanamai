@@ -48,20 +48,140 @@ serve(async (req) => {
       });
     }
 
-    // Rate limit check
-    const { data: allowed } = await supabase.rpc("check_ai_rate_limit", {
-      p_user_id: student.id,
-      p_action: "study_blaster",
-      p_max_requests: 30,
-      p_window_minutes: 5,
-    });
-    if (!allowed) {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait a few minutes." }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    const aiActions = new Set(["analyze_sources", "chat", "process_url", "extract_file", "process_text", "generate_podcast"]);
+    if (aiActions.has(action)) {
+      const { data: allowed } = await supabase.rpc("check_ai_rate_limit", {
+        p_user_id: student.id,
+        p_action: "study_blaster",
+        p_max_requests: 30,
+        p_window_minutes: 5,
       });
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait a few minutes." }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
     }
 
-    if (action === "analyze_sources") {
+    const requireProject = async () => {
+      const { data: project } = await supabase
+        .from("study_projects")
+        .select("*")
+        .eq("id", projectId)
+        .eq("student_id", student.id)
+        .maybeSingle();
+      return project;
+    };
+
+    if (action === "get_workspace") {
+      const { data: projects } = await supabase
+        .from("study_projects")
+        .select("*")
+        .eq("student_id", student.id)
+        .order("updated_at", { ascending: false });
+      return new Response(JSON.stringify({ studentId: student.id, projects: projects || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+
+    } else if (action === "get_project") {
+      const project = await requireProject();
+      if (!project) {
+        return new Response(JSON.stringify({ error: "Project not found" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      const { data: sources } = await supabase
+        .from("study_sources")
+        .select("*")
+        .eq("project_id", project.id)
+        .eq("student_id", student.id)
+        .order("created_at", { ascending: false });
+      return new Response(JSON.stringify({ project, sources: sources || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+
+    } else if (action === "create_project") {
+      const title = String(body.title || "").trim().slice(0, 100);
+      if (!title) {
+        return new Response(JSON.stringify({ error: "Title required" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      const { data: project, error } = await supabase
+        .from("study_projects")
+        .insert({
+          student_id: student.id,
+          title,
+          description: String(body.description || "").trim().slice(0, 500) || null,
+          target_date: body.targetDate || null,
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true, project }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+
+    } else if (action === "delete_project") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      await supabase.from("study_project_messages").delete().eq("project_id", project.id);
+      await supabase.from("study_podcasts").delete().eq("project_id", project.id).eq("student_id", student.id);
+      await supabase.from("study_sources").delete().eq("project_id", project.id).eq("student_id", student.id);
+      await supabase.from("study_projects").delete().eq("id", project.id).eq("student_id", student.id);
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+
+    } else if (action === "delete_source") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      await supabase.from("study_sources").delete().eq("id", body.sourceId).eq("project_id", project.id).eq("student_id", student.id);
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+
+    } else if (action === "add_note") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const title = String(body.title || "").trim().slice(0, 100);
+      const noteContent = String(content || "").trim().slice(0, 10000);
+      if (!title || !noteContent) return new Response(JSON.stringify({ error: "Title and note required" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data: source, error } = await supabase.from("study_sources").insert({
+        project_id: project.id, student_id: student.id, source_type: "note", title,
+        extracted_content: noteContent, processing_status: "completed",
+      }).select("*").single();
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true, source }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    } else if (action === "get_chat_messages") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data: chatMessages } = await supabase.from("study_project_messages").select("role, content").eq("project_id", project.id).order("created_at", { ascending: true });
+      return new Response(JSON.stringify({ messages: chatMessages || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    } else if (action === "save_chat_message") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const role = body.role === "assistant" ? "assistant" : "user";
+      const text = String(content || "").trim().slice(0, 20000);
+      if (!text) return new Response(JSON.stringify({ error: "Message required" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      await supabase.from("study_project_messages").insert({ project_id: project.id, role, content: text });
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    } else if (action === "get_podcast_history") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data: history } = await supabase.from("study_podcasts").select("id,title,script,exchanges,teacher_name,student_name,created_at").eq("project_id", project.id).eq("student_id", student.id).order("created_at", { ascending: false }).limit(50);
+      return new Response(JSON.stringify({ history: history || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    } else if (action === "delete_podcast") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      await supabase.from("study_podcasts").delete().eq("id", body.podcastId).eq("project_id", project.id).eq("student_id", student.id);
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    } else if (action === "analyze_sources") {
       // Fetch all sources for this project
       const { data: sources } = await supabase
         .from("study_sources")
