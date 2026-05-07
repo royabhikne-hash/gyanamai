@@ -23,12 +23,11 @@ const StudyBlasterDashboard = ({ projectId, studentId, onBack }: Props) => {
   const { toast } = useToast();
 
   const fetchData = useCallback(async () => {
-    const [{ data: proj }, { data: srcs }] = await Promise.all([
-      supabase.from("study_projects").select("*").eq("id", projectId).single(),
-      supabase.from("study_sources").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
-    ]);
-    setProject(proj);
-    setSources(srcs || []);
+    const { data } = await supabase.functions.invoke("study-blaster", {
+      body: { action: "get_project", projectId },
+    });
+    setProject(data?.project || null);
+    setSources(data?.sources || []);
     setLoading(false);
   }, [projectId]);
 
@@ -41,29 +40,15 @@ const StudyBlasterDashboard = ({ projectId, studentId, onBack }: Props) => {
     }
     setAnalyzing(true);
     try {
-      await supabase.from("study_projects").update({ processing_status: "processing" }).eq("id", projectId);
-      
-      const { data: session } = await supabase.auth.getSession();
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/study-blaster`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.session?.access_token}`,
-          },
-          body: JSON.stringify({ action: "analyze_sources", projectId }),
-        }
-      );
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Analysis failed");
+      const { data: result, error } = await supabase.functions.invoke("study-blaster", {
+        body: { action: "analyze_sources", projectId },
+      });
+      if (error || result?.error) throw new Error(result?.error || error?.message || "Analysis failed");
 
       toast({ title: "Analysis complete!", description: "Your study guide is ready." });
       fetchData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
-      await supabase.from("study_projects").update({ processing_status: "idle" }).eq("id", projectId);
     } finally {
       setAnalyzing(false);
     }
