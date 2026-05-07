@@ -329,7 +329,7 @@ Deno.serve(async (req) => {
           const newHash = await hashPassword(password);
           await supabase.from("coaching_centers").update({ password_hash: newHash, password_updated_at: new Date().toISOString() }).eq("id", coaching.id);
         }
-        const token = await createSessionToken(supabase, coaching.id, 'school' as any, clientIp, userAgent);
+        const token = await createSessionToken(supabase, coaching.id, 'coaching', clientIp, userAgent);
         recordAttempt(`auto:${id}`, true);
         return new Response(JSON.stringify({
           success: true, role: "coaching",
@@ -518,7 +518,7 @@ Deno.serve(async (req) => {
       }
 
       const newHash = await hashPassword(newPassword);
-      const table = validation.userType === 'admin' ? 'admins' : 'schools';
+      const table = validation.userType === 'admin' ? 'admins' : validation.userType === 'coaching' ? 'coaching_centers' : 'schools';
 
       const { error: updateError } = await supabase
         .from(table)
@@ -538,11 +538,11 @@ Deno.serve(async (req) => {
       }
 
       // Revoke all old sessions and create a new one
-      await revokeUserSessions(supabase, validation.userId, validation.userType as 'admin' | 'school');
+      await revokeUserSessions(supabase, validation.userId, validation.userType as StaffUserType);
       const newToken = await createSessionToken(
         supabase,
         validation.userId,
-        validation.userType as 'admin' | 'school',
+        validation.userType as StaffUserType,
         clientIp,
         userAgent
       );
