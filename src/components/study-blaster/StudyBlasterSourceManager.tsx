@@ -60,13 +60,6 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
 
     setUploading(true);
     try {
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id;
-      if (!userId) {
-        toast({ title: "Not signed in", description: "Please log in again to upload files.", variant: "destructive" });
-        setUploading(false);
-        return;
-      }
       for (const file of Array.from(files)) {
         if (file.size > MAX_FILE_SIZE) {
           toast({ title: "File too large", description: `${file.name} exceeds 25MB limit`, variant: "destructive" });
@@ -77,60 +70,12 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
           continue;
         }
 
-        // Storage RLS requires first folder to equal auth.uid()
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const filePath = `${userId}/${projectId}/${Date.now()}_${safeName}`;
-        const { error: uploadError } = await supabase.storage
-          .from("study-blaster-files")
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        // Extract content based on file type
-        let extractedContent = "";
-        if (file.type === "text/plain" || file.name.endsWith(".txt")) {
-          extractedContent = await file.text();
-        } else {
-          // For PDF/DOCX, read as base64 and send to AI for extraction
-          toast({ title: "Processing...", description: `Extracting content from ${file.name}` });
-          const base64Content = await readFileAsBase64(file);
-          const { data: session } = await supabase.auth.getSession();
-          const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/study-blaster`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${session.session?.access_token}`,
-              },
-              body: JSON.stringify({
-                action: "extract_file",
-                fileName: file.name,
-                fileType: file.type,
-                fileBase64: base64Content,
-              }),
-            }
-          );
-          const result = await response.json();
-          if (result.error) {
-            console.error("File extraction error:", result.error);
-          }
-          extractedContent = result.extractedContent || "";
-        }
-
-        const { error } = await supabase.from("study_sources").insert({
-          project_id: projectId,
-          student_id: studentId,
-          source_type: "file",
-          title: file.name,
-          file_name: file.name,
-          file_url: filePath,
-          file_size: file.size,
-          extracted_content: extractedContent,
-          processing_status: extractedContent ? "completed" : "pending",
+        toast({ title: "Processing...", description: `Securing and extracting ${file.name}` });
+        const base64Content = await readFileAsBase64(file);
+        const { data, error } = await supabase.functions.invoke("study-blaster", {
+          body: { action: "extract_file", projectId, fileName: file.name, fileType: file.type, fileBase64: base64Content },
         });
-
-        if (error) throw error;
+        if (error || data?.error) throw new Error(data?.error || error?.message || "Upload failed");
       }
       toast({ title: "Files uploaded!", description: "Sources added to your project." });
       onRefresh();
@@ -153,31 +98,10 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
 
     setProcessingUrl(true);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/study-blaster`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.session?.access_token}`,
-          },
-          body: JSON.stringify({ action: "process_url", content: webUrl }),
-        }
-      );
-      const result = await response.json();
-
-      const { error } = await supabase.from("study_sources").insert({
-        project_id: projectId,
-        student_id: studentId,
-        source_type: "url",
-        title: new URL(webUrl).hostname,
-        web_url: webUrl,
-        extracted_content: result.extractedContent || "",
-        processing_status: result.extractedContent ? "completed" : "failed",
+      const { data, error } = await supabase.functions.invoke("study-blaster", {
+        body: { action: "process_url", projectId, content: webUrl },
       });
-
-      if (error) throw error;
+      if (error || data?.error) throw new Error(data?.error || error?.message || "URL processing failed");
       toast({ title: "URL added!", description: "Web content extracted." });
       setWebUrl("");
       onRefresh();
@@ -192,15 +116,10 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
     if (!noteTitle.trim() || !noteContent.trim()) return;
     setSavingNote(true);
     try {
-      const { error } = await supabase.from("study_sources").insert({
-        project_id: projectId,
-        student_id: studentId,
-        source_type: "note",
-        title: noteTitle.trim(),
-        extracted_content: noteContent.trim(),
-        processing_status: "completed",
+      const { data, error } = await supabase.functions.invoke("study-blaster", {
+        body: { action: "add_note", projectId, title: noteTitle.trim(), content: noteContent.trim() },
       });
-      if (error) throw error;
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Save failed");
       toast({ title: "Note added!" });
       setNoteTitle("");
       setNoteContent("");
@@ -214,7 +133,10 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
 
   const handleDelete = async (id: string) => {
     try {
-      await supabase.from("study_sources").delete().eq("id", id);
+      const { data, error } = await supabase.functions.invoke("study-blaster", {
+        body: { action: "delete_source", projectId, sourceId: id },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Delete failed");
       toast({ title: "Source removed" });
       onRefresh();
     } catch {
