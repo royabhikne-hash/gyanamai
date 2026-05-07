@@ -29,14 +29,12 @@ const StudyBlasterChat = ({ projectId, projectTitle }: Props) => {
 
   useEffect(() => {
     const loadMessages = async () => {
-      const { data } = await supabase
-        .from("study_project_messages")
-        .select("role, content")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: true });
+      const { data, error } = await supabase.functions.invoke("study-blaster", {
+        body: { action: "get_chat_messages", projectId },
+      });
 
-      if (data && data.length > 0) {
-        setMessages(data.map(m => ({ role: m.role as "user" | "assistant", content: m.content })));
+      if (!error && data?.messages?.length > 0) {
+        setMessages(data.messages.map((m: any) => ({ role: m.role as "user" | "assistant", content: m.content })));
       }
     };
     loadMessages();
@@ -82,10 +80,8 @@ const StudyBlasterChat = ({ projectId, projectTitle }: Props) => {
     // Reset textarea height
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
-    await supabase.from("study_project_messages").insert({
-      project_id: projectId,
-      role: "user",
-      content: userMsg.content,
+    await supabase.functions.invoke("study-blaster", {
+      body: { action: "save_chat_message", projectId, role: "user", content: userMsg.content },
     });
 
     let assistantContent = "";
@@ -154,10 +150,8 @@ const StudyBlasterChat = ({ projectId, projectTitle }: Props) => {
       }
 
       if (assistantContent) {
-        await supabase.from("study_project_messages").insert({
-          project_id: projectId,
-          role: "assistant",
-          content: assistantContent,
+        await supabase.functions.invoke("study-blaster", {
+          body: { action: "save_chat_message", projectId, role: "assistant", content: assistantContent },
         });
       }
     } catch (err: any) {

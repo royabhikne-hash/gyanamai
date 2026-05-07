@@ -23,26 +23,22 @@ const StudyBlaster = () => {
 
   const fetchStudent = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from("students")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-    if (data) {
-      setStudentId(data.id);
+    const { data, error } = await supabase.functions.invoke("study-blaster", {
+      body: { action: "get_workspace" },
+    });
+    if (!error && data?.studentId) {
+      setStudentId(data.studentId);
+      setProjects(data.projects || []);
     }
+    setLoading(false);
   }, [user]);
 
   const fetchProjects = useCallback(async () => {
-    if (!studentId) return;
-    const { data } = await supabase
-      .from("study_projects")
-      .select("*")
-      .eq("student_id", studentId)
-      .order("updated_at", { ascending: false });
-    setProjects(data || []);
-    setLoading(false);
-  }, [studentId]);
+    const { data, error } = await supabase.functions.invoke("study-blaster", {
+      body: { action: "get_workspace" },
+    });
+    if (!error) setProjects(data?.projects || []);
+  }, []);
 
   useEffect(() => { fetchStudent(); }, [fetchStudent]);
   useEffect(() => { if (studentId) fetchProjects(); }, [studentId, fetchProjects]);

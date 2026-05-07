@@ -9,7 +9,7 @@ const corsHeaders = {
 async function validateSessionToken(
   supabase: any,
   token: string,
-  expectedUserType?: 'admin' | 'school',
+  expectedUserType?: 'admin' | 'school' | 'coaching',
   expectedUserId?: string
 ): Promise<{ valid: boolean; userId?: string; userType?: string }> {
   const { data, error } = await supabase
@@ -117,6 +117,31 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
+
+    // Handle student ranking request (for student dashboard)
+    if (action === 'get_my_student_profile') {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      const anonClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+      const { data: { user }, error: authError } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      const { data: student } = await supabaseAdmin
+        .from('students')
+        .select('id, is_approved, rejection_reason')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return new Response(JSON.stringify({ student: student || null }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     // Handle student ranking request (for student dashboard)
     if (action === 'get_student_rankings') {
