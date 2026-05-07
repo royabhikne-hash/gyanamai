@@ -37,13 +37,15 @@ const StudyBlasterProjectList = ({ projects, studentId, onSelectProject, onRefre
     if (!title.trim()) return;
     setCreating(true);
     try {
-      const { error } = await supabase.from("study_projects").insert({
-        student_id: studentId,
-        title: title.trim(),
-        description: description.trim() || null,
-        target_date: targetDate || null,
+      const { data, error } = await supabase.functions.invoke("study-blaster", {
+        body: {
+          action: "create_project",
+          title: title.trim(),
+          description: description.trim() || null,
+          targetDate: targetDate || null,
+        },
       });
-      if (error) throw error;
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Create failed");
       toast({ title: "Project created!", description: "Start adding your study sources." });
       setTitle("");
       setDescription("");
@@ -61,11 +63,14 @@ const StudyBlasterProjectList = ({ projects, studentId, onSelectProject, onRefre
     e.stopPropagation();
     if (!confirm("Delete this project and all its sources?")) return;
     try {
-      await supabase.from("study_projects").delete().eq("id", id);
+      const { data, error } = await supabase.functions.invoke("study-blaster", {
+        body: { action: "delete_project", projectId: id },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Delete failed");
       toast({ title: "Project deleted" });
       onRefresh();
-    } catch {
-      toast({ title: "Error deleting", variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "Error deleting", description: err.message, variant: "destructive" });
     }
   };
 
