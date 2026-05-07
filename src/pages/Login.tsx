@@ -142,6 +142,10 @@ const Login = () => {
             localStorage.setItem("coachingUUID", data.user.id);
             localStorage.setItem("coachingName", data.user.name);
             localStorage.setItem("coachingSessionToken", data.sessionToken);
+            localStorage.setItem("schoolId", data.user.coachingId || data.user.id);
+            localStorage.setItem("schoolUUID", data.user.id);
+            localStorage.setItem("schoolName", data.user.name);
+            localStorage.setItem("schoolSessionToken", data.sessionToken);
           }
           if (data.requiresPasswordReset) {
             setSessionToken(data.sessionToken);
@@ -320,7 +324,7 @@ const Login = () => {
       const tokenKey = detectedRole === "admin" ? "adminSessionToken" : detectedRole === "school" ? "schoolSessionToken" : "coachingSessionToken";
       localStorage.setItem(tokenKey, data.sessionToken);
       toast({ title: "Success", description: "Password updated." });
-      navigate(detectedRole === "admin" ? "/admin-dashboard" : "/school-dashboard");
+      navigate(detectedRole === "admin" ? "/admin-dashboard" : "/school-dashboard", { replace: true });
     } catch (err) {
       toast({ title: "Error", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
     } finally {
