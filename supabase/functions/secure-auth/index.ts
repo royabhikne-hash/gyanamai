@@ -562,8 +562,21 @@ Deno.serve(async (req) => {
       }
 
       const validation = await validateSessionToken(supabase, sessionToken, userType);
+      let user: any = null;
+      if (validation.valid && validation.userId && validation.userType) {
+        if (validation.userType === "admin") {
+          const { data } = await supabase.from("admins").select("id, name, role, admin_id").eq("id", validation.userId).maybeSingle();
+          user = data ? { id: data.id, name: data.name, role: data.role, adminId: data.admin_id } : null;
+        } else if (validation.userType === "coaching") {
+          const { data } = await supabase.from("coaching_centers").select("id, name, coaching_id, is_banned, fee_paid, district").eq("id", validation.userId).maybeSingle();
+          user = data ? { id: data.id, name: data.name, coachingId: data.coaching_id, isBanned: data.is_banned, feePaid: data.fee_paid, district: data.district } : null;
+        } else {
+          const { data } = await supabase.from("schools").select("id, name, school_id, is_banned, fee_paid, district").eq("id", validation.userId).maybeSingle();
+          user = data ? { id: data.id, name: data.name, schoolId: data.school_id, isBanned: data.is_banned, feePaid: data.fee_paid, district: data.district } : null;
+        }
+      }
       return new Response(
-        JSON.stringify({ valid: validation.valid, userId: validation.userId, userType: validation.userType }),
+        JSON.stringify({ valid: validation.valid && !!user, userId: validation.userId, userType: validation.userType, user }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
 
