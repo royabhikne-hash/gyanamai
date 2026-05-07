@@ -15,6 +15,26 @@ import { loginSchema, validateForm } from "@/lib/validation";
 
 type Role = "student" | "school" | "coaching" | "admin";
 
+const STAFF_STORAGE_KEYS = [
+  "userType",
+  "adminId",
+  "adminName",
+  "adminRole",
+  "adminSessionToken",
+  "schoolId",
+  "schoolUUID",
+  "schoolName",
+  "schoolSessionToken",
+  "coachingId",
+  "coachingUUID",
+  "coachingName",
+  "coachingSessionToken",
+];
+
+const clearStaffSessionStorage = () => {
+  STAFF_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+};
+
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -83,6 +103,7 @@ const Login = () => {
     e.preventDefault();
 
     setIsLoading(true);
+    clearStaffSessionStorage();
     // 1) Try staff auto-login (admin/school/coaching) via edge function
     try {
       const { data, error } = await supabase.functions.invoke("secure-auth", {
@@ -102,6 +123,7 @@ const Login = () => {
         if (data.success) {
           const r = data.role as Role;
           setDetectedRole(r);
+          await supabase.auth.signOut();
           if (r === "admin") {
             localStorage.setItem("userType", "admin");
             localStorage.setItem("adminId", data.user.id);
@@ -129,7 +151,7 @@ const Login = () => {
             return;
           }
           toast({ title: "Welcome!", description: `Signed in as ${r}.` });
-          navigate(r === "admin" ? "/admin-dashboard" : "/school-dashboard");
+          navigate(r === "admin" ? "/admin-dashboard" : "/school-dashboard", { replace: true });
           return;
         }
       }
@@ -247,6 +269,7 @@ const Login = () => {
         }
 
         // Login succeeded - check approval
+        localStorage.setItem("userType", "student");
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         if (!mountedRef.current) return;
         
@@ -307,11 +330,11 @@ const Login = () => {
 
   const checkApprovalAndNavigate = async (userId: string) => {
     try {
-      const { data: student } = await supabase
-        .from("students")
-        .select("id, is_approved")
-        .eq("user_id", userId)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke("get-students", {
+        body: { action: "get_my_student_profile" },
+      });
+      if (error) throw error;
+      const student = data?.student as { id: string; is_approved: boolean } | null;
       
       if (!mountedRef.current) return;
       
