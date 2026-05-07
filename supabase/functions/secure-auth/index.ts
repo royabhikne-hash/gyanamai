@@ -18,6 +18,7 @@ const loginAttempts = new Map<string, { count: number; lastAttempt: number; bloc
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
 const MAX_ATTEMPTS = 5;
 const BLOCK_DURATION = 30 * 60 * 1000; // 30 minutes block
+type StaffUserType = 'admin' | 'school' | 'coaching';
 
 function checkRateLimit(identifier: string): { allowed: boolean; waitSeconds?: number } {
   const now = Date.now();
@@ -144,7 +145,7 @@ async function verifyPassword(password: string, storedHash: string): Promise<{ v
 async function createSessionToken(
   supabase: any,
   userId: string,
-  userType: 'admin' | 'school',
+  userType: StaffUserType,
   clientIp: string,
   userAgent: string
 ): Promise<string> {
@@ -172,7 +173,7 @@ async function createSessionToken(
 async function validateSessionToken(
   supabase: any,
   token: string,
-  expectedUserType?: 'admin' | 'school'
+  expectedUserType?: StaffUserType
 ): Promise<{ valid: boolean; userId?: string; userType?: string }> {
   const { data, error } = await supabase
     .from('session_tokens')
@@ -199,7 +200,7 @@ async function validateSessionToken(
 async function revokeUserSessions(
   supabase: any,
   userId: string,
-  userType: 'admin' | 'school'
+  userType: StaffUserType
 ): Promise<void> {
   const { error } = await supabase
     .from('session_tokens')
