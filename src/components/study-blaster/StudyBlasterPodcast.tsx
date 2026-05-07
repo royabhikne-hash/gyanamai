@@ -105,13 +105,10 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
   }, [voices]);
 
   const fetchHistory = async () => {
-    const { data } = await supabase
-      .from("study_podcasts")
-      .select("id,title,script,exchanges,teacher_name,student_name,created_at")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    setHistory((data || []) as any);
+    const { data, error } = await supabase.functions.invoke("study-blaster", {
+      body: { action: "get_podcast_history", projectId },
+    });
+    if (!error) setHistory((data?.history || []) as any);
   };
 
   useEffect(() => { fetchHistory(); }, [projectId]);
@@ -322,7 +319,9 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
   };
 
   const deleteHistoryItem = async (id: string) => {
-    await supabase.from("study_podcasts").delete().eq("id", id);
+    await supabase.functions.invoke("study-blaster", {
+      body: { action: "delete_podcast", projectId, podcastId: id },
+    });
     setHistory(prev => prev.filter(p => p.id !== id));
   };
 
