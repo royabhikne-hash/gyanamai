@@ -182,6 +182,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     } else if (action === "analyze_sources") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       // Fetch all sources for this project
       const { data: sources } = await supabase
         .from("study_sources")
@@ -198,13 +200,6 @@ serve(async (req) => {
       const combinedContent = sources
         .map(s => `[Source: ${s.title}]\n${s.extracted_content || "No content extracted"}`)
         .join("\n\n---\n\n");
-
-      // Get project target date
-      const { data: project } = await supabase
-        .from("study_projects")
-        .select("target_date, title")
-        .eq("id", projectId)
-        .single();
 
       const targetDateInfo = project?.target_date 
         ? `The student's target completion date is: ${project.target_date}. Provide time-based guidance.` 
@@ -333,6 +328,8 @@ ${combinedContent.substring(0, 80000)}`;
       });
 
     } else if (action === "chat") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       // Source-grounded chat
       const { data: sources } = await supabase
         .from("study_sources")
@@ -343,12 +340,6 @@ ${combinedContent.substring(0, 80000)}`;
       const combinedContent = (sources || [])
         .map(s => `[Source: ${s.title}]\n${s.extracted_content || ""}`)
         .join("\n\n---\n\n");
-
-      const { data: project } = await supabase
-        .from("study_projects")
-        .select("title, target_date, ai_summary")
-        .eq("id", projectId)
-        .single();
 
       const targetInfo = project?.target_date
         ? `Student's target date: ${project.target_date}. Guide them accordingly.`
