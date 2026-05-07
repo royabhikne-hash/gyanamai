@@ -415,6 +415,8 @@ ${combinedContent.substring(0, 60000)}`;
       });
 
     } else if (action === "process_url") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       // Extract content from URL - content already parsed from initial req.json()
       const extractPrompt = `Extract and summarize the main educational content from this URL: ${content}. Return the key text content suitable for study purposes. If you cannot access the URL, explain why.`;
 
@@ -438,11 +440,25 @@ ${combinedContent.substring(0, 60000)}`;
       const aiData = await aiResponse.json();
       const extractedContent = aiData.choices?.[0]?.message?.content || "";
 
-      return new Response(JSON.stringify({ success: true, extractedContent }), {
+      const url = String(content || "").trim();
+      const { data: source, error } = await supabase.from("study_sources").insert({
+        project_id: project.id,
+        student_id: student.id,
+        source_type: "url",
+        title: (() => { try { return new URL(url).hostname; } catch (_) { return "Web source"; } })(),
+        web_url: url,
+        extracted_content: extractedContent,
+        processing_status: extractedContent ? "completed" : "failed",
+      }).select("*").single();
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true, extractedContent, source }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
 
     } else if (action === "extract_file") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       // Extract content from base64 file using multimodal Gemini
       if (!fileBase64 || !fileName) {
         return new Response(JSON.stringify({ error: "Missing file data" }), {
@@ -488,7 +504,27 @@ ${combinedContent.substring(0, 60000)}`;
       const aiData = await aiResponse.json();
       const extractedContent = aiData.choices?.[0]?.message?.content || "";
 
-      return new Response(JSON.stringify({ success: true, extractedContent }), {
+      const safeName = String(fileName).replace(/[^a-zA-Z0-9._-]/g, "_");
+      const filePath = `${user.id}/${project.id}/${Date.now()}_${safeName}`;
+      const bytes = Uint8Array.from(atob(fileBase64), (c) => c.charCodeAt(0));
+      const { error: uploadError } = await supabase.storage
+        .from("study-blaster-files")
+        .upload(filePath, new Blob([bytes], { type: fileType || "application/octet-stream" }), { contentType: fileType || "application/octet-stream" });
+      if (uploadError) throw uploadError;
+      const { data: source, error } = await supabase.from("study_sources").insert({
+        project_id: project.id,
+        student_id: student.id,
+        source_type: "file",
+        title: fileName,
+        file_name: fileName,
+        file_url: filePath,
+        file_size: bytes.length,
+        extracted_content: extractedContent,
+        processing_status: extractedContent ? "completed" : "pending",
+      }).select("*").single();
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true, extractedContent, source }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
 
@@ -520,6 +556,8 @@ ${combinedContent.substring(0, 60000)}`;
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     } else if (action === "generate_podcast") {
+      const project = await requireProject();
+      if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       // Generate teacher+student dialogue podcast script grounded in project sources
       const numExchanges = Math.min(Math.max(parseInt(String(exchanges)) || 20, 6), 50);
 
@@ -558,12 +596,6 @@ ${combinedContent.substring(0, 60000)}`;
           status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
-
-      const { data: project } = await supabase
-        .from("study_projects")
-        .select("title")
-        .eq("id", projectId)
-        .single();
 
       const combinedContent = sources
         .map((s: any) => `[Source: ${s.title}]\n${s.extracted_content || ""}`)
