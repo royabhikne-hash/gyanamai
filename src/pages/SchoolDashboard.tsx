@@ -149,51 +149,89 @@ const SchoolDashboard = () => {
   const isCoachingUser = localStorage.getItem("userType") === "coaching";
 
   useEffect(() => {
+    const storedSchoolName = localStorage.getItem("schoolName");
+    const storedSchoolId = localStorage.getItem("schoolId");
+    
+    if (!storedSchoolId) {
+      navigate(isCoachingUser ? "/coaching-login" : "/school-login");
+      return;
+    }
+    
+    if (storedSchoolName) {
+      setSchoolName(storedSchoolName);
+    }
+
     checkSchoolAccess();
   }, [navigate]);
 
   const checkSchoolAccess = async () => {
     try {
-      const sessionToken = localStorage.getItem("schoolSessionToken") || localStorage.getItem("coachingSessionToken");
-      const expectedRole = isCoachingUser ? "coaching" : "school";
-      if (!sessionToken) {
-        localStorage.clear();
-        navigate("/login", { replace: true });
+      const storedSchoolId = localStorage.getItem("schoolId");
+      const storedSchoolUUID = localStorage.getItem("schoolUUID");
+      
+      if (!storedSchoolId) {
+        setLoading(false);
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke("secure-auth", {
-        body: { action: "validate_session", userType: expectedRole, sessionToken },
+      if (isCoachingUser) {
+        // For coaching users, use the stored UUID directly and validate via session
+        const sessionToken = localStorage.getItem("schoolSessionToken") || localStorage.getItem("coachingSessionToken");
+        if (!sessionToken || !storedSchoolUUID) {
+          setLoading(false);
+          return;
+        }
+        // Validate session via manage-coaching
+        const { data, error } = await supabase.functions.invoke("manage-coaching", {
+          body: { action: "get_coaching_students", sessionToken, coachingData: { coachingUuid: storedSchoolUUID } },
+        });
+        if (error || data?.error) {
+          if (data?.error?.includes("expired") || data?.error?.includes("Invalid")) {
+            localStorage.clear();
+            navigate("/coaching-login");
+            return;
+          }
+          setLoading(false);
+          return;
+        }
+        setSchoolUuid(storedSchoolUUID);
+        loadStudents(storedSchoolUUID);
+        return;
+      }
+
+      // School user flow
+      const { data, error } = await supabase.functions.invoke("get-schools-public", {
+        body: { action: "by_school_id", school_id: storedSchoolId },
       });
 
-      if (error || !data?.valid || data.userType !== expectedRole || !data.user?.id) {
-        localStorage.clear();
-        navigate("/login", { replace: true });
+      if (error || data?.error) {
+        console.error("School access check error:", error || data?.error);
+        setLoading(false);
         return;
       }
 
-      if (data.user.isBanned) {
+      const school = data?.school as { id: string; is_banned: boolean | null; fee_paid: boolean | null } | null;
+
+      if (!school) {
+        setLoading(false);
+        return;
+      }
+
+      if (school.is_banned) {
         toast({ title: "Access Denied", description: "Your school has been banned. Please contact admin.", variant: "destructive" });
         localStorage.clear();
-        navigate("/login", { replace: true });
+        navigate("/school-login");
         return;
       }
 
-      if (!data.user.feePaid) {
+      if (!school.fee_paid) {
         setFeePaid(false);
         setLoading(false);
         return;
       }
 
-      const id = data.user.id;
-      setSchoolUuid(id);
-      setSchoolName(data.user.name || (isCoachingUser ? "Coaching" : "School"));
-      localStorage.setItem("schoolUUID", id);
-      localStorage.setItem("schoolName", data.user.name || "School");
-      localStorage.setItem("userType", expectedRole);
-      if (!isCoachingUser && data.user.schoolId) localStorage.setItem("schoolId", data.user.schoolId);
-      if (isCoachingUser && data.user.coachingId) localStorage.setItem("schoolId", data.user.coachingId);
-      loadStudents(id);
+      setSchoolUuid(school.id);
+      loadStudents(school.id);
     } catch (error) {
       console.error("Error checking school access:", error);
       setLoading(false);

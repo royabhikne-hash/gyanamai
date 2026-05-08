@@ -105,10 +105,13 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
   }, [voices]);
 
   const fetchHistory = async () => {
-    const { data, error } = await supabase.functions.invoke("study-blaster", {
-      body: { action: "get_podcast_history", projectId },
-    });
-    if (!error) setHistory((data?.history || []) as any);
+    const { data } = await supabase
+      .from("study_podcasts")
+      .select("id,title,script,exchanges,teacher_name,student_name,created_at")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setHistory((data || []) as any);
   };
 
   useEffect(() => { fetchHistory(); }, [projectId]);
@@ -123,10 +126,20 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
     setActiveIndex(-1);
     setDownloadUrl(null);
     try {
-      const { data, error } = await supabase.functions.invoke("study-blaster", {
-        body: { action: "generate_podcast", projectId, exchanges },
-      });
-      if (error || data?.error) throw new Error(data?.error || error?.message || "Failed to generate");
+      const { data: session } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/study-blaster`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.session?.access_token}`,
+          },
+          body: JSON.stringify({ action: "generate_podcast", projectId, exchanges }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to generate");
       if (!data.script?.turns?.length) throw new Error("Empty podcast script");
       setScript(data.script);
       toast({ title: "Podcast ready! 🎙️", description: `${data.script.turns.length} dialogue turns generated.` });
@@ -309,9 +322,7 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
   };
 
   const deleteHistoryItem = async (id: string) => {
-    await supabase.functions.invoke("study-blaster", {
-      body: { action: "delete_podcast", projectId, podcastId: id },
-    });
+    await supabase.from("study_podcasts").delete().eq("id", id);
     setHistory(prev => prev.filter(p => p.id !== id));
   };
 

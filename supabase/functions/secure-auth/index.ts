@@ -18,7 +18,6 @@ const loginAttempts = new Map<string, { count: number; lastAttempt: number; bloc
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
 const MAX_ATTEMPTS = 5;
 const BLOCK_DURATION = 30 * 60 * 1000; // 30 minutes block
-type StaffUserType = 'admin' | 'school' | 'coaching';
 
 function checkRateLimit(identifier: string): { allowed: boolean; waitSeconds?: number } {
   const now = Date.now();
@@ -145,7 +144,7 @@ async function verifyPassword(password: string, storedHash: string): Promise<{ v
 async function createSessionToken(
   supabase: any,
   userId: string,
-  userType: StaffUserType,
+  userType: 'admin' | 'school',
   clientIp: string,
   userAgent: string
 ): Promise<string> {
@@ -173,7 +172,7 @@ async function createSessionToken(
 async function validateSessionToken(
   supabase: any,
   token: string,
-  expectedUserType?: StaffUserType
+  expectedUserType?: 'admin' | 'school'
 ): Promise<{ valid: boolean; userId?: string; userType?: string }> {
   const { data, error } = await supabase
     .from('session_tokens')
@@ -200,7 +199,7 @@ async function validateSessionToken(
 async function revokeUserSessions(
   supabase: any,
   userId: string,
-  userType: StaffUserType
+  userType: 'admin' | 'school'
 ): Promise<void> {
   const { error } = await supabase
     .from('session_tokens')
@@ -329,7 +328,7 @@ Deno.serve(async (req) => {
           const newHash = await hashPassword(password);
           await supabase.from("coaching_centers").update({ password_hash: newHash, password_updated_at: new Date().toISOString() }).eq("id", coaching.id);
         }
-        const token = await createSessionToken(supabase, coaching.id, 'coaching', clientIp, userAgent);
+        const token = await createSessionToken(supabase, coaching.id, 'school' as any, clientIp, userAgent);
         recordAttempt(`auto:${id}`, true);
         return new Response(JSON.stringify({
           success: true, role: "coaching",
@@ -518,7 +517,7 @@ Deno.serve(async (req) => {
       }
 
       const newHash = await hashPassword(newPassword);
-      const table = validation.userType === 'admin' ? 'admins' : validation.userType === 'coaching' ? 'coaching_centers' : 'schools';
+      const table = validation.userType === 'admin' ? 'admins' : 'schools';
 
       const { error: updateError } = await supabase
         .from(table)
@@ -538,11 +537,11 @@ Deno.serve(async (req) => {
       }
 
       // Revoke all old sessions and create a new one
-      await revokeUserSessions(supabase, validation.userId, validation.userType as StaffUserType);
+      await revokeUserSessions(supabase, validation.userId, validation.userType as 'admin' | 'school');
       const newToken = await createSessionToken(
         supabase,
         validation.userId,
-        validation.userType as StaffUserType,
+        validation.userType as 'admin' | 'school',
         clientIp,
         userAgent
       );
@@ -562,21 +561,8 @@ Deno.serve(async (req) => {
       }
 
       const validation = await validateSessionToken(supabase, sessionToken, userType);
-      let user: any = null;
-      if (validation.valid && validation.userId && validation.userType) {
-        if (validation.userType === "admin") {
-          const { data } = await supabase.from("admins").select("id, name, role, admin_id").eq("id", validation.userId).maybeSingle();
-          user = data ? { id: data.id, name: data.name, role: data.role, adminId: data.admin_id } : null;
-        } else if (validation.userType === "coaching") {
-          const { data } = await supabase.from("coaching_centers").select("id, name, coaching_id, is_banned, fee_paid, district").eq("id", validation.userId).maybeSingle();
-          user = data ? { id: data.id, name: data.name, coachingId: data.coaching_id, isBanned: data.is_banned, feePaid: data.fee_paid, district: data.district } : null;
-        } else {
-          const { data } = await supabase.from("schools").select("id, name, school_id, is_banned, fee_paid, district").eq("id", validation.userId).maybeSingle();
-          user = data ? { id: data.id, name: data.name, schoolId: data.school_id, isBanned: data.is_banned, feePaid: data.fee_paid, district: data.district } : null;
-        }
-      }
       return new Response(
-        JSON.stringify({ valid: validation.valid && !!user, userId: validation.userId, userType: validation.userType, user }),
+        JSON.stringify({ valid: validation.valid, userId: validation.userId, userType: validation.userType }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
 

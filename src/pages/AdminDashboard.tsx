@@ -194,27 +194,20 @@ const AdminDashboard = () => {
   // Debounced search
   const debouncedSearch = useDebounce(searchQuery, 300);
   useEffect(() => {
-    verifyAdminSession();
-  }, [navigate]);
+    const storedAdminId = localStorage.getItem("adminId");
+    const storedAdminName = localStorage.getItem("adminName");
+    
+    if (!storedAdminId) {
+      navigate("/admin-login");
+      return;
+    }
+    
+    if (storedAdminName) {
+      setAdminName(storedAdminName);
+    }
 
-  const verifyAdminSession = async () => {
-    const sessionToken = localStorage.getItem("adminSessionToken");
-    if (!sessionToken) {
-      navigate("/login", { replace: true });
-      return;
-    }
-    const { data, error } = await supabase.functions.invoke("secure-auth", {
-      body: { action: "validate_session", userType: "admin", sessionToken },
-    });
-    if (error || !data?.valid || data.userType !== "admin") {
-      localStorage.clear();
-      navigate("/login", { replace: true });
-      return;
-    }
-    if (data.user?.name) setAdminName(data.user.name);
-    if (data.user?.id) localStorage.setItem("adminId", data.user.id);
     loadData();
-  };
+  }, [navigate]);
 
   const loadData = async () => {
     try {
