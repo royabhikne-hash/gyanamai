@@ -1,95 +1,44 @@
+# Gyanam AI – PDF Requirements Implementation Plan
 
+The PDF has ~15 distinct items spanning bug fixes, UX polish, AI quality, and brand‑new features (YouTube source, syllabus algorithm rewrite, podcast voice upgrade). Doing all of it in one shot will produce a messy diff and likely regressions. I'll split it into **3 stages** and ship Stage 1 immediately after you confirm.
 
-# Real Progress Tracking System — Topic-Level Mastery
+---
 
-## Problem
-Current tracking is shallow:
-- Weak/strong analysis is only at **subject level** from weekly tests
-- Study session topic-level data (weak_areas, strong_areas from AI) is **never shown** on the progress page
-- MCQ attempts and quiz attempts data is **not combined** into the progress view
-- Student gets no actionable topic-level guidance
+## Stage 1 — Bug Fixes & Quick Wins (ship now)
 
-## Solution
-Build a **topic-level mastery system** that combines ALL data sources into one unified progress view with real, actionable insights.
+These are small, high‑impact, low‑risk changes.
 
-## Data Sources (already exist, just not aggregated)
+1. **TTS false "Voice Error" popup** — only show the error toast when `onerror` fires, not when playback completes/cancels normally. Fix in `useSmartTTS`, `useNativeTTS`, `useSpeechifyTTS`.
+2. **Study Blaster project creation failure** — add proper try/catch around the create flow in `StudyBlasterProjectList.tsx` + edge function, return structured `{ success, error }`, show success/error toasts instead of silent failure.
+3. **AI sends two responses at once** — guard the chat submit handlers (`StudyChat`, `ExamPrepChat`, `StudyBlasterChat`) with an `isStreaming` lock so double‑tap/Enter+click can't fire twice.
+4. **AI can't detect subject** — pass `currentSubject` + `currentChapter` into the system prompt of `study-chat` edge function so it stops "guessing general study".
+5. **Hindi toggle wording** — replace "Tera Personal Gyanam AI Aa Gaya" / informal "tu" copy with respectful Hindi ("Aapka", "Namaste") across `LanguageContext`, Landing/Login.
+6. **Forgot password link 10‑min expiry** — already handled by Supabase default (1h); set `OTP expiry` to 600s via auth config + show "Link valid for 10 minutes" copy on `ForgotPassword.tsx` and "Link expired" message on `ResetPassword.tsx`.
+7. **School notification on new student approval request** — insert a row into existing `school_notifications` (or create one) when a student signs up with a school_id, surface a badge on School Dashboard.
+8. **Compulsory student photo** — make the photo field `required` on `Signup.tsx`, validate before submit.
+9. **Updated Terms & Conditions checkbox** on first signup (already partially exists — enforce it).
+10. **Skeleton screens** — wire existing `DashboardSkeleton` into `StudentDashboard`, add lightweight skeletons to Study Blaster project list and Exam Prep dashboard.
 
-```text
-┌─────────────────────┐   ┌──────────────────┐   ┌──────────────────┐
-│  study_sessions     │   │  quiz_attempts   │   │  weekly_tests    │
-│  - weak_areas[]     │   │  - accuracy %    │   │  - weak_subjects │
-│  - strong_areas[]   │   │  - session_id    │   │  - strong_subj   │
-│  - understanding    │   │  - correct_count │   │  - accuracy %    │
-│  - subject/topic    │   └──────────────────┘   └──────────────────┘
-└─────────────────────┘
-         │                        │                       │
-         └────────────────────────┴───────────────────────┘
-                              │
-                    ┌─────────────────────┐
-                    │  NEW: topic_mastery  │
-                    │  - topic + subject   │
-                    │  - mastery_score     │
-                    │  - attempt_count     │
-                    │  - last_practiced    │
-                    │  - trend (improving/ │
-                    │    declining/stable) │
-                    └─────────────────────┘
-```
+## Stage 2 — AI Quality Upgrade
 
-## Plan
+11. Rewrite system prompts in `study-chat`, `exam-prep`, `study-blaster` edge functions: simple student‑friendly tone, clarifying questions when query is incomplete, step‑by‑step for hard topics, NCERT/exam‑oriented, respectful Hindi.
+12. Real progress tracking: new score formula = 25% study time + 25% topic completion + 25% MCQ score + 25% week‑over‑week consistency. Update `StudentProgress.tsx` + `update-topic-mastery` function.
 
-### 1. Create `topic_mastery` Table
-New table to aggregate topic-level performance:
-- `student_id`, `subject`, `topic`, `mastery_score` (0-100), `attempt_count`, `last_practiced`, `trend` (improving/declining/stable), `source` (study_session/quiz/weekly_test)
-- RLS: students can only view/update their own data
-- Updated automatically when sessions end or tests complete
+## Stage 3 — New Features (larger)
 
-### 2. Create Edge Function: `update-topic-mastery`
-Runs after each study session or test completion. Aggregates:
-- Study session AI analysis (weak_areas → low mastery, strong_areas → high mastery)
-- Quiz attempt accuracy per topic
-- Weekly test subject performance
-- Calculates trend by comparing last 3 data points
+13. **YouTube source in Study Blaster** — accept a YouTube URL in `StudyBlasterSourceManager`, transcript fetch via edge function, feed transcript into existing Gemini multimodal flow for notes/MCQ/Q&A.
+14. **Exam AI Prep new algorithm** — full syllabus upload → AI extracts subjects/chapters/topics → asks class/board/exam/date → references past‑year patterns → produces prioritized study plan. Major rewrite of `exam-prep` function.
+15. **Podcast voice upgrade** — switch `StudyBlasterPodcast` to Speechify's expressive Indian voices with SSML for prosody/pauses, more human pacing.
 
-### 3. Redesign Progress Page with Real Data
-Replace current static aggregation with live topic mastery data:
+---
 
-**Section 1: Key Metrics** (keep current 4 cards — they work)
+## Technical Notes
 
-**Section 2: Topic Mastery Map** (NEW — replaces Subject Health)
-- List of ALL topics the student has studied
-- Each topic shows: mastery score bar (0-100), attempt count, trend arrow
-- Color-coded: Red (0-40), Yellow (40-70), Green (70-100)
-- Sorted: weakest first (so student sees what to focus on)
+- All edge function changes follow existing rule: return HTTP 200 + JSON, parse `req.json()` once.
+- New school‑notification table (if needed) will include `GRANT` + RLS per project conventions.
+- Skeleton components reuse existing `DashboardSkeleton.tsx` patterns — no new deps.
+- No schema changes in Stage 1 except possibly `school_notifications` table.
 
-**Section 3: Weak Topics Action Card** (NEW)
-- Top 5 weakest topics with "Study Now" button linking to StudyChat with that topic pre-selected
-- Shows how many times attempted + current score
-- Real actionable guidance
+---
 
-**Section 4: Charts** (keep WPS Trend + Study Pattern, remove Subject Performance bar)
-
-**Section 5: Recent Activity Timeline** (replaces Test History)
-- Combined feed: study sessions + quizzes + weekly tests
-- Shows what was studied, score achieved, topics covered
-- Last 10 activities
-
-**Section 6: AI Insights** (improved)
-- Use actual topic mastery data for insights
-- "Your weakest topic is X — studied 3 times but mastery still at 35%"
-- "Y improved from 40% to 78% — great progress!"
-
-### 4. Call `update-topic-mastery` After Sessions & Tests
-- In `StudyPage.tsx` `handleEndStudy`: call the edge function after saving session
-- In `WeeklyTest.tsx` after test submission: call the edge function
-
-## Files to Create/Edit
-- **New migration**: Create `topic_mastery` table with RLS
-- **New edge function**: `supabase/functions/update-topic-mastery/index.ts`
-- **Edit**: `src/pages/StudentProgress.tsx` — new UI with topic mastery data
-- **Edit**: `src/pages/StudyPage.tsx` — trigger mastery update after session
-- **Edit**: `src/pages/WeeklyTest.tsx` — trigger mastery update after test
-
-## No Breaking Changes
-All existing data stays. New table is populated going forward + can backfill from existing study_sessions data.
-
+**Approve and I'll ship Stage 1 immediately.** Then we move to Stage 2, then Stage 3 — each as a separate, reviewable change so nothing regresses.
