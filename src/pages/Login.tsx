@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -345,11 +345,7 @@ const Login = () => {
       <div className="liquid-orb liquid-orb-blue w-[400px] h-[400px] -top-32 -right-32" />
       <div className="liquid-orb liquid-orb-purple w-[300px] h-[300px] bottom-0 -left-20" style={{ animationDelay: '3s' }} />
       <header className="container mx-auto py-4 px-3 sm:px-4 relative z-10">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm">
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden xs:inline">{language === 'en' ? 'Back to Home' : 'वापस होम'}</span>
-          </Link>
+        <div className="flex items-center justify-end">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <LanguageToggle />
             <ThemeToggle />

@@ -9,6 +9,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
 import GlobalErrorHandlers from "@/components/GlobalErrorHandlers";
+import CookieConsent from "@/components/CookieConsent";
 import { Loader2 } from "lucide-react";
 
 // Lazy load all pages
@@ -56,8 +57,9 @@ const App = () => (
               <BrowserRouter>
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
-                    <Route path="/" element={<Landing />} />
+                    <Route path="/" element={<Login />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/home" element={<Landing />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/schools" element={<SchoolsDirectory />} />
                     <Route path="/school-login" element={<Navigate to="/login" replace />} />
@@ -80,6 +82,7 @@ const App = () => (
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
+                <CookieConsent />
               </BrowserRouter>
             </AppErrorBoundary>
           </TooltipProvider>
