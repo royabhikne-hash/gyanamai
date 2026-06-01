@@ -437,7 +437,7 @@ const Signup = () => {
 
               {/* Photo Upload */}
               <div className="flex flex-col items-center">
-                <Label className="mb-2 sm:mb-3 text-sm">Student Photo (Optional)</Label>
+                <Label className="mb-2 sm:mb-3 text-sm">Student Photo <span className="text-destructive">*</span></Label>
                 <div
                   className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-2 border-dashed border-input bg-muted flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary transition-colors"
                   onClick={() => fileInputRef.current?.click()}
