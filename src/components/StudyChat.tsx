@@ -144,6 +144,11 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // Synchronous lock to prevent double-fire from Enter + click race.
+  // setIsLoading is async (React batches state), so two rapid submits can both
+  // pass `if (isLoading) return` before either re-render commits. The ref
+  // is updated synchronously and reliably blocks the duplicate.
+  const sendingRef = useRef(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [startTime] = useState(new Date());
   const [currentTopic, setCurrentTopic] = useState("");
