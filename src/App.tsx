@@ -56,8 +56,9 @@ const App = () => (
               <BrowserRouter>
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
-                    <Route path="/" element={<Landing />} />
+                    <Route path="/" element={<Login />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/home" element={<Landing />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/schools" element={<SchoolsDirectory />} />
                     <Route path="/school-login" element={<Navigate to="/login" replace />} />
