@@ -374,16 +374,9 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         speed: isQuizQuestion ? Math.max(voiceSpeed - 0.1, 0.7) : voiceSpeed,
         language: 'hi-IN',
       });
-
-      // Check if there was an error after speak completed (no silent failure)
-      if (ttsError) {
-        toast({
-          title: "Voice Error",
-          description: ttsError,
-          variant: "destructive",
-          duration: 3000
-        });
-      }
+      // Note: do NOT check `ttsError` here — it's a stale closure value from a
+      // previous call and was causing a false "Voice Error" toast after every
+      // successful playback. Real failures are surfaced via the catch below.
     } catch (error) {
       console.error("TTS error:", error);
       toast({
@@ -395,7 +388,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     } finally {
       setSpeakingMessageId(null);
     }
-  }, [ttsSupported, speakingMessageId, voiceSpeed, speechifySpeak, stopTTS, toast, ttsError]);
+  }, [ttsSupported, speakingMessageId, voiceSpeed, speechifySpeak, stopTTS, toast]);
 
   // Quiz TTS removed - no voice in quiz mode
 
