@@ -531,7 +531,18 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   };
 
   const handleSendMessage = async () => {
-    if ((!inputValue.trim() && !selectedImage) || isLoading) return;
+    // Synchronous double-fire guard. Stops "two AI responses at once" bug
+    // when the user taps Send right after pressing Enter.
+    if ((!inputValue.trim() && !selectedImage) || isLoading || sendingRef.current) return;
+    sendingRef.current = true;
+    try {
+      await sendMessageInner();
+    } finally {
+      sendingRef.current = false;
+    }
+  };
+
+  const sendMessageInner = async () => {
 
     // Check daily usage limits BEFORE sending
     if (studentId) {
