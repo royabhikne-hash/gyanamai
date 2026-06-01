@@ -211,6 +211,17 @@ const Signup = () => {
       return;
     }
 
+    // Student photo is now compulsory — required for school verification
+    // before approval.
+    if (!photoFile) {
+      toast({
+        title: "Photo Required",
+        description: "Please upload a clear photo of yourself. Your school needs it to verify your identity before approval.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
