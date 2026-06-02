@@ -68,6 +68,18 @@ interface TopicMastery {
   trend: string;
 }
 
+interface McqRecord {
+  id: string;
+  accuracy_percentage: number;
+  created_at: string;
+}
+
+interface ChapterRecord {
+  id: string;
+  completed_at: string | null;
+  is_completed: boolean;
+}
+
 interface ActivityItem {
   id: string;
   type: "session" | "test" | "quiz";
@@ -85,6 +97,8 @@ const StudentProgress = () => {
   const [weeklyTests, setWeeklyTests] = useState<WeeklyTestRecord[]>([]);
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [topicMastery, setTopicMastery] = useState<TopicMastery[]>([]);
+  const [mcqAttempts, setMcqAttempts] = useState<McqRecord[]>([]);
+  const [chaptersDone, setChaptersDone] = useState<ChapterRecord[]>([]);
   const [studentName, setStudentName] = useState("Student");
   const [studentClass, setStudentClass] = useState("");
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -112,7 +126,7 @@ const StudentProgress = () => {
         setStudentId(student.id);
 
         // Fetch all data in parallel
-        const [testsRes, sessionsRes, masteryRes] = await Promise.all([
+        const [testsRes, sessionsRes, masteryRes, mcqRes, chapRes] = await Promise.all([
           supabase
             .from("weekly_tests")
             .select("*")
@@ -129,11 +143,23 @@ const StudentProgress = () => {
             .select("id, subject, topic, mastery_score, attempt_count, last_practiced, trend")
             .eq("student_id", student.id)
             .order("mastery_score", { ascending: true }),
+          supabase
+            .from("mcq_attempts")
+            .select("id, accuracy_percentage, created_at")
+            .eq("student_id", student.id)
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("chapter_progress")
+            .select("id, completed_at, is_completed")
+            .eq("student_id", student.id)
+            .eq("is_completed", true),
         ]);
 
         if (testsRes.data) setWeeklyTests(testsRes.data);
         if (sessionsRes.data) setSessions(sessionsRes.data);
         if (masteryRes.data) setTopicMastery(masteryRes.data as TopicMastery[]);
+        if (mcqRes.data) setMcqAttempts(mcqRes.data as McqRecord[]);
+        if (chapRes.data) setChaptersDone(chapRes.data as ChapterRecord[]);
       }
     } catch (error) {
       console.error("Error loading progress data:", error);
@@ -143,21 +169,39 @@ const StudentProgress = () => {
   };
 
   // ===== WPS Calculation =====
+  // New formula (each 0-100, weighted 25% each):
+  //  - Study time: weekly minutes / 420 (target 7h/week)
+  //  - Topic completion: chapters completed in week / 3 (target 3 chapters/week)
+  //  - MCQ score: average accuracy across that week's MCQ attempts (falls back to weekly-test accuracy)
+  //  - Consistency: unique study days that week / 7
   const calculateWPS = (testIndex: number): number => {
     if (weeklyTests.length === 0) return 0;
     const test = weeklyTests[testIndex];
-    const accuracy = test.accuracy_percentage;
-    const prevTest = testIndex > 0 ? weeklyTests[testIndex - 1] : null;
-    const improvement = prevTest ? Math.max(0, accuracy - prevTest.accuracy_percentage) : 0;
-    const currentWeak = (test.weak_subjects || []).length;
-    const prevWeak = prevTest ? (prevTest.weak_subjects || []).length : currentWeak;
-    const weakReduction = prevWeak > 0 ? Math.max(0, ((prevWeak - currentWeak) / prevWeak) * 100) : (currentWeak === 0 ? 100 : 0);
     const weekStart = new Date(test.week_start);
     const weekEnd = new Date(test.week_end);
-    const weekSessions = sessions.filter(s => { const d = new Date(s.created_at); return d >= weekStart && d <= weekEnd; });
+    const inWeek = (iso: string) => { const d = new Date(iso); return d >= weekStart && d <= weekEnd; };
+
+    const weekSessions = sessions.filter(s => inWeek(s.created_at));
+    const minutes = weekSessions.reduce((acc, s) => acc + (s.time_spent || 0), 0);
+    const studyTimeScore = Math.min(100, (minutes / 420) * 100);
+
+    const weekChapters = chaptersDone.filter(c => c.completed_at && inWeek(c.completed_at)).length;
+    const topicCompletionScore = Math.min(100, (weekChapters / 3) * 100);
+
+    const weekMcq = mcqAttempts.filter(m => inWeek(m.created_at));
+    const mcqScore = weekMcq.length > 0
+      ? weekMcq.reduce((a, m) => a + (m.accuracy_percentage || 0), 0) / weekMcq.length
+      : test.accuracy_percentage; // fallback to weekly test accuracy
+
     const uniqueDays = new Set(weekSessions.map(s => new Date(s.created_at).toDateString())).size;
-    const consistency = (uniqueDays / 7) * 100;
-    return Math.round((accuracy * 0.5) + (improvement * 0.25) + (weakReduction * 0.15) + (consistency * 0.10));
+    const consistencyScore = (uniqueDays / 7) * 100;
+
+    return Math.round(
+      studyTimeScore * 0.25 +
+      topicCompletionScore * 0.25 +
+      mcqScore * 0.25 +
+      consistencyScore * 0.25
+    );
   };
 
   const getLatestWPS = () => weeklyTests.length === 0 ? 0 : calculateWPS(weeklyTests.length - 1);
