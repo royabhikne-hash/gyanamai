@@ -19,10 +19,10 @@ These are small, high‑impact, low‑risk changes.
 9. **Updated Terms & Conditions checkbox** on first signup (already partially exists — enforce it).
 10. **Skeleton screens** — wire existing `DashboardSkeleton` into `StudentDashboard`, add lightweight skeletons to Study Blaster project list and Exam Prep dashboard.
 
-## Stage 2 — AI Quality Upgrade
+## Stage 2 — AI Quality Upgrade ✅ SHIPPED
 
-11. Rewrite system prompts in `study-chat`, `exam-prep`, `study-blaster` edge functions: simple student‑friendly tone, clarifying questions when query is incomplete, step‑by‑step for hard topics, NCERT/exam‑oriented, respectful Hindi.
-12. Real progress tracking: new score formula = 25% study time + 25% topic completion + 25% MCQ score + 25% week‑over‑week consistency. Update `StudentProgress.tsx` + `update-topic-mastery` function.
+11. ✅ Rewrote system prompts in `study-chat`, `exam-prep`, `study-blaster`: respectful Hindi (aap/aapka, never tu/tera), clarifying questions for vague queries, step-by-step for hard topics, NCERT/board-aligned.
+12. ✅ New WPS formula in `StudentProgress.tsx`: 25% study time (target 7h/wk) + 25% topic completion (3 chapters/wk) + 25% MCQ accuracy + 25% consistency (unique days/7). Now fetches `mcq_attempts` and `chapter_progress` in parallel.
 
 ## Stage 3 — New Features (larger)
 
