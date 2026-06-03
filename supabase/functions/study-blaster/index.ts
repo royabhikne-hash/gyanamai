@@ -309,6 +309,53 @@ ${combinedContent.substring(0, 60000)}`;
       });
 
     } else if (action === "process_url") {
+      // YouTube special-case: fetch transcript and use as content
+      const ytIdMatch = String(content || "").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
+      if (ytIdMatch) {
+        const videoId = ytIdMatch[1];
+        try {
+          const watchHtml = await fetch(`https://www.youtube.com/watch?v=${videoId}&hl=en`, {
+            headers: { "User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9" },
+          }).then(r => r.text());
+          const tracksMatch = watchHtml.match(/"captionTracks":(\[.*?\])/);
+          let transcriptText = "";
+          let videoTitle = "";
+          const titleMatch = watchHtml.match(/<title>([^<]+)<\/title>/);
+          if (titleMatch) videoTitle = titleMatch[1].replace(/ - YouTube$/, "").trim();
+          if (tracksMatch) {
+            const tracks = JSON.parse(tracksMatch[1].replace(/\\u0026/g, "&"));
+            const track = tracks.find((t: any) => t.languageCode === "en") || tracks.find((t: any) => t.languageCode === "hi") || tracks[0];
+            if (track?.baseUrl) {
+              const xml = await fetch(track.baseUrl).then(r => r.text());
+              transcriptText = xml
+                .replace(/<text[^>]*>/g, "\n")
+                .replace(/<\/text>/g, " ")
+                .replace(/<[^>]+>/g, "")
+                .replace(/&amp;/g, "&").replace(/&#39;/g, "'")
+                .replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+                .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n)))
+                .replace(/\s+/g, " ").trim();
+            }
+          }
+          if (!transcriptText) {
+            return new Response(JSON.stringify({ error: "No captions available for this YouTube video. Try a video that has subtitles enabled." }), {
+              status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+          }
+          return new Response(JSON.stringify({
+            success: true,
+            extractedContent: `[YouTube Video: ${videoTitle || videoId}]\n\n${transcriptText.substring(0, 80000)}`,
+            title: videoTitle || `YouTube ${videoId}`,
+            isYouTube: true,
+          }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        } catch (e) {
+          console.error("YouTube transcript error:", e);
+          return new Response(JSON.stringify({ error: "Could not fetch YouTube transcript." }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+      }
+
       // Extract content from URL - content already parsed from initial req.json()
       const extractPrompt = `Extract and summarize the main educational content from this URL: ${content}. Return the key text content suitable for study purposes. If you cannot access the URL, explain why.`;
 
