@@ -503,9 +503,34 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
             <h4 className="font-bold text-foreground text-sm sm:text-base truncate">🎙️ {script.title}</h4>
             <p className="text-[11px] text-muted-foreground">
               {script.turns.length} turns • Voices:{" "}
-              <span className="text-foreground">{femaleVoice?.name || "default female"}</span> /{" "}
-              <span className="text-foreground">{maleVoice?.name || "default male"}</span>
+              {useSpeechify && speechifyAvailable ? (
+                <span className="text-foreground">Natasha 🇮🇳 / Henry 🇮🇳 (premium)</span>
+              ) : (
+                <>
+                  <span className="text-foreground">{femaleVoice?.name || "default female"}</span> /{" "}
+                  <span className="text-foreground">{maleVoice?.name || "default male"}</span>
+                </>
+              )}
             </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-primary/10 bg-background/40">
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkle className="w-3.5 h-3.5 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-foreground">Premium Indian voices</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {speechifyAvailable
+                    ? "Expressive Speechify TTS (Pro plan)"
+                    : "Pro plan required — using device voice"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={useSpeechify && speechifyAvailable}
+              disabled={!speechifyAvailable || isPlaying}
+              onCheckedChange={(c) => setUseSpeechify(c)}
+            />
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
