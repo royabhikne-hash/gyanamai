@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Mic, Loader2, Play, Pause, SkipForward, SkipBack, Square,
-  Download, Sparkles, GraduationCap, User as UserIcon, History, Trash2
+  Download, Sparkles, GraduationCap, User as UserIcon, History, Trash2, Sparkle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -50,6 +51,8 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [history, setHistory] = useState<PodcastHistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [useSpeechify, setUseSpeechify] = useState(true);
+  const [speechifyAvailable, setSpeechifyAvailable] = useState(true);
 
   const stoppedRef = useRef(false);
   const indexRef = useRef(0);
@@ -57,6 +60,7 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
   const chunksRef = useRef<Blob[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const destRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const speechifyAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Load TTS voices
   useEffect(() => {
@@ -152,6 +156,76 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
   };
 
   const speakTurn = (turn: Turn): Promise<void> => {
+    // Try Speechify first if available (premium Indian voices)
+    if (useSpeechify && speechifyAvailable) {
+      return speakTurnSpeechify(turn).catch(() => speakTurnBrowser(turn));
+    }
+    return speakTurnBrowser(turn);
+  };
+
+  // Add subtle prosody-style pacing to plain text (commas, ellipses become pauses naturally)
+  const enhanceForSpeech = (text: string, isTeacher: boolean): string => {
+    // Strip emojis/markdown, add small natural pauses after punctuation
+    let t = text
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    // Soften abrupt transitions
+    if (isTeacher) {
+      t = t.replace(/\. /g, ". ... ");
+    }
+    return t;
+  };
+
+  const speakTurnSpeechify = (turn: Turn): Promise<void> => {
+    return new Promise(async (resolve, reject) => {
+      if (stoppedRef.current) { resolve(); return; }
+      try {
+        const speakerGender =
+          turn.speaker === "teacher"
+            ? (script?.teacherGender || "female")
+            : (script?.studentGender || "male");
+        // Henry = Indian male, Natasha = Indian female (expressive multilingual)
+        const voiceId = speakerGender === "female" ? "natasha" : "henry";
+        const enhanced = enhanceForSpeech(turn.text, turn.speaker === "teacher");
+
+        const { data: session } = await supabase.auth.getSession();
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-speech`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.session?.access_token}`,
+            },
+            body: JSON.stringify({
+              text: enhanced,
+              voiceId,
+              speed: 0.95,
+              language: "hi-IN",
+            }),
+          }
+        );
+        const data = await res.json();
+        if (data.error === "FALLBACK_TO_WEB_TTS" || !data.audio) {
+          // Pro plan needed — silently fall back permanently this session
+          setSpeechifyAvailable(false);
+          reject(new Error("speechify unavailable"));
+          return;
+        }
+        if (stoppedRef.current) { resolve(); return; }
+        const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
+        speechifyAudioRef.current = audio;
+        audio.onended = () => resolve();
+        audio.onerror = () => resolve();
+        await audio.play().catch(() => resolve());
+      } catch (e) {
+        reject(e);
+      }
+    });
+  };
+
+  const speakTurnBrowser = (turn: Turn): Promise<void> => {
     return new Promise((resolve) => {
       if (stoppedRef.current) { resolve(); return; }
       const u = new SpeechSynthesisUtterance(turn.text);
@@ -218,6 +292,10 @@ const StudyBlasterPodcast = ({ projectId, hasSources }: Props) => {
   const handleStop = () => {
     stoppedRef.current = true;
     window.speechSynthesis.cancel();
+    if (speechifyAudioRef.current) {
+      try { speechifyAudioRef.current.pause(); } catch (_) {}
+      speechifyAudioRef.current = null;
+    }
     setIsPlaying(false);
     setIsPaused(false);
     setActiveIndex(-1);
