@@ -718,11 +718,6 @@ Generate exactly 5 quiz MCQs and 6 flashcards. All must be from the study materi
         });
       }
 
-      default:
-        return new Response(JSON.stringify({ error: "Unknown action" }), {
-          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-
       case "analyze_full_syllabus": {
         // NEW ALGORITHM: take ALL uploaded materials → extract structured
         // subjects → chapters → topics with priority weights based on
@@ -909,6 +904,11 @@ Generate ALL ${daysAvailable} days. No placeholders.`;
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      default:
+        return new Response(JSON.stringify({ error: "Unknown action" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
     }
   } catch (err: any) {
     console.error("Exam prep error:", err);
