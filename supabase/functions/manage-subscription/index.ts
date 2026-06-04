@@ -118,6 +118,56 @@ const handler = async (req: Request): Promise<Response> => {
     }
     const admin = createClient(supabaseUrl, supabaseServiceKey);
 
+    // SECURITY: for student-facing actions, validate the JWT and derive
+    // the trusted studentId from the verified claims — never trust body.
+    const STUDENT_ACTIONS = new Set<SubscriptionAction>([
+      "get_subscription", "get_daily_usage", "check_daily_usage",
+      "request_upgrade", "increment_tts",
+    ]);
+    let trustedStudentId: string | null = null;
+    if (STUDENT_ACTIONS.has(body.action)) {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const jwt = authHeader.replace("Bearer ", "");
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+      const anonClient = createClient(supabaseUrl, anonKey);
+      const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(jwt);
+      if (claimsError || !claimsData?.claims?.sub) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data: studentRow } = await admin
+        .from('students').select('id').eq('user_id', claimsData.claims.sub).maybeSingle();
+      if (!studentRow?.id) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Student not found" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      trustedStudentId = studentRow.id;
+      // Overwrite any body-supplied studentId with the trusted one.
+      body.studentId = trustedStudentId;
+    }
+
+    // check_expiry is a maintenance op — require service-role auth.
+    if (body.action === "check_expiry") {
+      const authHeader = req.headers.get("Authorization") || "";
+      const isService = authHeader === `Bearer ${supabaseServiceKey}`;
+      if (!isService) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     switch (body.action) {
       // =============== STUDENT ACTIONS ===============
       case "request_upgrade": {
