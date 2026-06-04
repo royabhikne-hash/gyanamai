@@ -175,7 +175,7 @@ Return ONLY a valid JSON array with this exact format, no other text:
       const { data: existingTest } = await supabase
         .from("weekly_tests")
         .select("id")
-        .eq("student_id", studentId)
+        .eq("student_id", trustedStudentId)
         .gte("created_at", weekStart.toISOString())
         .limit(1);
 
@@ -189,20 +189,20 @@ Return ONLY a valid JSON array with this exact format, no other text:
       const { data: sessions } = await supabase
         .from("study_sessions")
         .select("subject, topic, weak_areas, strong_areas")
-        .eq("student_id", studentId)
+        .eq("student_id", trustedStudentId)
         .gte("created_at", weekStart.toISOString());
 
       const { data: mcqAttempts } = await supabase
         .from("mcq_attempts")
         .select("subject")
-        .eq("student_id", studentId)
+        .eq("student_id", trustedStudentId)
         .gte("created_at", weekStart.toISOString());
 
       // Get previous weak topics from older weekly tests
       const { data: prevTests } = await supabase
         .from("weekly_tests")
         .select("weak_subjects")
-        .eq("student_id", studentId)
+        .eq("student_id", trustedStudentId)
         .order("created_at", { ascending: false })
         .limit(3);
 
@@ -339,7 +339,7 @@ Return ONLY a valid JSON array:
       const { data: lastTest } = await supabase
         .from("weekly_tests")
         .select("id, created_at")
-        .eq("student_id", studentId)
+        .eq("student_id", trustedStudentId)
         .order("created_at", { ascending: false })
         .limit(1);
 
@@ -350,7 +350,7 @@ Return ONLY a valid JSON array:
       const { data: thisWeekTest } = await supabase
         .from("weekly_tests")
         .select("id")
-        .eq("student_id", studentId)
+        .eq("student_id", trustedStudentId)
         .gte("created_at", weekStart.toISOString())
         .limit(1);
 
@@ -360,13 +360,13 @@ Return ONLY a valid JSON array:
       const { data: sessions } = await supabase
         .from("study_sessions")
         .select("subject, topic")
-        .eq("student_id", studentId)
+        .eq("student_id", trustedStudentId)
         .gte("created_at", weekStart.toISOString());
 
       const { data: mcqAttempts } = await supabase
         .from("mcq_attempts")
         .select("subject")
-        .eq("student_id", studentId)
+        .eq("student_id", trustedStudentId)
         .gte("created_at", weekStart.toISOString());
 
       const studiedSubjects = new Set<string>();
