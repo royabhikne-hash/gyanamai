@@ -21,12 +21,50 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { studentId, studentName, studentClass, schoolId }: NotifySchoolRequest = await req.json();
-    console.log("Processing notification for student:", studentName, "school:", schoolId);
+    // SECURITY: require a valid JWT from the registering student and verify
+    // the schoolId matches the student's own school_id. Prevents attackers
+    // from spoofing fake registrations to arbitrary schools.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    const jwt = authHeader.replace("Bearer ", "");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const anonClient = createClient(supabaseUrl, anonKey);
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(jwt);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Look up the caller's student row and use its trusted school_id, name,
+    // and class — ignore body claims for those fields.
+    const { data: student } = await supabase
+      .from("students")
+      .select("id, full_name, class, school_id")
+      .eq("user_id", claimsData.claims.sub)
+      .maybeSingle();
+    if (!student?.id || !student.school_id) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Student or school not found" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    const studentId = student.id;
+    const studentName = student.full_name;
+    const studentClass = student.class;
+    const schoolId = student.school_id;
+    console.log("Processing notification for student:", studentName, "school:", schoolId);
 
     // Get school details
     const { data: school, error: schoolError } = await supabase

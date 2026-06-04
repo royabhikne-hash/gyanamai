@@ -277,6 +277,15 @@ const Signup = () => {
 
       await createStudentProfile(user.id);
       
+      // Fire-and-forget WhatsApp notification to the school admin so they
+      // know a new student is awaiting approval. Failures must not block
+      // the signup flow.
+      try {
+        await supabase.functions.invoke("notify-school-registration", { body: {} });
+      } catch (notifyError) {
+        console.warn("School notification failed (non-blocking):", notifyError);
+      }
+
       toast({
         title: "Account Created! 🎉",
         description: studentType === "school_student"

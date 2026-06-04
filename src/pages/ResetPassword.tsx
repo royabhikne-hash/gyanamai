@@ -17,6 +17,10 @@ const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
+  // 10-minute reset link window
+  const RESET_WINDOW_MS = 10 * 60 * 1000;
+  const [isExpired, setIsExpired] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   useEffect(() => {
     // Check if user has a valid recovery session
@@ -27,8 +31,44 @@ const ResetPassword = () => {
     checkSession();
   }, []);
 
+  // Enforce the 10-minute link window. Reads the timestamp ForgotPassword
+  // stored when the user requested the reset email.
+  useEffect(() => {
+    if (isValidSession !== true) return;
+    const requestedAtStr = localStorage.getItem("gyanam_pwd_reset_requested_at");
+    const requestedAt = requestedAtStr ? parseInt(requestedAtStr, 10) : null;
+    if (!requestedAt || Number.isNaN(requestedAt)) {
+      // No tracked request time — assume link is fresh enough.
+      return;
+    }
+    const expiresAt = requestedAt + RESET_WINDOW_MS;
+    const tick = () => {
+      const remaining = expiresAt - Date.now();
+      if (remaining <= 0) {
+        setIsExpired(true);
+        setSecondsLeft(0);
+        // Drop the recovery session so a stale tab can't be used either.
+        supabase.auth.signOut().catch(() => {});
+      } else {
+        setSecondsLeft(Math.ceil(remaining / 1000));
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [isValidSession]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isExpired) {
+      toast({
+        title: "Reset Link Expired",
+        description: "This reset link is older than 10 minutes. Please request a new one.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (password.length < 6) {
       toast({
@@ -65,6 +105,12 @@ const ResetPassword = () => {
         description: "Your password has been successfully changed.",
       });
 
+      // Clear the 10-minute window tracker on success.
+      try {
+        localStorage.removeItem("gyanam_pwd_reset_requested_at");
+        localStorage.removeItem("gyanam_pwd_reset_email");
+      } catch { /* ignore */ }
+
       // Redirect to login after 3 seconds
       setTimeout(() => {
         navigate("/login");
@@ -89,7 +135,7 @@ const ResetPassword = () => {
     );
   }
 
-  if (!isValidSession) {
+  if (!isValidSession || isExpired) {
     return (
       <div className="min-h-screen hero-gradient flex flex-col">
         <header className="container mx-auto py-6 px-4">
@@ -105,9 +151,13 @@ const ResetPassword = () => {
               <div className="w-16 h-16 rounded-2xl bg-destructive flex items-center justify-center mx-auto mb-4">
                 <KeyRound className="w-8 h-8 text-destructive-foreground" />
               </div>
-              <h1 className="text-2xl font-bold">Invalid or Expired Link</h1>
+              <h1 className="text-2xl font-bold">
+                {isExpired ? "Link Expired" : "Invalid or Expired Link"}
+              </h1>
               <p className="text-muted-foreground mt-2 mb-6">
-                This password reset link is invalid or has expired. Please request a new one.
+                {isExpired
+                  ? "For your security, password reset links are only valid for 10 minutes. Please request a new one."
+                  : "This password reset link is invalid or has expired. Please request a new one."}
               </p>
               <Link to="/forgot-password">
                 <Button variant="hero" className="w-full">
@@ -161,6 +211,16 @@ const ResetPassword = () => {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
+                {secondsLeft !== null && (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-center">
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      ⏱️ This link expires in{" "}
+                      <strong>
+                        {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}
+                      </strong>
+                    </p>
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="password">New Password</Label>
                   <div className="relative">
