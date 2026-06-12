@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, Link2, FileText, Trash2, Loader2, StickyNote, Globe, File, Youtube } from "lucide-react";
+import { Upload, Link2, FileText, Trash2, Loader2, StickyNote, Globe, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,8 +35,6 @@ const ALLOWED_TYPES = [
 const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }: Props) => {
   const [uploading, setUploading] = useState(false);
   const [webUrl, setWebUrl] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [processingYoutube, setProcessingYoutube] = useState(false);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
   const [processingUrl, setProcessingUrl] = useState(false);
@@ -190,50 +188,6 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
     }
   };
 
-  const handleAddYoutube = async () => {
-    if (!youtubeUrl.trim()) return;
-    if (!/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))[A-Za-z0-9_-]{11}/.test(youtubeUrl)) {
-      toast({ title: "Invalid YouTube URL", description: "Paste a full youtube.com or youtu.be link", variant: "destructive" });
-      return;
-    }
-    setProcessingYoutube(true);
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/study-blaster`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.session?.access_token}`,
-          },
-          body: JSON.stringify({ action: "process_url", content: youtubeUrl }),
-        }
-      );
-      const result = await response.json();
-      if (result.error) throw new Error(result.error);
-      if (!result.extractedContent) throw new Error("No transcript found");
-
-      const { error } = await supabase.from("study_sources").insert({
-        project_id: projectId,
-        student_id: studentId,
-        source_type: "url",
-        title: result.title || "YouTube video",
-        web_url: youtubeUrl,
-        extracted_content: result.extractedContent,
-        processing_status: "completed",
-      });
-      if (error) throw error;
-      toast({ title: "YouTube added! 🎥", description: "Transcript imported." });
-      setYoutubeUrl("");
-      onRefresh();
-    } catch (err: any) {
-      toast({ title: "YouTube error", description: err.message || "Could not import video", variant: "destructive" });
-    } finally {
-      setProcessingYoutube(false);
-    }
-  };
-
   const handleAddNote = async () => {
     if (!noteTitle.trim() || !noteContent.trim()) return;
     setSavingNote(true);
@@ -284,10 +238,9 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
       </h3>
 
       <Tabs defaultValue="upload" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 glass-card h-auto p-0.5">
+        <TabsList className="grid w-full grid-cols-3 glass-card h-auto p-0.5">
           <TabsTrigger value="upload" className="gap-1 text-[10px] sm:text-xs py-1.5 sm:py-2 rounded-xl"><Upload className="w-3 h-3" /> Upload</TabsTrigger>
           <TabsTrigger value="url" className="gap-1 text-[10px] sm:text-xs py-1.5 sm:py-2 rounded-xl"><Link2 className="w-3 h-3" /> Web Link</TabsTrigger>
-          <TabsTrigger value="youtube" className="gap-1 text-[10px] sm:text-xs py-1.5 sm:py-2 rounded-xl"><Youtube className="w-3 h-3" /> YouTube</TabsTrigger>
           <TabsTrigger value="note" className="gap-1 text-[10px] sm:text-xs py-1.5 sm:py-2 rounded-xl"><StickyNote className="w-3 h-3" /> Notes</TabsTrigger>
         </TabsList>
 
@@ -327,23 +280,6 @@ const StudyBlasterSourceManager = ({ sources, projectId, studentId, onRefresh }:
               {processingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}
             </Button>
           </div>
-        </TabsContent>
-
-        <TabsContent value="youtube" className="mt-3 space-y-3">
-          <div className="flex gap-2">
-            <Input
-              value={youtubeUrl}
-              onChange={(e) => setYoutubeUrl(e.target.value)}
-              placeholder="https://youtube.com/watch?v=..."
-              className="flex-1 text-sm"
-            />
-            <Button onClick={handleAddYoutube} disabled={processingYoutube || !youtubeUrl.trim()} size="sm" className="rounded-xl shrink-0">
-              {processingYoutube ? <Loader2 className="w-4 h-4 animate-spin" /> : "Import"}
-            </Button>
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">
-            Video must have captions/subtitles enabled. Transcript will be used as study source.
-          </p>
         </TabsContent>
 
         <TabsContent value="note" className="mt-3 space-y-3">

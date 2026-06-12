@@ -505,9 +505,7 @@ export type Database = {
           mastery_data: Json | null
           mood: string
           onboarding_completed: boolean
-          priority_plan: Json | null
           student_id: string
-          syllabus_structure: Json | null
           target_score: number | null
           topic_familiarity: string
           updated_at: string
@@ -521,9 +519,7 @@ export type Database = {
           mastery_data?: Json | null
           mood?: string
           onboarding_completed?: boolean
-          priority_plan?: Json | null
           student_id: string
-          syllabus_structure?: Json | null
           target_score?: number | null
           topic_familiarity?: string
           updated_at?: string
@@ -537,9 +533,7 @@ export type Database = {
           mastery_data?: Json | null
           mood?: string
           onboarding_completed?: boolean
-          priority_plan?: Json | null
           student_id?: string
-          syllabus_structure?: Json | null
           target_score?: number | null
           topic_familiarity?: string
           updated_at?: string
