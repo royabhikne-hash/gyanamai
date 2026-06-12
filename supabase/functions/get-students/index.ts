@@ -120,10 +120,34 @@ Deno.serve(async (req) => {
 
     // Handle student ranking request (for student dashboard)
     if (action === 'get_student_rankings') {
-      if (!student_id) {
+      // SECURITY: validate JWT and derive student_id from claims.
+      // Strip PII (phone, parent_whatsapp, user_id) from the response.
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader?.startsWith('Bearer ')) {
         return new Response(
-          JSON.stringify({ error: 'Student ID required' }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const jwt = authHeader.replace('Bearer ', '');
+      const anonClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      );
+      const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(jwt);
+      if (claimsError || !claimsData?.claims?.sub) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const { data: studentRow } = await supabaseAdmin
+        .from('students').select('id').eq('user_id', claimsData.claims.sub).maybeSingle();
+      const trustedStudentId = studentRow?.id;
+      if (!trustedStudentId) {
+        return new Response(
+          JSON.stringify({ error: 'Student not found' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -131,7 +155,7 @@ Deno.serve(async (req) => {
       const { data: studentData } = await supabaseAdmin
         .from('students')
         .select('*, schools(name)')
-        .eq('id', student_id)
+        .eq('id', trustedStudentId)
         .maybeSingle();
 
       if (!studentData || !studentData.is_approved) {
@@ -194,20 +218,34 @@ Deno.serve(async (req) => {
       const districtRankings = calculateStudentRankings(districtStudentsWithSessions);
 
       // Find the current student's position in each
-      const studentSchoolRank = schoolRankings.find((r: any) => r.id === student_id);
-      const studentDistrictRank = districtRankings.find((r: any) => r.id === student_id);
+      const studentSchoolRank = schoolRankings.find((r: any) => r.id === trustedStudentId);
+      const studentDistrictRank = districtRankings.find((r: any) => r.id === trustedStudentId);
 
       // Get ranking history for the student
       const { data: rankingHistory } = await supabaseAdmin
         .from('ranking_history')
         .select('*')
-        .eq('student_id', student_id)
+        .eq('student_id', trustedStudentId)
         .order('week_start', { ascending: false })
         .limit(10);
 
+      // Strip PII before returning to the client.
+      const safeStudent = studentData ? {
+        id: studentData.id,
+        full_name: studentData.full_name,
+        photo_url: studentData.photo_url,
+        class: studentData.class,
+        board: studentData.board,
+        district: studentData.district,
+        state: studentData.state,
+        school_id: studentData.school_id,
+        is_approved: studentData.is_approved,
+        schools: studentData.schools,
+      } : null;
+
       return new Response(
         JSON.stringify({
-          student: studentData,
+          student: safeStudent,
           mySchoolRank: studentSchoolRank || null,
           myDistrictRank: studentDistrictRank || null,
           schoolRankings: schoolRankings.slice(0, 10),
@@ -407,18 +445,28 @@ Deno.serve(async (req) => {
 
     // School Analytics action - handle before generic session_token check
     if (action === 'get_school_analytics') {
-      const sId = schoolId || school_id;
       const sToken = sessionToken || session_token;
-      
-      if (!sId || !sToken) {
+
+      if (!sToken) {
         return new Response(
-          JSON.stringify({ error: 'School ID and session token required' }),
+          JSON.stringify({ error: 'Session token required' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       const validation = await validateSessionToken(supabaseAdmin, sToken, 'school');
       if (!validation.valid) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid session' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // SECURITY: bind analytics to the school that owns this session token.
+      // Never trust a body-supplied schoolId — that would let one school read
+      // another school's student analytics.
+      const sId = validation.userId;
+      if (!sId) {
         return new Response(
           JSON.stringify({ error: 'Invalid session' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

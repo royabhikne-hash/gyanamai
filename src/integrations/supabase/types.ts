@@ -505,7 +505,9 @@ export type Database = {
           mastery_data: Json | null
           mood: string
           onboarding_completed: boolean
+          priority_plan: Json | null
           student_id: string
+          syllabus_structure: Json | null
           target_score: number | null
           topic_familiarity: string
           updated_at: string
@@ -519,7 +521,9 @@ export type Database = {
           mastery_data?: Json | null
           mood?: string
           onboarding_completed?: boolean
+          priority_plan?: Json | null
           student_id: string
+          syllabus_structure?: Json | null
           target_score?: number | null
           topic_familiarity?: string
           updated_at?: string
@@ -533,7 +537,9 @@ export type Database = {
           mastery_data?: Json | null
           mood?: string
           onboarding_completed?: boolean
+          priority_plan?: Json | null
           student_id?: string
+          syllabus_structure?: Json | null
           target_score?: number | null
           topic_familiarity?: string
           updated_at?: string
@@ -1109,6 +1115,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      study_podcasts: {
+        Row: {
+          created_at: string
+          exchanges: number
+          id: string
+          project_id: string
+          script: Json
+          student_id: string
+          student_name: string | null
+          teacher_name: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          exchanges?: number
+          id?: string
+          project_id: string
+          script?: Json
+          student_id: string
+          student_name?: string | null
+          teacher_name?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          exchanges?: number
+          id?: string
+          project_id?: string
+          script?: Json
+          student_id?: string
+          student_name?: string | null
+          teacher_name?: string | null
+          title?: string
+        }
+        Relationships: []
       }
       study_project_messages: {
         Row: {

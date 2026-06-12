@@ -211,6 +211,17 @@ const Signup = () => {
       return;
     }
 
+    // Student photo is now compulsory — required for school verification
+    // before approval.
+    if (!photoFile) {
+      toast({
+        title: "Photo Required",
+        description: "Please upload a clear photo of yourself. Your school needs it to verify your identity before approval.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -266,6 +277,15 @@ const Signup = () => {
 
       await createStudentProfile(user.id);
       
+      // Fire-and-forget WhatsApp notification to the school admin so they
+      // know a new student is awaiting approval. Failures must not block
+      // the signup flow.
+      try {
+        await supabase.functions.invoke("notify-school-registration", { body: {} });
+      } catch (notifyError) {
+        console.warn("School notification failed (non-blocking):", notifyError);
+      }
+
       toast({
         title: "Account Created! 🎉",
         description: studentType === "school_student"
@@ -426,7 +446,7 @@ const Signup = () => {
 
               {/* Photo Upload */}
               <div className="flex flex-col items-center">
-                <Label className="mb-2 sm:mb-3 text-sm">Student Photo (Optional)</Label>
+                <Label className="mb-2 sm:mb-3 text-sm">Student Photo <span className="text-destructive">*</span></Label>
                 <div
                   className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-2 border-dashed border-input bg-muted flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary transition-colors"
                   onClick={() => fileInputRef.current?.click()}

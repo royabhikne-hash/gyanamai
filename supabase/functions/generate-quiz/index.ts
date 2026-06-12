@@ -49,7 +49,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, topic, studentLevel, weakAreas, strongAreas, studentId, quizMode } = await req.json();
+    const { messages, topic, studentLevel, weakAreas, strongAreas, quizMode } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -57,8 +57,44 @@ serve(async (req) => {
       throw new Error("AI service is not configured");
     }
 
+    // Auth: derive studentId from JWT
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", success: false }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const authClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", success: false }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const adminClient = createClient(supabaseUrl, serviceKey);
+    const { data: studentRow } = await adminClient
+      .from("students")
+      .select("id")
+      .eq("user_id", claimsData.claims.sub)
+      .maybeSingle();
+    const studentId = studentRow?.id as string | undefined;
+    if (!studentId) {
+      return new Response(
+        JSON.stringify({ error: "Student profile not found", success: false }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Rate limit check (10 quizzes per 5 minutes)
-    if (studentId && !checkRateLimit(studentId)) {
+    if (!checkRateLimit(studentId)) {
       return new Response(
         JSON.stringify({ 
           error: "Rate limit exceeded. Please wait before generating another quiz.",

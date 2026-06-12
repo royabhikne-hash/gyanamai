@@ -1,95 +1,80 @@
+# Stage 4 — Security Hardening, Password Reset, Skeletons & QA
 
+## Important clarification first (please read)
 
-# Real Progress Tracking System — Topic-Level Mastery
+**About `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env`:**
+These are **not secrets**. The `anon` / publishable key is *designed* to be public and shipped to the browser — that is how every Supabase client works. Security comes from **RLS policies + JWT validation in edge functions**, not from hiding the URL. The actual secrets (`SUPABASE_SERVICE_ROLE_KEY`, `LOVABLE_API_KEY`, `TWILIO_*`, `SPEECHIFY_API_KEY`) are already backend-only.
+**Action:** I will leave `VITE_*` vars as-is (required for the app to work) but will lock down every edge function so the publishable key alone gives an attacker nothing.
 
-## Problem
-Current tracking is shallow:
-- Weak/strong analysis is only at **subject level** from weekly tests
-- Study session topic-level data (weak_areas, strong_areas from AI) is **never shown** on the progress page
-- MCQ attempts and quiz attempts data is **not combined** into the progress view
-- Student gets no actionable topic-level guidance
+---
 
-## Solution
-Build a **topic-level mastery system** that combines ALL data sources into one unified progress view with real, actionable insights.
+## 1. Fix all 12 security findings
 
-## Data Sources (already exist, just not aggregated)
+### Edge function auth rewrites (derive `studentId` from JWT, never trust body)
+- `manage-subscription` — validate JWT on `get_subscription`, `get_daily_usage`, `check_daily_usage`, `request_upgrade`, `increment_tts`; gate `check_expiry` behind `CRON_SECRET`.
+- `update-topic-mastery` — add `getClaims()`, drop body `studentId`.
+- `text-to-speech` — require JWT, derive student, rate-limit per user.
+- `get-students` `get_student_rankings` — require JWT, strip `phone` / `parent_whatsapp` / `user_id` from response.
+- `send-weekly-report` — gate behind `CRON_SECRET` (cron) or admin session token (manual).
+- `generate-mcq` — replace header-presence check with real `getClaims()`.
+- `notify-school-registration` — require student JWT; verify `schoolId` matches `students.school_id`.
+- `save-weekly-rankings` — require `CRON_SECRET`.
+- `secure-auth` `login_auto` — sanitize identifier (reject `%`, `_`, `,`, `(`, `)`) to kill PostgREST filter injection.
 
-```text
-┌─────────────────────┐   ┌──────────────────┐   ┌──────────────────┐
-│  study_sessions     │   │  quiz_attempts   │   │  weekly_tests    │
-│  - weak_areas[]     │   │  - accuracy %    │   │  - weak_subjects │
-│  - strong_areas[]   │   │  - session_id    │   │  - strong_subj   │
-│  - understanding    │   │  - correct_count │   │  - accuracy %    │
-│  - subject/topic    │   └──────────────────┘   └──────────────────┘
-└─────────────────────┘
-         │                        │                       │
-         └────────────────────────┴───────────────────────┘
-                              │
-                    ┌─────────────────────┐
-                    │  NEW: topic_mastery  │
-                    │  - topic + subject   │
-                    │  - mastery_score     │
-                    │  - attempt_count     │
-                    │  - last_practiced    │
-                    │  - trend (improving/ │
-                    │    declining/stable) │
-                    └─────────────────────┘
-```
+### Database migration
+- Tighten `students` UPDATE policy to a WITH CHECK that blocks changes to `is_approved`, `is_banned`, `student_type`, `school_id`, `coaching_center_id`, `user_id`, `approved_by`, `approved_at`, `rejection_reason`.
+- Tighten `exam_prep_invites` UPDATE to require matching `invite_code`.
+- Revoke `EXECUTE` on SECURITY DEFINER functions from `anon` / `authenticated` where not needed (`cleanup_expired_sessions`, `create_basic_subscription`, `prevent_student_sensitive_update`). Keep `has_role`-style and `check_ai_rate_limit` callable.
+- Move `pg_net` / `pg_cron` out of `public` if present (informational lint).
 
-## Plan
+### New secret
+- Add `CRON_SECRET` (I'll request via `add_secret` when we start).
 
-### 1. Create `topic_mastery` Table
-New table to aggregate topic-level performance:
-- `student_id`, `subject`, `topic`, `mastery_score` (0-100), `attempt_count`, `last_practiced`, `trend` (improving/declining/stable), `source` (study_session/quiz/weekly_test)
-- RLS: students can only view/update their own data
-- Updated automatically when sessions end or tests complete
+---
 
-### 2. Create Edge Function: `update-topic-mastery`
-Runs after each study session or test completion. Aggregates:
-- Study session AI analysis (weak_areas → low mastery, strong_areas → high mastery)
-- Quiz attempt accuracy per topic
-- Weekly test subject performance
-- Calculates trend by comparing last 3 data points
+## 2. Password reset 10-min expiry
+- Replace Supabase's built-in `resetPasswordForEmail` flow with a custom token table:
+  - New table `password_reset_tokens(token, user_id, expires_at, used_at)` — 10 min expiry.
+  - Edge function `request-password-reset` — generates token, emails/WhatsApps link.
+  - Edge function `verify-reset-token` + UI in `ResetPassword.tsx` — shows "This link has expired, please request a new one" if `now() > expires_at` or `used_at IS NOT NULL`.
 
-### 3. Redesign Progress Page with Real Data
-Replace current static aggregation with live topic mastery data:
+*(If you'd rather just shorten Supabase's built-in recovery link lifetime to 10 min instead of building a custom system, say so — that's a 1-line config change in Auth settings.)*
 
-**Section 1: Key Metrics** (keep current 4 cards — they work)
+---
 
-**Section 2: Topic Mastery Map** (NEW — replaces Subject Health)
-- List of ALL topics the student has studied
-- Each topic shows: mastery score bar (0-100), attempt count, trend arrow
-- Color-coded: Red (0-40), Yellow (40-70), Green (70-100)
-- Sorted: weakest first (so student sees what to focus on)
+## 3. WhatsApp on new signup
+- `Signup.tsx` already triggers `notify-school-registration`. After Stage-4 auth hardening that function will require the student's JWT — I'll thread `session.access_token` through the invoke call.
+- Verify Twilio secrets are still valid by sending a test message in dev.
 
-**Section 3: Weak Topics Action Card** (NEW)
-- Top 5 weakest topics with "Study Now" button linking to StudyChat with that topic pre-selected
-- Shows how many times attempted + current score
-- Real actionable guidance
+---
 
-**Section 4: Charts** (keep WPS Trend + Study Pattern, remove Subject Performance bar)
+## 4. Skeleton screens
+- StudentDashboard → use existing `DashboardSkeleton` during initial load (already exists, just wire it).
+- StudyChat → add message-bubble skeleton list during history fetch.
+- StudentProgress / report views → use existing `ProgressSkeleton` / `ReportSkeleton`.
+- Parent report PDF preview → loading skeleton before PDF renders.
 
-**Section 5: Recent Activity Timeline** (replaces Test History)
-- Combined feed: study sessions + quizzes + weekly tests
-- Shows what was studied, score achieved, topics covered
-- Last 10 activities
+---
 
-**Section 6: AI Insights** (improved)
-- Use actual topic mastery data for insights
-- "Your weakest topic is X — studied 3 times but mastery still at 35%"
-- "Y improved from 40% to 78% — great progress!"
+## 5. QA Stages 1–3
+- Stage 1: verify TTS no-longer-throws toast, double-send guard, Study Blaster project insert error surface, respectful Hindi copy, required photo on signup.
+- Stage 2: verify new WPS formula renders on StudentProgress and AI prompts return formal "Aap" Hindi.
+- Stage 3: smoke-test YouTube URL ingestion in Study Blaster, Speechify toggle, `analyze_full_syllabus` + `generate_priority_plan` in Exam Prep.
+- Report any regressions back before closing.
 
-### 4. Call `update-topic-mastery` After Sessions & Tests
-- In `StudyPage.tsx` `handleEndStudy`: call the edge function after saving session
-- In `WeeklyTest.tsx` after test submission: call the edge function
+---
 
-## Files to Create/Edit
-- **New migration**: Create `topic_mastery` table with RLS
-- **New edge function**: `supabase/functions/update-topic-mastery/index.ts`
-- **Edit**: `src/pages/StudentProgress.tsx` — new UI with topic mastery data
-- **Edit**: `src/pages/StudyPage.tsx` — trigger mastery update after session
-- **Edit**: `src/pages/WeeklyTest.tsx` — trigger mastery update after test
+## Order of execution
+1. Request `CRON_SECRET` secret.
+2. Ship DB migration (RLS tightening + function grants).
+3. Rewrite all 8 edge functions in parallel; deploy.
+4. Build password-reset token system (table + 2 functions + UI).
+5. Wire skeletons.
+6. QA pass on Stages 1-3 + new changes; run security rescan.
 
-## No Breaking Changes
-All existing data stays. New table is populated going forward + can backfill from existing study_sessions data.
+---
 
+## Questions before I start
+1. **Password reset** — custom 10-min token system as described, or just shorten Supabase Auth's built-in recovery lifetime?
+2. **`CRON_SECRET`** — OK for me to request this secret via the secrets tool?
+3. **Scope confirmation** — this is roughly a 25-file change touching auth on every protected endpoint. Want it as one big push, or split (security first → password reset → skeletons)?

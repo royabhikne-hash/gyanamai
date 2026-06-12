@@ -25,7 +25,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, projectId, messages, content, fileName, fileType, fileBase64 } = body;
+    const { action, projectId, messages, content, fileName, fileType, fileBase64, exchanges } = body;
 
     // Validate user
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
@@ -234,14 +234,55 @@ ${combinedContent.substring(0, 80000)}`;
         ? `Student's target date: ${project.target_date}. Guide them accordingly.`
         : "";
 
-      const systemPrompt = `You are Study Blaster AI - an expert study tutor. You MUST ONLY answer based on the provided source materials below. If a question cannot be answered from these materials, clearly state: "This information is not available in your uploaded sources."
+      const systemPrompt = `You are Study Blaster AI — a warm, friendly, expert NCERT-aligned tutor for Indian students (Classes 6-12). Think of yourself as a caring senior bhaiya/didi who explains things deeply and clearly.
 
-When answering:
-- Always reference which source the information comes from
-- Be concise but thorough
-- Use simple language appropriate for students
-- If asked, generate practice questions from the materials
-- Never make up information not in the sources
+GROUNDING RULES (HIGHEST PRIORITY):
+- Answer ONLY using the SOURCE MATERIALS below. No outside facts, dates, names, or numbers.
+- NEVER describe the document itself (book name, author, page count, "this PDF says…"). Teach the SUBJECT MATTER directly.
+- If the question is NOT covered in the sources, say warmly: "Yeh topic aapke uploaded sources mein nahi hai 🙏. Main sirf aapke material se hi padha sakta hoon." Then suggest 1-2 related topics from the sources.
+- You MAY add ONE simple Indian-life analogy (cricket, chai, trains, cricket scores, family) to aid understanding — but core facts must come from the sources.
+
+TEACHING STYLE (be DEEP, not shallow):
+- Warm Hinglish by default — use "aap/aapka", NEVER "tu/tera". If the student writes in pure English, reply in English. If pure Hindi, reply in simple Hindi.
+- Start with a 1-line friendly hook acknowledging the question.
+- Then EXPLAIN the concept properly: definition → why it matters → how it works → a worked example from the sources.
+- For hard topics, break into clear numbered steps. One idea per step.
+- Use real numbers, formulas, and exact terminology from the sources.
+- If the question is vague, ask ONE short clarifying question first instead of guessing.
+- If asked for practice, generate exam-pattern questions ONLY from source content, with answer keys.
+
+RESPONSE FORMATTING (use proper Markdown — it WILL be rendered):
+- Use **bold** for key terms and important facts.
+- Use ### short headings to organize longer answers (e.g., ### Concept, ### Example, ### 💡 Quick Recap).
+- Use bullet lists (- ) and numbered lists (1.) generously for clarity.
+- Use > blockquotes for definitions or key formulas.
+- Use \`inline code\` for formulas, equations, variables, or technical terms.
+- Use tables (| col | col |) when comparing things — they render nicely.
+- Keep paragraphs short (2-3 lines max). Use line breaks between sections.
+- Up to 3 tasteful emojis (📘 💡 ✅ 🎯 ⚡) to make it friendly — never spam.
+- Cite source briefly inline when stating a key fact, e.g., _(Source: Chapter 3)_.
+
+TONE:
+- Encouraging, patient, never condescending. Celebrate effort.
+- Treat the student like a real human — never robotic.
+
+MANDATORY ENDING — every teaching reply MUST end with these two sections (in English, always):
+
+### 📌 Quick Recap
+- 2-4 bullet points of the most important takeaways from this answer (from the sources).
+- 1 short "Next step for revision" line (e.g., "Re-read Source: Chapter 3, Section 2 tonight").
+
+### 🎯 Check Your Understanding
+1. <Short, specific question grounded in the sources you just used.>
+2. <Optional second — slightly harder.>
+3. <Optional third — application/example based.>
+(Ask 1-3 questions total. Number them. Wait for the student's answer.)
+
+ADAPTING TO ANSWERS (next turn):
+- Correct → praise warmly, then go ONE level deeper using the sources.
+- Partial → appreciate what's right, gently fix the gap with the source, re-explain that specific part.
+- Wrong → be kind, give the correct answer with WHY (citing source), then ask ONE simpler version.
+- Skip Recap + Check only for pure greetings or clarifying questions.
 
 ${targetInfo}
 
@@ -298,6 +339,53 @@ ${combinedContent.substring(0, 60000)}`;
       });
 
     } else if (action === "process_url") {
+      // YouTube special-case: fetch transcript and use as content
+      const ytIdMatch = String(content || "").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
+      if (ytIdMatch) {
+        const videoId = ytIdMatch[1];
+        try {
+          const watchHtml = await fetch(`https://www.youtube.com/watch?v=${videoId}&hl=en`, {
+            headers: { "User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9" },
+          }).then(r => r.text());
+          const tracksMatch = watchHtml.match(/"captionTracks":(\[.*?\])/);
+          let transcriptText = "";
+          let videoTitle = "";
+          const titleMatch = watchHtml.match(/<title>([^<]+)<\/title>/);
+          if (titleMatch) videoTitle = titleMatch[1].replace(/ - YouTube$/, "").trim();
+          if (tracksMatch) {
+            const tracks = JSON.parse(tracksMatch[1].replace(/\\u0026/g, "&"));
+            const track = tracks.find((t: any) => t.languageCode === "en") || tracks.find((t: any) => t.languageCode === "hi") || tracks[0];
+            if (track?.baseUrl) {
+              const xml = await fetch(track.baseUrl).then(r => r.text());
+              transcriptText = xml
+                .replace(/<text[^>]*>/g, "\n")
+                .replace(/<\/text>/g, " ")
+                .replace(/<[^>]+>/g, "")
+                .replace(/&amp;/g, "&").replace(/&#39;/g, "'")
+                .replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+                .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n)))
+                .replace(/\s+/g, " ").trim();
+            }
+          }
+          if (!transcriptText) {
+            return new Response(JSON.stringify({ error: "No captions available for this YouTube video. Try a video that has subtitles enabled." }), {
+              status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+          }
+          return new Response(JSON.stringify({
+            success: true,
+            extractedContent: `[YouTube Video: ${videoTitle || videoId}]\n\n${transcriptText.substring(0, 80000)}`,
+            title: videoTitle || `YouTube ${videoId}`,
+            isYouTube: true,
+          }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        } catch (e) {
+          console.error("YouTube transcript error:", e);
+          return new Response(JSON.stringify({ error: "Could not fetch YouTube transcript." }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+      }
+
       // Extract content from URL - content already parsed from initial req.json()
       const extractPrompt = `Extract and summarize the main educational content from this URL: ${content}. Return the key text content suitable for study purposes. If you cannot access the URL, explain why.`;
 
@@ -400,6 +488,174 @@ ${combinedContent.substring(0, 60000)}`;
       const extractedContent = aiData.choices?.[0]?.message?.content || "";
 
       return new Response(JSON.stringify({ success: true, extractedContent }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    } else if (action === "generate_podcast") {
+      // Generate teacher+student dialogue podcast script grounded in project sources
+      const numExchanges = Math.min(Math.max(parseInt(String(exchanges)) || 20, 6), 50);
+
+      // Mixed-gender name pools — voices follow gender of chosen name
+      const femaleTeachers = [
+        "Priya Ma'am", "Anjali Ma'am", "Neha Ma'am", "Kavya Ma'am", "Ritu Ma'am",
+        "Shreya Ma'am", "Meera Ma'am", "Nisha Ma'am", "Aditi Ma'am", "Radhika Ma'am"
+      ];
+      const maleTeachers = [
+        "Rajesh Sir", "Amit Sir", "Vikram Sir", "Sanjay Sir", "Anil Sir",
+        "Suresh Sir", "Manoj Sir", "Deepak Sir", "Arvind Sir", "Pankaj Sir"
+      ];
+      const femaleStudents = [
+        "Anya", "Ishita", "Tanya", "Riya", "Sneha",
+        "Pari", "Aarohi", "Diya", "Kiara", "Myra"
+      ];
+      const maleStudents = [
+        "Arjun", "Rohan", "Aditya", "Karan", "Vivek",
+        "Rahul", "Aryan", "Siddharth", "Yash", "Kabir"
+      ];
+      const teacherGender: "male" | "female" = Math.random() < 0.5 ? "female" : "male";
+      const studentGender: "male" | "female" = Math.random() < 0.5 ? "female" : "male";
+      const teacherPool = teacherGender === "female" ? femaleTeachers : maleTeachers;
+      const studentPool = studentGender === "female" ? femaleStudents : maleStudents;
+      const teacherName = teacherPool[Math.floor(Math.random() * teacherPool.length)];
+      const studentName = studentPool[Math.floor(Math.random() * studentPool.length)];
+
+      const { data: sources } = await supabase
+        .from("study_sources")
+        .select("title, extracted_content")
+        .eq("project_id", projectId)
+        .eq("student_id", student.id);
+
+      if (!sources || sources.length === 0) {
+        return new Response(JSON.stringify({ error: "No sources found. Add notes/PDFs first." }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      const { data: project } = await supabase
+        .from("study_projects")
+        .select("title")
+        .eq("id", projectId)
+        .single();
+
+      const combinedContent = sources
+        .map((s: any) => `[Source: ${s.title}]\n${s.extracted_content || ""}`)
+        .join("\n\n---\n\n")
+        .substring(0, 70000);
+
+      const podcastPrompt = `You are scripting an educational podcast titled "${project?.title || "Study Podcast"}".
+
+Format: A friendly DIALOGUE between two hosts:
+- TEACHER (${teacherGender}): "${teacherName}" — patient, warm, expert, explains concepts deeply with real-world examples and analogies.
+- STUDENT (${studentGender}): "${studentName}" — curious learner who asks smart, probing questions, sometimes challenges/debates points to dig deeper, occasionally summarizes back what they understood.
+
+Rules:
+- Generate EXACTLY ${numExchanges} alternating turns (start with TEACHER introducing the topic).
+- Each turn must be 2-5 sentences (long enough to be substantive, short enough to feel like real conversation).
+- Ground EVERY explanation strictly in the source materials below — do not invent facts.
+- Cover the most important concepts in depth: definitions, why-it-matters, examples, common confusions, and quick recaps.
+- Include 1-2 light debate moments where ${studentName} pushes back or proposes a different angle and ${teacherName} clarifies.
+- End with ${teacherName} giving a crisp summary + motivational sign-off.
+- Keep language simple, warm, conversational. Mix English with occasional Hindi/Hinglish phrases ONLY in ${studentName}'s lines (1-2 times max) for relatability — ${teacherName} stays in clear English.
+- No stage directions, no markdown, no asterisks. Just the dialogue text.
+
+Return JSON with a "turns" array, each item: { "speaker": "teacher" | "student", "text": "..." }
+
+SOURCE MATERIALS:
+${combinedContent}`;
+
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: "You are an expert educational podcast scriptwriter. Always respond using the provided tool." },
+            { role: "user", content: podcastPrompt },
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "generate_podcast_script",
+                description: "Generate a teacher-student dialogue podcast script",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    turns: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          speaker: { type: "string", enum: ["teacher", "student"] },
+                          text: { type: "string" },
+                        },
+                        required: ["speaker", "text"],
+                      },
+                    },
+                  },
+                  required: ["title", "turns"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          ],
+          tool_choice: { type: "function", function: { name: "generate_podcast_script" } },
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        const status = aiResponse.status;
+        if (status === 429) {
+          return new Response(JSON.stringify({ error: "AI rate limit. Try again in a minute." }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+        if (status === 402) {
+          return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+        throw new Error("AI gateway error");
+      }
+
+      const aiData = await aiResponse.json();
+      const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+      let script: any = { title: project?.title || "Podcast", turns: [] };
+      if (toolCall) {
+        try { script = JSON.parse(toolCall.function.arguments); } catch (_) { /* keep default */ }
+      }
+      // Attach the chosen host names so the UI can display them
+      script.teacherName = teacherName;
+      script.studentName = studentName;
+      script.teacherGender = teacherGender;
+      script.studentGender = studentGender;
+
+      // Save to history so student can listen later
+      try {
+        await supabase.from("study_podcasts").insert({
+          project_id: projectId,
+          student_id: student.id,
+          title: script.title || project?.title || "Podcast",
+          script,
+          exchanges: numExchanges,
+          teacher_name: teacherName,
+          student_name: studentName,
+        });
+      } catch (_) { /* non-fatal */ }
+
+      await supabase.from("ai_usage_log").insert({
+        student_id: student.id,
+        action: "study_blaster_podcast",
+        model: "google/gemini-3-flash-preview",
+        input_tokens: combinedContent.length,
+        output_tokens: JSON.stringify(script).length,
+        estimated_cost_inr: 0.7,
+      });
+
+      return new Response(JSON.stringify({ success: true, script }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }

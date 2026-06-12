@@ -316,9 +316,38 @@ serve(async (req) => {
   }
 
   try {
+    // SECURITY: require admin session token or the service-role key.
+    // Without this, the function leaks all-student academic data and parent
+    // WhatsApp numbers, and can be abused to spam parents via Twilio.
+    const authHeader = req.headers.get('Authorization') || '';
+    const adminToken = req.headers.get('x-admin-token') || '';
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const isServiceCall = authHeader === `Bearer ${serviceKey}`;
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    if (!isServiceCall) {
+      if (!adminToken) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data: session } = await supabase
+        .from('session_tokens')
+        .select('user_type, expires_at, is_revoked')
+        .eq('token', adminToken)
+        .maybeSingle();
+      const valid = session && !session.is_revoked && new Date(session.expires_at) > new Date() && session.user_type === 'admin';
+      if (!valid) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     let body: { studentId?: string; sendWhatsApp?: boolean; previewOnly?: boolean; language?: ReportLanguage } = {};
     try {

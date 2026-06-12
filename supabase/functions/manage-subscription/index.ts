@@ -71,6 +71,27 @@ function getISTDateString(): string {
   return istDate.toISOString().split('T')[0];
 }
 
+// Auto-downgrade expired Pro subscriptions to Basic so all limits/quotas
+// fall back to the Basic plan immediately on read.
+async function autoDowngradeIfExpired(admin: any, sub: any): Promise<any> {
+  if (!sub) return sub;
+  const isExpired = sub.plan === 'pro' && sub.end_date && new Date(sub.end_date) < new Date();
+  if (!isExpired) return sub;
+  const { data: updated } = await admin
+    .from('subscriptions')
+    .update({
+      plan: 'basic',
+      end_date: null,
+      is_active: true,
+      tts_used: 0,
+      tts_limit: 0,
+    })
+    .eq('id', sub.id)
+    .select('*')
+    .maybeSingle();
+  return updated || { ...sub, plan: 'basic', end_date: null, is_active: true, tts_used: 0, tts_limit: 0 };
+}
+
 // Verify student belongs to institution
 async function verifyStudentInstitution(
   supabase: any, studentId: string, institutionId: string, institutionType: 'school' | 'coaching'
@@ -96,6 +117,56 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
     const admin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // SECURITY: for student-facing actions, validate the JWT and derive
+    // the trusted studentId from the verified claims — never trust body.
+    const STUDENT_ACTIONS = new Set<SubscriptionAction>([
+      "get_subscription", "get_daily_usage", "check_daily_usage",
+      "request_upgrade", "increment_tts",
+    ]);
+    let trustedStudentId: string | null = null;
+    if (STUDENT_ACTIONS.has(body.action)) {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const jwt = authHeader.replace("Bearer ", "");
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+      const anonClient = createClient(supabaseUrl, anonKey);
+      const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(jwt);
+      if (claimsError || !claimsData?.claims?.sub) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data: studentRow } = await admin
+        .from('students').select('id').eq('user_id', claimsData.claims.sub).maybeSingle();
+      if (!studentRow?.id) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Student not found" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      trustedStudentId = studentRow.id;
+      // Overwrite any body-supplied studentId with the trusted one.
+      body.studentId = trustedStudentId;
+    }
+
+    // check_expiry is a maintenance op — require service-role auth.
+    if (body.action === "check_expiry") {
+      const authHeader = req.headers.get("Authorization") || "";
+      const isService = authHeader === `Bearer ${supabaseServiceKey}`;
+      if (!isService) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     switch (body.action) {
       // =============== STUDENT ACTIONS ===============
@@ -124,10 +195,17 @@ const handler = async (req: Request): Promise<Response> => {
           .eq('id', body.studentId).maybeSingle();
 
         const { data: sub } = await admin
-          .from('subscriptions').select('plan')
+          .from('subscriptions').select('plan, end_date, is_active')
           .eq('student_id', body.studentId).maybeSingle();
 
-        if (sub?.plan === 'pro') {
+        // Check if Pro has expired (end_date in past or inactive)
+        const proExpired = sub?.plan === 'pro' && (
+          (sub.end_date && new Date(sub.end_date) < new Date()) ||
+          sub.is_active === false
+        );
+
+        // Block only if active Pro that hasn't expired
+        if (sub?.plan === 'pro' && !proExpired) {
           return new Response(
             JSON.stringify({ success: false, error: "You already have a Pro plan" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -188,9 +266,10 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        const { data: subscription } = await admin
+        let { data: subscription } = await admin
           .from('subscriptions').select('*')
           .eq('student_id', body.studentId).maybeSingle();
+        subscription = await autoDowngradeIfExpired(admin, subscription);
 
         const { data: pendingRequest } = await admin
           .from('upgrade_requests').select('*')
@@ -237,9 +316,10 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        const { data: sub } = await admin
-          .from('subscriptions').select('plan')
+        let { data: sub } = await admin
+          .from('subscriptions').select('*')
           .eq('student_id', body.studentId).maybeSingle();
+        sub = await autoDowngradeIfExpired(admin, sub);
 
         const plan = sub?.plan || 'basic';
         const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
@@ -270,9 +350,10 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        const { data: sub } = await admin
-          .from('subscriptions').select('plan')
+        let { data: sub } = await admin
+          .from('subscriptions').select('*')
           .eq('student_id', body.studentId).maybeSingle();
+        sub = await autoDowngradeIfExpired(admin, sub);
 
         const plan = sub?.plan || 'basic';
         const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
