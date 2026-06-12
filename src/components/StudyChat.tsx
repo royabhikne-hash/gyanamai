@@ -144,6 +144,11 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // Synchronous lock to prevent double-fire from Enter + click race.
+  // setIsLoading is async (React batches state), so two rapid submits can both
+  // pass `if (isLoading) return` before either re-render commits. The ref
+  // is updated synchronously and reliably blocks the duplicate.
+  const sendingRef = useRef(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [startTime] = useState(new Date());
   const [currentTopic, setCurrentTopic] = useState("");
@@ -374,16 +379,9 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         speed: isQuizQuestion ? Math.max(voiceSpeed - 0.1, 0.7) : voiceSpeed,
         language: 'hi-IN',
       });
-
-      // Check if there was an error after speak completed (no silent failure)
-      if (ttsError) {
-        toast({
-          title: "Voice Error",
-          description: ttsError,
-          variant: "destructive",
-          duration: 3000
-        });
-      }
+      // Note: do NOT check `ttsError` here — it's a stale closure value from a
+      // previous call and was causing a false "Voice Error" toast after every
+      // successful playback. Real failures are surfaced via the catch below.
     } catch (error) {
       console.error("TTS error:", error);
       toast({
@@ -395,7 +393,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     } finally {
       setSpeakingMessageId(null);
     }
-  }, [ttsSupported, speakingMessageId, voiceSpeed, speechifySpeak, stopTTS, toast, ttsError]);
+  }, [ttsSupported, speakingMessageId, voiceSpeed, speechifySpeak, stopTTS, toast]);
 
   // Quiz TTS removed - no voice in quiz mode
 
@@ -533,7 +531,18 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   };
 
   const handleSendMessage = async () => {
-    if ((!inputValue.trim() && !selectedImage) || isLoading) return;
+    // Synchronous double-fire guard. Stops "two AI responses at once" bug
+    // when the user taps Send right after pressing Enter.
+    if ((!inputValue.trim() && !selectedImage) || isLoading || sendingRef.current) return;
+    sendingRef.current = true;
+    try {
+      await sendMessageInner();
+    } finally {
+      sendingRef.current = false;
+    }
+  };
+
+  const sendMessageInner = async () => {
 
     // Check daily usage limits BEFORE sending
     if (studentId) {
@@ -1543,7 +1552,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                 {analyzingAnswer && (
                   <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <span>AI tumhara answer analyze kar raha hai...</span>
+                    <span>AI aapka answer analyze kar raha hai...</span>
                   </div>
                 )}
 

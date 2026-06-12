@@ -35,15 +35,28 @@ const StudyBlasterProjectList = ({ projects, studentId, onSelectProject, onRefre
 
   const handleCreate = async () => {
     if (!title.trim()) return;
+    if (!studentId) {
+      toast({
+        title: "Account not ready",
+        description: "We could not detect your student profile. Please refresh and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
     setCreating(true);
     try {
-      const { error } = await supabase.from("study_projects").insert({
-        student_id: studentId,
-        title: title.trim(),
-        description: description.trim() || null,
-        target_date: targetDate || null,
-      });
+      const { data, error } = await supabase
+        .from("study_projects")
+        .insert({
+          student_id: studentId,
+          title: title.trim(),
+          description: description.trim() || null,
+          target_date: targetDate || null,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      if (!data?.id) throw new Error("Project could not be created. Please try again.");
       toast({ title: "Project created!", description: "Start adding your study sources." });
       setTitle("");
       setDescription("");
@@ -51,7 +64,16 @@ const StudyBlasterProjectList = ({ projects, studentId, onSelectProject, onRefre
       setIsOpen(false);
       onRefresh();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      console.error("Study Blaster create error:", err);
+      const msg =
+        err?.message ||
+        err?.error_description ||
+        (typeof err === "string" ? err : "Could not create project. Please try again.");
+      toast({
+        title: "Could not create project",
+        description: msg,
+        variant: "destructive",
+      });
     } finally {
       setCreating(false);
     }
