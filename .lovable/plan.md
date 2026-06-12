@@ -19,16 +19,16 @@ These are small, high‑impact, low‑risk changes.
 9. **Updated Terms & Conditions checkbox** on first signup (already partially exists — enforce it).
 10. **Skeleton screens** — wire existing `DashboardSkeleton` into `StudentDashboard`, add lightweight skeletons to Study Blaster project list and Exam Prep dashboard.
 
-## Stage 2 — AI Quality Upgrade
+## Stage 2 — AI Quality Upgrade ✅ SHIPPED
 
-11. Rewrite system prompts in `study-chat`, `exam-prep`, `study-blaster` edge functions: simple student‑friendly tone, clarifying questions when query is incomplete, step‑by‑step for hard topics, NCERT/exam‑oriented, respectful Hindi.
-12. Real progress tracking: new score formula = 25% study time + 25% topic completion + 25% MCQ score + 25% week‑over‑week consistency. Update `StudentProgress.tsx` + `update-topic-mastery` function.
+11. ✅ Rewrote system prompts in `study-chat`, `exam-prep`, `study-blaster`: respectful Hindi (aap/aapka, never tu/tera), clarifying questions for vague queries, step-by-step for hard topics, NCERT/board-aligned.
+12. ✅ New WPS formula in `StudentProgress.tsx`: 25% study time (target 7h/wk) + 25% topic completion (3 chapters/wk) + 25% MCQ accuracy + 25% consistency (unique days/7). Now fetches `mcq_attempts` and `chapter_progress` in parallel.
 
-## Stage 3 — New Features (larger)
+## Stage 3 — New Features ✅ SHIPPED
 
-13. **YouTube source in Study Blaster** — accept a YouTube URL in `StudyBlasterSourceManager`, transcript fetch via edge function, feed transcript into existing Gemini multimodal flow for notes/MCQ/Q&A.
-14. **Exam AI Prep new algorithm** — full syllabus upload → AI extracts subjects/chapters/topics → asks class/board/exam/date → references past‑year patterns → produces prioritized study plan. Major rewrite of `exam-prep` function.
-15. **Podcast voice upgrade** — switch `StudyBlasterPodcast` to Speechify's expressive Indian voices with SSML for prosody/pauses, more human pacing.
+13. ✅ **YouTube source** — new YouTube tab in Source Manager. `process_url` edge action detects YT URLs, scrapes `captionTracks` from watch page HTML, fetches XML transcript, stores as `extracted_content`.
+14. ✅ **Exam Prep new algorithm** — two new actions: `analyze_full_syllabus` (extracts subjects→chapters→topics with importance/`pastYearFreq`/`expectedMarks` based on board pattern) and `generate_priority_plan` (day-by-day plan: front-loads must-do topics, reserves last 20% for revision/mock). Stored in `exam_prep_sessions.syllabus_structure` + `priority_plan`. UI buttons surface results.
+15. ✅ **Podcast voice upgrade** — `StudyBlasterPodcast` now calls `text-to-speech` (Speechify Henry/Natasha Indian voices) per turn with prosody pacing. Auto-falls-back to browser TTS on Basic plan. Toggle in player UI.
 
 ---
 

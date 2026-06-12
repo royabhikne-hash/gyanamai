@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Upload, Calendar, Target, BarChart3, BookOpen, Brain,
-  GraduationCap, ClipboardList, Plus, ArrowLeft, Share2, Loader2
+  GraduationCap, ClipboardList, Plus, ArrowLeft, Share2, Loader2, Sparkles, ListChecks
 } from 'lucide-react';
 import { ExamPrepAccess, ExamPrepSession } from '@/hooks/useExamPrep';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +29,9 @@ const ExamPrepDashboard: React.FC<Props> = ({
   const { toast } = useToast();
   const [uploading, setUploading] = useState<string | null>(null);
   const [extracting, setExtracting] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState<string | null>(null);
+  const [planning, setPlanning] = useState<string | null>(null);
+  const [planResult, setPlanResult] = useState<{ sessionId: string; plan: any } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadSessionId, setUploadSessionId] = useState<string | null>(null);
 
@@ -70,6 +73,50 @@ const ExamPrepDashboard: React.FC<Props> = ({
       e.target.value = '';
       setUploading(null);
       setExtracting(null);
+    }
+  };
+
+  const callExamPrep = async (action: string, sessionId: string) => {
+    const { data: session } = await supabase.auth.getSession();
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/exam-prep`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session?.access_token}`,
+        },
+        body: JSON.stringify({ action, sessionId }),
+      }
+    );
+    return res.json();
+  };
+
+  const handleAnalyzeSyllabus = async (sessionId: string) => {
+    try {
+      setAnalyzing(sessionId);
+      const result = await callExamPrep("analyze_full_syllabus", sessionId);
+      if (result.error) throw new Error(result.error);
+      toast({ title: "Syllabus analyzed ✨", description: `${result.structure?.subjects?.length || 0} subjects mapped by ${"board"} pattern.` });
+      onRefresh?.();
+    } catch (err: any) {
+      toast({ title: "Analysis failed", description: err.message, variant: "destructive" });
+    } finally {
+      setAnalyzing(null);
+    }
+  };
+
+  const handleGeneratePlan = async (sessionId: string) => {
+    try {
+      setPlanning(sessionId);
+      const result = await callExamPrep("generate_priority_plan", sessionId);
+      if (result.error) throw new Error(result.error);
+      setPlanResult({ sessionId, plan: result.plan });
+      toast({ title: "Plan ready! 🎯", description: `${result.plan?.days?.length || 0}-day prioritized plan generated.` });
+    } catch (err: any) {
+      toast({ title: "Plan failed", description: err.message, variant: "destructive" });
+    } finally {
+      setPlanning(null);
     }
   };
 
@@ -216,6 +263,57 @@ const ExamPrepDashboard: React.FC<Props> = ({
                 >
                   <Brain className="h-4 w-4 mr-2" /> Open AI Tutor
                 </Button>
+
+                {/* New priority-plan algorithm */}
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    disabled={analyzing === session.id || getMaterialCount(session) === 0}
+                    onClick={() => handleAnalyzeSyllabus(session.id)}
+                  >
+                    {analyzing === session.id
+                      ? <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Mapping...</>
+                      : <><Sparkles className="h-3 w-3 mr-1" /> Analyze Syllabus</>}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    disabled={planning === session.id}
+                    onClick={() => handleGeneratePlan(session.id)}
+                  >
+                    {planning === session.id
+                      ? <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Planning...</>
+                      : <><ListChecks className="h-3 w-3 mr-1" /> Priority Plan</>}
+                  </Button>
+                </div>
+
+                {planResult?.sessionId === session.id && planResult.plan && (
+                  <div className="mt-3 p-3 rounded-xl bg-muted/40 border border-border/60 space-y-2 max-h-72 overflow-y-auto">
+                    <p className="text-xs font-semibold text-foreground">
+                      {planResult.plan.totalDays}-day plan • {planResult.plan.phases?.length || 0} phases
+                    </p>
+                    {(planResult.plan.days || []).slice(0, 14).map((d: any) => (
+                      <div key={d.day} className="text-[11px] border-l-2 border-primary/40 pl-2">
+                        <p className="font-medium text-foreground">
+                          Day {d.day} • {d.date} • <span className={
+                            d.priority === "critical" ? "text-destructive"
+                            : d.priority === "high" ? "text-primary" : "text-muted-foreground"
+                          }>{d.priority}</span>
+                        </p>
+                        <p className="text-muted-foreground">
+                          {d.subject} › {d.chapter} • {d.estimatedMinutes} min • {d.mcqCount} MCQs
+                        </p>
+                        <p className="text-muted-foreground">{d.task}</p>
+                      </div>
+                    ))}
+                    {(planResult.plan.days?.length || 0) > 14 && (
+                      <p className="text-[10px] text-muted-foreground">+ {planResult.plan.days.length - 14} more days…</p>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))

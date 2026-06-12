@@ -234,20 +234,25 @@ ${combinedContent.substring(0, 80000)}`;
         ? `Student's target date: ${project.target_date}. Guide them accordingly.`
         : "";
 
-      const systemPrompt = `You are Study Blaster AI - a strict, source-grounded study tutor.
+      const systemPrompt = `You are Study Blaster AI — a warm, strict, source-grounded NCERT-aligned tutor for Indian students.
 
-CRITICAL GROUNDING RULES (highest priority):
-- ANSWER ONLY using the SOURCE MATERIALS below. Do NOT use outside knowledge.
-- NEVER describe the document itself (book name, author, publisher, page count, "this PDF says…", "this book is by…"). Teach the SUBJECT MATTER directly.
-- If the question is NOT covered in the sources, reply briefly: "This is not in your uploaded sources. I can only teach from your study material." Then suggest a related topic that IS in the sources.
-- When teaching a concept FROM the sources, you MAY add ONE simple real-world example or analogy to aid understanding — but core facts/definitions must come from the sources.
-- Never invent facts, dates, names or numbers not present in the sources.
+GROUNDING RULES (HIGHEST PRIORITY):
+- Answer ONLY using the SOURCE MATERIALS below. No outside knowledge, no invented facts/dates/names.
+- NEVER describe the document itself (book name, author, publisher, page count, "this PDF says…"). Teach the SUBJECT MATTER directly.
+- If the question is NOT in the sources, reply briefly: "Yeh aapke uploaded sources mein nahi hai. Main sirf aapke material se padha sakta hoon." Then suggest a related topic that IS in the sources.
+- You MAY add ONE simple Indian-life example to aid understanding, but core facts must come from the sources.
 
-Style:
-- Plain text. No markdown symbols like **, ##, *.
-- Reference the source briefly (e.g., "from Source: Chapter 3") when stating key facts.
-- Concise, simple, student-friendly language.
-- If asked, generate practice questions ONLY from the source content.
+TEACHING STYLE:
+- Respectful Hindi/Hinglish always — use "aap/aapka", NEVER "tu/tera". English → English reply.
+- If the question is vague or incomplete, ASK ONE short clarifying question first instead of guessing.
+- For hard topics, break into numbered steps (1, 2, 3…), one small idea per step, end with "Samajh aaya?".
+- Reference the source briefly when stating key facts (e.g., "from Source: Chapter 3").
+- After explaining, end with ONE check-understanding question grounded in the sources.
+- If asked, generate practice questions ONLY from the source content, exam-pattern style.
+
+FORMATTING:
+- Plain text only. NO markdown symbols (**, ##, *, backticks). Use 1. 2. 3. or dashes for lists.
+- Concise, simple, student-friendly. Max 2 emojis.
 
 ${targetInfo}
 
@@ -304,6 +309,53 @@ ${combinedContent.substring(0, 60000)}`;
       });
 
     } else if (action === "process_url") {
+      // YouTube special-case: fetch transcript and use as content
+      const ytIdMatch = String(content || "").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
+      if (ytIdMatch) {
+        const videoId = ytIdMatch[1];
+        try {
+          const watchHtml = await fetch(`https://www.youtube.com/watch?v=${videoId}&hl=en`, {
+            headers: { "User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9" },
+          }).then(r => r.text());
+          const tracksMatch = watchHtml.match(/"captionTracks":(\[.*?\])/);
+          let transcriptText = "";
+          let videoTitle = "";
+          const titleMatch = watchHtml.match(/<title>([^<]+)<\/title>/);
+          if (titleMatch) videoTitle = titleMatch[1].replace(/ - YouTube$/, "").trim();
+          if (tracksMatch) {
+            const tracks = JSON.parse(tracksMatch[1].replace(/\\u0026/g, "&"));
+            const track = tracks.find((t: any) => t.languageCode === "en") || tracks.find((t: any) => t.languageCode === "hi") || tracks[0];
+            if (track?.baseUrl) {
+              const xml = await fetch(track.baseUrl).then(r => r.text());
+              transcriptText = xml
+                .replace(/<text[^>]*>/g, "\n")
+                .replace(/<\/text>/g, " ")
+                .replace(/<[^>]+>/g, "")
+                .replace(/&amp;/g, "&").replace(/&#39;/g, "'")
+                .replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+                .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n)))
+                .replace(/\s+/g, " ").trim();
+            }
+          }
+          if (!transcriptText) {
+            return new Response(JSON.stringify({ error: "No captions available for this YouTube video. Try a video that has subtitles enabled." }), {
+              status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+          }
+          return new Response(JSON.stringify({
+            success: true,
+            extractedContent: `[YouTube Video: ${videoTitle || videoId}]\n\n${transcriptText.substring(0, 80000)}`,
+            title: videoTitle || `YouTube ${videoId}`,
+            isYouTube: true,
+          }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        } catch (e) {
+          console.error("YouTube transcript error:", e);
+          return new Response(JSON.stringify({ error: "Could not fetch YouTube transcript." }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+      }
+
       // Extract content from URL - content already parsed from initial req.json()
       const extractPrompt = `Extract and summarize the main educational content from this URL: ${content}. Return the key text content suitable for study purposes. If you cannot access the URL, explain why.`;
 
