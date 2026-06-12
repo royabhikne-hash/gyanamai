@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import RichMarkdown from "@/components/chat/RichMarkdown";
 import SoundWave from "@/components/SoundWave";
 import VoiceInputIndicator from "@/components/VoiceInputIndicator";
 import Confetti from "@/components/Confetti";
@@ -1353,9 +1354,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                     ) : isUser ? (
                       <span className="whitespace-pre-wrap">{message.content}</span>
                     ) : (
-                      <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&_pre]:rounded-xl [&_pre]:bg-secondary [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-xs">
-                        <ReactMarkdown>{message.content}</ReactMarkdown>
-                      </div>
+                      <RichMarkdown>{message.content}</RichMarkdown>
                     )}
                   </div>
                   
