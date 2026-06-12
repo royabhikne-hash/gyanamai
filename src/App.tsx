@@ -3,13 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
 import GlobalErrorHandlers from "@/components/GlobalErrorHandlers";
-import CookieConsent from "@/components/CookieConsent";
 import { Loader2 } from "lucide-react";
 
 // Lazy load all pages
@@ -57,14 +56,13 @@ const App = () => (
               <BrowserRouter>
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
-                    <Route path="/" element={<Login />} />
+                    <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
-                    <Route path="/home" element={<Landing />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/schools" element={<SchoolsDirectory />} />
-                    <Route path="/school-login" element={<Navigate to="/login" replace />} />
-                    <Route path="/admin-login" element={<Navigate to="/login" replace />} />
-                    <Route path="/coaching-login" element={<Navigate to="/login" replace />} />
+                    <Route path="/school-login" element={<SchoolLogin />} />
+                    <Route path="/admin-login" element={<AdminLogin />} />
+                    <Route path="/coaching-login" element={<CoachingLogin />} />
                     <Route path="/dashboard" element={<StudentDashboard />} />
                     <Route path="/progress" element={<StudentProgress />} />
                     <Route path="/profile" element={<StudentProfile />} />
@@ -82,7 +80,6 @@ const App = () => (
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
-                <CookieConsent />
               </BrowserRouter>
             </AppErrorBoundary>
           </TooltipProvider>

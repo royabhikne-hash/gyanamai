@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
-import RichMarkdown from "@/components/chat/RichMarkdown";
 import SoundWave from "@/components/SoundWave";
 import VoiceInputIndicator from "@/components/VoiceInputIndicator";
 import Confetti from "@/components/Confetti";
@@ -145,11 +144,6 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  // Synchronous lock to prevent double-fire from Enter + click race.
-  // setIsLoading is async (React batches state), so two rapid submits can both
-  // pass `if (isLoading) return` before either re-render commits. The ref
-  // is updated synchronously and reliably blocks the duplicate.
-  const sendingRef = useRef(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [startTime] = useState(new Date());
   const [currentTopic, setCurrentTopic] = useState("");
@@ -380,9 +374,16 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         speed: isQuizQuestion ? Math.max(voiceSpeed - 0.1, 0.7) : voiceSpeed,
         language: 'hi-IN',
       });
-      // Note: do NOT check `ttsError` here — it's a stale closure value from a
-      // previous call and was causing a false "Voice Error" toast after every
-      // successful playback. Real failures are surfaced via the catch below.
+
+      // Check if there was an error after speak completed (no silent failure)
+      if (ttsError) {
+        toast({
+          title: "Voice Error",
+          description: ttsError,
+          variant: "destructive",
+          duration: 3000
+        });
+      }
     } catch (error) {
       console.error("TTS error:", error);
       toast({
@@ -394,7 +395,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     } finally {
       setSpeakingMessageId(null);
     }
-  }, [ttsSupported, speakingMessageId, voiceSpeed, speechifySpeak, stopTTS, toast]);
+  }, [ttsSupported, speakingMessageId, voiceSpeed, speechifySpeak, stopTTS, toast, ttsError]);
 
   // Quiz TTS removed - no voice in quiz mode
 
@@ -532,18 +533,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   };
 
   const handleSendMessage = async () => {
-    // Synchronous double-fire guard. Stops "two AI responses at once" bug
-    // when the user taps Send right after pressing Enter.
-    if ((!inputValue.trim() && !selectedImage) || isLoading || sendingRef.current) return;
-    sendingRef.current = true;
-    try {
-      await sendMessageInner();
-    } finally {
-      sendingRef.current = false;
-    }
-  };
-
-  const sendMessageInner = async () => {
+    if ((!inputValue.trim() && !selectedImage) || isLoading) return;
 
     // Check daily usage limits BEFORE sending
     if (studentId) {
@@ -1096,21 +1086,21 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   const currentQuestion = quizQuestions[currentQuestionIndex];
 
   return (
-    <div className="flex flex-col h-full w-full bg-background">
+    <div className="flex flex-col h-full w-full bg-gradient-to-b from-background to-muted/20">
       {/* Confetti Celebration */}
       <Confetti trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
-      {/* Professional Clay Header */}
-      <div className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 border-b border-border/40 bg-card/80 backdrop-blur-xl sticky top-0 z-10">
+      {/* Enhanced ChatGPT-style Header - Mobile Optimized */}
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border/50 bg-card/95 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center" style={{ boxShadow: 'var(--clay-shadow)' }}>
-            <Sparkles className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" strokeWidth={2.2} />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground text-sm sm:text-[15px] tracking-tight leading-none">Gyanam AI</h3>
-            <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1 font-medium">
+            <h3 className="font-bold text-foreground text-sm sm:text-base">Gyanam AI</h3>
+            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
               {isQuizMode ? (
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
                   Q {currentQuestionIndex + 1}/{quizQuestions.length}
                 </span>
               ) : currentSubject ? (
@@ -1126,8 +1116,8 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                 </span>
               ) : (
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  {completedSubjects.length > 0 ? `${completedSubjects.length} subject${completedSubjects.length>1?'s':''} studied` : "Online"}
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+                  {completedSubjects.length > 0 ? `${completedSubjects.length} subject(s) studied` : "Ready!"}
                 </span>
               )}
             </p>
@@ -1302,65 +1292,56 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
           return (
             <div
               key={message.id}
-              className="py-4 sm:py-6 px-3 sm:px-6"
+              className={`py-3 sm:py-5 px-3 sm:px-4 ${isUser ? "bg-background" : "bg-muted/20"} transition-colors`}
             >
-              <div className={`max-w-3xl mx-auto flex gap-2.5 sm:gap-4 ${isUser ? 'flex-row-reverse' : ''}`}>
-                {/* Avatar */}
-                <div
-                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex-shrink-0 flex items-center justify-center ring-1 ${
-                    isUser
-                      ? 'bg-secondary text-secondary-foreground ring-border/60'
-                      : 'bg-primary/10 text-primary ring-primary/15'
-                  }`}
-                  style={{ boxShadow: 'var(--clay-shadow)' }}
-                >
-                  {isUser ? <User className="w-4 h-4" strokeWidth={2.2} /> : <Sparkles className="w-4 h-4" strokeWidth={2.2} />}
+              <div className="max-w-3xl mx-auto flex gap-2 sm:gap-4">
+                {/* Avatar - Smaller on mobile */}
+                <div className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg flex-shrink-0 flex items-center justify-center shadow-sm ${
+                  isUser 
+                    ? "bg-accent/10 ring-1 ring-accent/20" 
+                    : "bg-primary/10 ring-1 ring-primary/20"
+                }`}>
+                  {isUser ? <User className="w-3 h-3 sm:w-4 sm:h-4 text-accent" /> : <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />}
                 </div>
-
+                
                 {/* Content */}
-                <div className={`flex-1 min-w-0 flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                  <div className={`flex items-center gap-2 mb-1.5 ${isUser ? 'flex-row-reverse' : ''}`}>
-                    <span className="font-semibold text-[12px] sm:text-[13px] text-foreground/90 tracking-tight">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                    <span className="font-semibold text-xs sm:text-sm">
                       {isUser ? "You" : "Gyanam AI"}
                     </span>
-                    <span className="text-[10px] sm:text-[11px] text-muted-foreground/70 font-medium">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">
                       {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
-
+                  
                   {message.imageUrl && (
                     <img
                       src={message.imageUrl}
                       alt="Uploaded"
-                      className="max-w-[200px] sm:max-w-[260px] rounded-2xl mb-2 border border-border/50"
-                      style={{ boxShadow: 'var(--clay-shadow)' }}
+                      className="max-w-[150px] sm:max-w-[200px] rounded-xl mb-2 sm:mb-3 shadow-sm border border-border/50"
                     />
                   )}
-
-                  <div
-                    className={`text-foreground leading-relaxed text-[14px] sm:text-[15px] max-w-full break-words ${
-                      isUser
-                        ? 'rounded-3xl rounded-tr-md px-4 py-2.5 bg-primary text-primary-foreground'
-                        : 'rounded-3xl rounded-tl-md px-4 py-3 bg-card border border-border/50'
-                    }`}
-                    style={!isUser ? { boxShadow: 'var(--clay-shadow)' } : undefined}
-                  >
+                  
+                  <div className="text-foreground leading-relaxed text-[13px] sm:text-[15px]">
                     {!isUser && message.isTyping && typingMessageId === message.id ? (
-                      <TypingText
-                        text={message.content}
+                      <TypingText 
+                        text={message.content} 
                         speed={12}
                         onComplete={() => handleTypingComplete(message.id, message.content)}
                       />
                     ) : isUser ? (
                       <span className="whitespace-pre-wrap">{message.content}</span>
                     ) : (
-                      <RichMarkdown>{message.content}</RichMarkdown>
+                      <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&>pre]:rounded-xl [&>pre]:bg-secondary [&>code]:bg-secondary [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded-md [&>code]:text-xs">
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                      </div>
                     )}
                   </div>
                   
                   {/* AI message actions - Compact on mobile */}
                   {!isUser && (
-                    <div className="flex items-center gap-0.5 sm:gap-1 mt-2">
+                    <div className="flex items-center gap-0.5 sm:gap-1 mt-2 sm:mt-3">
                       <button
                         onClick={() => speakText(message.content, message.id)}
                         className="p-1 sm:p-1.5 rounded hover:bg-muted transition-colors flex items-center gap-0.5 sm:gap-1"
@@ -1551,7 +1532,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                 {analyzingAnswer && (
                   <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <span>AI aapka answer analyze kar raha hai...</span>
+                    <span>AI tumhara answer analyze kar raha hai...</span>
                   </div>
                 )}
 
@@ -1604,23 +1585,17 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
           </div>
         )}
         
-        {/* Loading indicator - Professional clay */}
+        {/* Loading indicator - ChatGPT style */}
         {isLoading && (
-          <div className="py-4 sm:py-6 px-3 sm:px-6">
-            <div className="max-w-3xl mx-auto flex gap-2.5 sm:gap-4">
-              <div
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex-shrink-0 flex items-center justify-center bg-primary/10 ring-1 ring-primary/15 text-primary"
-                style={{ boxShadow: 'var(--clay-shadow)' }}
-              >
-                <Sparkles className="w-4 h-4" strokeWidth={2.2} />
+          <div className="py-5 bg-muted/20">
+            <div className="max-w-2xl mx-auto px-4 flex gap-3">
+              <div className="w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center bg-primary/10 ring-1 ring-primary/20">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
               </div>
-              <div
-                className="rounded-3xl rounded-tl-md px-4 py-3.5 bg-card border border-border/50 flex items-center gap-1.5"
-                style={{ boxShadow: 'var(--clay-shadow)' }}
-              >
-                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="flex items-center gap-1.5 pt-1">
+                <div className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{animationDelay: "0ms"}}></div>
+                <div className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{animationDelay: "150ms"}}></div>
+                <div className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{animationDelay: "300ms"}}></div>
               </div>
             </div>
           </div>
@@ -1646,14 +1621,11 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         </div>
       )}
 
-      {/* Professional Clay Input */}
+      {/* ChatGPT-style Input - Mobile Optimized */}
       {!isQuizMode && (
-        <div className="bg-background/80 backdrop-blur-xl p-2.5 sm:p-4 pb-safe">
-          <div className="max-w-3xl mx-auto">
-            <div
-              className="relative flex items-end gap-1.5 sm:gap-2 rounded-3xl border border-border/50 bg-card px-2 sm:px-3 py-2 sm:py-2.5 focus-within:border-primary/40 transition-all duration-200"
-              style={{ boxShadow: 'var(--clay-shadow)' }}
-            >
+        <div className="border-t border-border/40 bg-background p-2 sm:p-3 pb-safe">
+          <div className="max-w-2xl mx-auto">
+            <div className="relative flex items-center gap-1.5 sm:gap-2 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all duration-200">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1665,9 +1637,9 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                 variant="ghost"
                 size="icon"
                 onClick={() => fileInputRef.current?.click()}
-                className="shrink-0 h-9 w-9 rounded-2xl text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted"
               >
-                <Image className="w-[18px] h-[18px]" strokeWidth={2} />
+                <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </Button>
               
               {/* Voice Input Button */}
@@ -1676,13 +1648,13 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                   variant="ghost"
                   size="icon"
                   onClick={toggleListening}
-                  className={`shrink-0 h-9 w-9 rounded-2xl transition-colors ${
+                  className={`shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-xl transition-colors ${
                     isListening 
                       ? "bg-destructive/10 text-destructive hover:bg-destructive/20" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}
                 >
-                  {isListening ? <MicOff className="w-[18px] h-[18px]" strokeWidth={2} /> : <Mic className="w-[18px] h-[18px]" strokeWidth={2} />}
+                  {isListening ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                 </Button>
               )}
               
@@ -1691,24 +1663,19 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 h-9 text-[14px] sm:text-[15px] placeholder:text-muted-foreground/60"
+                className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-0 h-7 sm:h-8 text-xs sm:text-sm"
                 disabled={isLoading || isListening}
               />
               <Button
                 size="icon"
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim() && !selectedImage}
-                className={`shrink-0 h-9 w-9 rounded-2xl transition-all ${
-                  inputValue.trim() || selectedImage ? '' : 'opacity-40'
-                }`}
-                style={(inputValue.trim() || selectedImage) ? { boxShadow: 'var(--clay-shadow)' } : undefined}
+                className="shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-xl"
+                variant={inputValue.trim() ? "default" : "ghost"}
               >
-                {isLoading ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <Send className="w-[18px] h-[18px]" strokeWidth={2.2} />}
+                {isLoading ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               </Button>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-muted-foreground/60 text-center mt-2 font-medium">
-              Gyanam AI can make mistakes. Verify important info.
-            </p>
             {isListening && (
               <div className="flex flex-col items-center gap-1.5 sm:gap-2 mt-2 sm:mt-3">
                 <VoiceInputIndicator isActive={isListening} />

@@ -70,7 +70,7 @@ const Landing = () => {
               {language === 'en' ? (
                 <>Your Personal<br /><span className="text-gradient-shimmer">Gyanam AI</span><br />is Here</>
               ) : (
-                <>Aapka Personal<br /><span className="text-gradient-shimmer">Gyanam AI</span><br />Aa Gaya Hai</>
+                <>Tera Personal<br /><span className="text-gradient-shimmer">Gyanam AI</span><br />Aa Gaya</>
               )}
             </h1>
 

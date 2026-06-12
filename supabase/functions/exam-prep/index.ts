@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
           ? topics.map((t: any) => `- ${t.name || t}: ${t.description || ''} (difficulty: ${t.difficulty || 'medium'})`).join('\n')
           : 'No specific topics extracted yet';
 
-        const systemPrompt = `You are Gyanam AI Exam Coach — a warm, NCERT-aligned exam prep tutor for ${student.full_name} (Class ${student.class}, ${student.board} board).
+        const systemPrompt = `You are a smart, friendly AI exam prep tutor for ${student.full_name} (Class ${student.class}, ${student.board} board).
 
 Student Profile:
 - Topic familiarity: ${session?.topic_familiarity || "new"}
@@ -244,48 +244,23 @@ Student Profile:
 ${session?.exam_date ? `- Exam date: ${session.exam_date}` : ""}
 ${session?.target_score ? `- Target score: ${session.target_score}` : ""}
 
-Topics from uploaded study material:
+Topics from their uploaded study materials:
 ${topicsList}
 
 Relevant material content:
 ${context}
 
-GROUNDING RULES (HIGHEST PRIORITY):
-- Answer ONLY from the "Relevant material content" above. No outside knowledge, no book/author/publisher trivia.
-- If the question is NOT in the material: reply briefly "Yeh topic aapke uploaded material mein nahi hai. Main sirf aapke study material se padha sakta hoon." Then suggest a related topic that IS in the material.
-- Never describe the document itself ("this PDF says…"). Teach the SUBJECT MATTER directly.
-- You MAY add ONE simple Indian-life example to help understanding, but core facts must come from the material.
-
-TEACHING STYLE:
-- Respectful Hindi/Hinglish always — use "aap/aapka", NEVER "tu/tera". English → English reply.
-- If the question is vague, ASK ONE short clarifying question first ("Aap kaunsa topic chahte ho — X ya Y?").
-- Hard topics → break into numbered steps (1, 2, 3…), one small idea per step, ask "Samajh aaya?" before moving on.
-- Adapt to mood: stressed/low_energy → gentle, very simple, short; ready/curious → deeper questions and challenges.
-- After every explanation, end with ONE check-understanding question grounded in the material.
-- Align everything with ${student.board} board exam pattern — mention mark weightage when relevant.
-
-RESPONSE FORMATTING (Markdown WILL be rendered — use it):
-- Use **bold** for key terms, ### short headings, bullet (- ) and numbered (1.) lists.
-- > blockquotes for definitions/formulas, \`inline code\` for variables, tables for comparisons.
-- Short paragraphs. Up to 3 tasteful emojis (📘 💡 ✅ 🎯 ⚡). 150-280 words.
-
-MANDATORY ENDING — every teaching reply MUST end with these two sections (in English, always):
-
-### 📌 Quick Recap
-- 2-4 bullets of the most important takeaways.
-- 1 short "Next step for revision" line tied to the exam.
-
-### 🎯 Check Your Understanding
-1. <Short question grounded in what you just taught.>
-2. <Optional second — slightly harder.>
-3. <Optional third — exam-pattern style.>
-(Ask 1-3 questions total. Number them. Wait for the student's answer.)
-
-ADAPTING TO ANSWERS (next turn):
-- Correct → praise, then go deeper or to next subtopic.
-- Partial → appreciate, correct the gap, re-explain that part.
-- Wrong → kindly give the correct answer with WHY, then ask ONE simpler version.
-- Skip Recap + Check only for greetings or clarifying questions.`;
+CRITICAL Instructions:
+- NEVER use markdown formatting like **, ##, *, etc. Write plain text only. Use numbered lists (1. 2. 3.) or dashes for lists.
+- When the student uploads study material, you MUST ask specific, targeted questions about the KEY CONCEPTS from those materials.
+- Proactively quiz the student on important topics from their materials
+- Adapt your teaching style based on the student's familiarity and mood
+- If mood is "stressed" or "low_energy", be extra encouraging and break things down simply
+- If mood is "ready" or "curious", challenge them with harder questions
+- Be conversational, supportive, and engaging
+- Always relate explanations directly to their uploaded study materials
+- Keep responses focused, clear, and not too long
+- After explaining a concept, follow up with a question to check understanding`;
 
         const messages = [
           { role: "system", content: systemPrompt },
@@ -733,193 +708,6 @@ Generate exactly 5 quiz MCQs and 6 flashcards. All must be from the study materi
         if (!quizData) throw new Error("Failed to generate quiz");
 
         return new Response(JSON.stringify({ quizData }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      case "analyze_full_syllabus": {
-        // NEW ALGORITHM: take ALL uploaded materials → extract structured
-        // subjects → chapters → topics with priority weights based on
-        // past-year exam patterns for the student's board & class.
-        const { sessionId } = body;
-        if (!lovableApiKey) throw new Error("AI not configured");
-
-        const { data: session } = await supabase
-          .from("exam_prep_sessions").select("*").eq("id", sessionId).single();
-        const { data: materials } = await supabase
-          .from("exam_prep_materials").select("extracted_content")
-          .eq("session_id", sessionId);
-
-        const combined = (materials || [])
-          .map((m: any) => m.extracted_content || "")
-          .join("\n\n---\n\n")
-          .substring(0, 90000);
-
-        const sysPrompt = `You are an expert syllabus analyst for Indian Class ${student.class} ${student.board} board, exam: ${session?.exam_name || "Board Exam"}.
-Use your knowledge of past-year ${student.board} board exam patterns to assign realistic importance weights.`;
-
-        const userPrompt = `Analyze the FULL uploaded syllabus content below and produce a structured hierarchy.
-
-Return ONLY valid JSON in this exact shape:
-{
-  "subjects": [
-    {
-      "name": "string",
-      "totalWeightPct": number,
-      "chapters": [
-        {
-          "name": "string",
-          "importance": "high" | "medium" | "low",
-          "pastYearFreq": "very_frequent" | "frequent" | "occasional" | "rare",
-          "expectedMarks": number,
-          "topics": [
-            { "name": "string", "difficulty": "easy" | "medium" | "hard", "mustDo": boolean }
-          ]
-        }
-      ]
-    }
-  ],
-  "overallStrategy": "string (2-3 sentences, ${student.board}-pattern aware)"
-}
-
-Rules:
-- Cover EVERY subject/chapter in the syllabus, do not skip.
-- pastYearFreq + expectedMarks must reflect actual ${student.board} ${student.class} pattern.
-- mustDo=true only for high-importance, high-frequency topics.
-
-SYLLABUS CONTENT:
-${combined}`;
-
-        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: AI_MODEL,
-            messages: [
-              { role: "system", content: sysPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            temperature: 0.3,
-            max_tokens: 8000,
-          }),
-        });
-        if (!aiResponse.ok) throw new Error(`AI error: ${aiResponse.status}`);
-        const aiData = await aiResponse.json();
-        if (aiData?.usage) logAIUsage(student.id, "exam_prep_syllabus", AI_MODEL, aiData.usage);
-        const content = aiData.choices?.[0]?.message?.content || "";
-        let structure: any = null;
-        try { const m = content.match(/\{[\s\S]*\}/); if (m) structure = JSON.parse(m[0]); } catch {}
-        if (!structure) throw new Error("Failed to parse syllabus structure");
-
-        // Persist back onto the session as extracted_topics (flattened for compatibility)
-        const flatTopics: any[] = [];
-        for (const subj of structure.subjects || []) {
-          for (const ch of subj.chapters || []) {
-            for (const t of ch.topics || []) {
-              flatTopics.push({
-                name: `${subj.name} › ${ch.name} › ${t.name}`,
-                description: `${ch.importance} importance, ${ch.pastYearFreq.replace("_", " ")}`,
-                difficulty: t.difficulty,
-              });
-            }
-          }
-        }
-        await supabase.from("exam_prep_sessions").update({
-          extracted_topics: flatTopics,
-          syllabus_structure: structure,
-        }).eq("id", sessionId);
-
-        return new Response(JSON.stringify({ structure }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      case "generate_priority_plan": {
-        // Take stored syllabus_structure + exam date + target → day-by-day plan.
-        const { sessionId } = body;
-        if (!lovableApiKey) throw new Error("AI not configured");
-
-        const { data: session } = await supabase
-          .from("exam_prep_sessions").select("*").eq("id", sessionId).single();
-        if (!session?.syllabus_structure) {
-          return new Response(JSON.stringify({ error: "Run syllabus analysis first." }), {
-            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        const today = new Date().toISOString().slice(0, 10);
-        const examDate = session.exam_date || null;
-        let daysAvailable = 30;
-        if (examDate) {
-          const diff = Math.ceil((new Date(examDate).getTime() - new Date(today).getTime()) / 86400000);
-          daysAvailable = Math.max(3, Math.min(180, diff));
-        }
-
-        const userPrompt = `Build a day-by-day prioritized study plan.
-
-Student: Class ${student.class} ${student.board}, Exam ${session.exam_name || "Board Exam"}.
-Today: ${today}. Exam date: ${examDate || "not set"}. Days available: ${daysAvailable}.
-Target score: ${session.target_score || "max"}. Topic familiarity: ${session.topic_familiarity || "new"}.
-
-Use this syllabus structure (already prioritized by past-year frequency):
-${JSON.stringify(session.syllabus_structure).substring(0, 30000)}
-
-Algorithm:
-1. Front-load HIGH-importance, very_frequent chapters in the first 60% of days.
-2. Schedule MUST-DO topics earliest.
-3. Reserve last 20% of days for revision + ${session.board || student.board}-pattern mock practice.
-4. Each day = 2-3 topics max (90-120 min total).
-5. Add 1 short MCQ practice block per day.
-
-Return ONLY valid JSON:
-{
-  "totalDays": ${daysAvailable},
-  "phases": [
-    { "name": "Foundation" | "Core" | "Advanced" | "Revision" | "Mock Practice", "startDay": number, "endDay": number, "focus": "string" }
-  ],
-  "days": [
-    {
-      "day": number,
-      "date": "YYYY-MM-DD",
-      "subject": "string",
-      "chapter": "string",
-      "topics": ["string"],
-      "task": "string (what to actually do — read / solve / revise)",
-      "estimatedMinutes": number,
-      "mcqCount": number,
-      "priority": "critical" | "high" | "medium"
-    }
-  ]
-}
-
-Generate ALL ${daysAvailable} days. No placeholders.`;
-
-        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: AI_MODEL,
-            messages: [
-              { role: "system", content: "You are an expert exam study planner. Return ONLY valid JSON." },
-              { role: "user", content: userPrompt },
-            ],
-            temperature: 0.4,
-            max_tokens: 8000,
-          }),
-        });
-        if (!aiResponse.ok) throw new Error(`AI error: ${aiResponse.status}`);
-        const aiData = await aiResponse.json();
-        if (aiData?.usage) logAIUsage(student.id, "exam_prep_plan", AI_MODEL, aiData.usage);
-        const content = aiData.choices?.[0]?.message?.content || "";
-        let plan: any = null;
-        try { const m = content.match(/\{[\s\S]*\}/); if (m) plan = JSON.parse(m[0]); } catch {}
-        if (!plan) throw new Error("Failed to generate plan");
-
-        await supabase.from("exam_prep_sessions").update({
-          priority_plan: plan,
-        }).eq("id", sessionId);
-
-        return new Response(JSON.stringify({ plan }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

@@ -26,13 +26,6 @@ const ForgotPassword = () => {
         throw error;
       }
 
-      // Track reset request time so /reset-password can enforce a 10-minute
-      // window and show a clear "expired link" message to the user.
-      try {
-        localStorage.setItem("gyanam_pwd_reset_requested_at", String(Date.now()));
-        localStorage.setItem("gyanam_pwd_reset_email", email);
-      } catch { /* ignore storage failures */ }
-
       setEmailSent(true);
       toast({
         title: "Email Sent!",

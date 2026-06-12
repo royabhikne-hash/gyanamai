@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,23 +13,16 @@ import AuthRepairButton from "@/components/AuthRepairButton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { loginSchema, validateForm } from "@/lib/validation";
 
-type Role = "student" | "school" | "coaching" | "admin";
-
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signIn, user, loading: authLoading } = useAuth();
   const { language } = useLanguage();
-  const [detectedRole, setDetectedRole] = useState<Role>("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showAuthRepair, setShowAuthRepair] = useState(false);
-  const [requiresPasswordReset, setRequiresPasswordReset] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [sessionToken, setSessionToken] = useState("");
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -81,63 +74,7 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    setIsLoading(true);
-    // 1) Try staff auto-login (admin/school/coaching) via edge function
-    try {
-      const { data, error } = await supabase.functions.invoke("secure-auth", {
-        body: { action: "login_auto", identifier: email.trim(), password },
-      });
-      if (!error && data && !data.notFound) {
-        if (data.rateLimited) {
-          toast({ title: "Too Many Attempts", description: `Wait ${Math.ceil((data.waitSeconds || 60) / 60)} minutes.`, variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-        if (data.error) {
-          toast({ title: "Login Failed", description: data.error, variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-        if (data.success) {
-          const r = data.role as Role;
-          setDetectedRole(r);
-          if (r === "admin") {
-            localStorage.setItem("userType", "admin");
-            localStorage.setItem("adminId", data.user.id);
-            localStorage.setItem("adminName", data.user.name);
-            localStorage.setItem("adminRole", data.user.role);
-            localStorage.setItem("adminSessionToken", data.sessionToken);
-          } else if (r === "school") {
-            localStorage.setItem("userType", "school");
-            localStorage.setItem("schoolId", data.user.schoolId);
-            localStorage.setItem("schoolUUID", data.user.id);
-            localStorage.setItem("schoolName", data.user.name);
-            localStorage.setItem("schoolSessionToken", data.sessionToken);
-          } else if (r === "coaching") {
-            localStorage.setItem("userType", "coaching");
-            localStorage.setItem("coachingId", data.user.coachingId || data.user.id);
-            localStorage.setItem("coachingUUID", data.user.id);
-            localStorage.setItem("coachingName", data.user.name);
-            localStorage.setItem("coachingSessionToken", data.sessionToken);
-          }
-          if (data.requiresPasswordReset) {
-            setSessionToken(data.sessionToken);
-            setRequiresPasswordReset(true);
-            toast({ title: "Password Reset Required", description: "Please set a new password to continue." });
-            setIsLoading(false);
-            return;
-          }
-          toast({ title: "Welcome!", description: `Signed in as ${r}.` });
-          navigate(r === "admin" ? "/admin-dashboard" : "/school-dashboard");
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn("Staff auto-login failed, falling back to student:", err);
-    }
-
-    // 2) Fall back to student auth
+    
     const validation = validateForm(loginSchema, { email, password });
     if (!validation.success && 'errors' in validation) {
       const firstError = Object.values(validation.errors)[0];
@@ -146,10 +83,10 @@ const Login = () => {
         description: firstError,
         variant: "destructive",
       });
-      setIsLoading(false);
       return;
     }
-    setDetectedRole("student");
+    
+    setIsLoading(true);
 
     // Global timeout - 30s to handle cold-start backends + slow mobile networks
     const globalTimeout = setTimeout(() => {
@@ -278,33 +215,6 @@ const Login = () => {
     await trySignIn();
   };
 
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      toast({ title: "Passwords Mismatch", description: "Both passwords must match.", variant: "destructive" });
-      return;
-    }
-    if (newPassword.length < 8) {
-      toast({ title: "Password Too Short", description: "Minimum 8 characters.", variant: "destructive" });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("secure-auth", {
-        body: { action: "reset_password", sessionToken, newPassword },
-      });
-      if (error || data?.error) throw new Error(data?.error || "Reset failed");
-      const tokenKey = detectedRole === "admin" ? "adminSessionToken" : detectedRole === "school" ? "schoolSessionToken" : "coachingSessionToken";
-      localStorage.setItem(tokenKey, data.sessionToken);
-      toast({ title: "Success", description: "Password updated." });
-      navigate(detectedRole === "admin" ? "/admin-dashboard" : "/school-dashboard");
-    } catch (err) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const checkApprovalAndNavigate = async (userId: string) => {
     try {
       const { data: student } = await supabase
@@ -345,7 +255,11 @@ const Login = () => {
       <div className="liquid-orb liquid-orb-blue w-[400px] h-[400px] -top-32 -right-32" />
       <div className="liquid-orb liquid-orb-purple w-[300px] h-[300px] bottom-0 -left-20" style={{ animationDelay: '3s' }} />
       <header className="container mx-auto py-4 px-3 sm:px-4 relative z-10">
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden xs:inline">{language === 'en' ? 'Back to Home' : 'वापस होम'}</span>
+          </Link>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <LanguageToggle />
             <ThemeToggle />
@@ -362,40 +276,14 @@ const Login = () => {
                 {language === 'en' ? 'Welcome Back!' : 'वापस स्वागत है!'}
               </h1>
               <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">
-                {language === 'en' ? 'Sign in to your account' : 'अपने अकाउंट में साइन इन करें'}
+                {language === 'en' ? 'Login to continue studying' : 'पढ़ाई जारी रखने के लिए लॉगिन करें'}
               </p>
             </div>
 
-            {requiresPasswordReset ? (
-              <form onSubmit={handlePasswordReset} className="space-y-5">
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-xs text-yellow-600 dark:text-yellow-400">
-                  Please set a new password (min 8 chars) to continue.
-                </div>
-                <div>
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input id="newPassword" type={showPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={8} className="h-12" />
-                </div>
-                <div>
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input id="confirmPassword" type={showPassword ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="h-12" />
-                </div>
-                <Button type="submit" variant="hero" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading ? "Updating..." : "Update Password"}
-                </Button>
-              </form>
-            ) : (
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <Label htmlFor="identifier">{language === 'en' ? 'Email or ID' : 'ईमेल या ID'}</Label>
-                <Input
-                  id="identifier"
-                  type="text"
-                  placeholder={language === 'en' ? 'your.email@example.com' : 'अपना ईमेल या ID'}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="h-12"
-                />
+                <Label htmlFor="email">{language === 'en' ? 'Email' : 'ईमेल'}</Label>
+                <Input id="email" type="email" placeholder="your.email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-12" />
               </div>
               <div>
                 <Label htmlFor="password">{language === 'en' ? 'Password' : 'पासवर्ड'}</Label>
@@ -415,7 +303,6 @@ const Login = () => {
                 {isLoading ? (language === 'en' ? "Logging in..." : "लॉगिन हो रहा है...") : (language === 'en' ? "Login" : "लॉगिन")}
               </Button>
             </form>
-            )}
 
             {showAuthRepair && (
               <div className="mt-4 p-3 rounded-lg bg-warning/10 border border-warning/20">
@@ -426,16 +313,20 @@ const Login = () => {
               </div>
             )}
 
-            {!requiresPasswordReset && (
-              <div className="mt-6 text-center">
-                <p className="text-muted-foreground">
-                  {language === 'en' ? "Don't have an account?" : "अकाउंट नहीं है?"}{" "}
-                  <Link to="/signup" className="text-primary font-semibold hover:underline">
-                    {language === 'en' ? 'Sign Up' : 'साइन अप'}
-                  </Link>
-                </p>
-              </div>
-            )}
+            <div className="mt-6 text-center">
+              <p className="text-muted-foreground">
+                {language === 'en' ? "Don't have an account?" : "अकाउंट नहीं है?"}{" "}
+                <Link to="/signup" className="text-primary font-semibold hover:underline">
+                  {language === 'en' ? 'Sign Up' : 'साइन अप'}
+                </Link>
+              </p>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-border text-center">
+              <Link to="/school-login" className="text-sm text-muted-foreground hover:text-primary">
+                {language === 'en' ? 'School Admin? Login here →' : 'स्कूल एडमिन? यहां लॉगिन करें →'}
+              </Link>
+            </div>
           </div>
         </div>
       </main>
