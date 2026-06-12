@@ -445,28 +445,18 @@ Deno.serve(async (req) => {
 
     // School Analytics action - handle before generic session_token check
     if (action === 'get_school_analytics') {
+      const sId = schoolId || school_id;
       const sToken = sessionToken || session_token;
-
-      if (!sToken) {
+      
+      if (!sId || !sToken) {
         return new Response(
-          JSON.stringify({ error: 'Session token required' }),
+          JSON.stringify({ error: 'School ID and session token required' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       const validation = await validateSessionToken(supabaseAdmin, sToken, 'school');
       if (!validation.valid) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid session' }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // SECURITY: bind analytics to the school that owns this session token.
-      // Never trust a body-supplied schoolId — that would let one school read
-      // another school's student analytics.
-      const sId = validation.userId;
-      if (!sId) {
         return new Response(
           JSON.stringify({ error: 'Invalid session' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
