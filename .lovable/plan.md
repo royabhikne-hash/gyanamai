@@ -1,80 +1,44 @@
-# Stage 4 — Security Hardening, Password Reset, Skeletons & QA
+# Gyanam AI – PDF Requirements Implementation Plan
 
-## Important clarification first (please read)
-
-**About `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env`:**
-These are **not secrets**. The `anon` / publishable key is *designed* to be public and shipped to the browser — that is how every Supabase client works. Security comes from **RLS policies + JWT validation in edge functions**, not from hiding the URL. The actual secrets (`SUPABASE_SERVICE_ROLE_KEY`, `LOVABLE_API_KEY`, `TWILIO_*`, `SPEECHIFY_API_KEY`) are already backend-only.
-**Action:** I will leave `VITE_*` vars as-is (required for the app to work) but will lock down every edge function so the publishable key alone gives an attacker nothing.
+The PDF has ~15 distinct items spanning bug fixes, UX polish, AI quality, and brand‑new features (YouTube source, syllabus algorithm rewrite, podcast voice upgrade). Doing all of it in one shot will produce a messy diff and likely regressions. I'll split it into **3 stages** and ship Stage 1 immediately after you confirm.
 
 ---
 
-## 1. Fix all 12 security findings
+## Stage 1 — Bug Fixes & Quick Wins (ship now)
 
-### Edge function auth rewrites (derive `studentId` from JWT, never trust body)
-- `manage-subscription` — validate JWT on `get_subscription`, `get_daily_usage`, `check_daily_usage`, `request_upgrade`, `increment_tts`; gate `check_expiry` behind `CRON_SECRET`.
-- `update-topic-mastery` — add `getClaims()`, drop body `studentId`.
-- `text-to-speech` — require JWT, derive student, rate-limit per user.
-- `get-students` `get_student_rankings` — require JWT, strip `phone` / `parent_whatsapp` / `user_id` from response.
-- `send-weekly-report` — gate behind `CRON_SECRET` (cron) or admin session token (manual).
-- `generate-mcq` — replace header-presence check with real `getClaims()`.
-- `notify-school-registration` — require student JWT; verify `schoolId` matches `students.school_id`.
-- `save-weekly-rankings` — require `CRON_SECRET`.
-- `secure-auth` `login_auto` — sanitize identifier (reject `%`, `_`, `,`, `(`, `)`) to kill PostgREST filter injection.
+These are small, high‑impact, low‑risk changes.
 
-### Database migration
-- Tighten `students` UPDATE policy to a WITH CHECK that blocks changes to `is_approved`, `is_banned`, `student_type`, `school_id`, `coaching_center_id`, `user_id`, `approved_by`, `approved_at`, `rejection_reason`.
-- Tighten `exam_prep_invites` UPDATE to require matching `invite_code`.
-- Revoke `EXECUTE` on SECURITY DEFINER functions from `anon` / `authenticated` where not needed (`cleanup_expired_sessions`, `create_basic_subscription`, `prevent_student_sensitive_update`). Keep `has_role`-style and `check_ai_rate_limit` callable.
-- Move `pg_net` / `pg_cron` out of `public` if present (informational lint).
+1. **TTS false "Voice Error" popup** — only show the error toast when `onerror` fires, not when playback completes/cancels normally. Fix in `useSmartTTS`, `useNativeTTS`, `useSpeechifyTTS`.
+2. **Study Blaster project creation failure** — add proper try/catch around the create flow in `StudyBlasterProjectList.tsx` + edge function, return structured `{ success, error }`, show success/error toasts instead of silent failure.
+3. **AI sends two responses at once** — guard the chat submit handlers (`StudyChat`, `ExamPrepChat`, `StudyBlasterChat`) with an `isStreaming` lock so double‑tap/Enter+click can't fire twice.
+4. **AI can't detect subject** — pass `currentSubject` + `currentChapter` into the system prompt of `study-chat` edge function so it stops "guessing general study".
+5. **Hindi toggle wording** — replace "Tera Personal Gyanam AI Aa Gaya" / informal "tu" copy with respectful Hindi ("Aapka", "Namaste") across `LanguageContext`, Landing/Login.
+6. **Forgot password link 10‑min expiry** — already handled by Supabase default (1h); set `OTP expiry` to 600s via auth config + show "Link valid for 10 minutes" copy on `ForgotPassword.tsx` and "Link expired" message on `ResetPassword.tsx`.
+7. **School notification on new student approval request** — insert a row into existing `school_notifications` (or create one) when a student signs up with a school_id, surface a badge on School Dashboard.
+8. **Compulsory student photo** — make the photo field `required` on `Signup.tsx`, validate before submit.
+9. **Updated Terms & Conditions checkbox** on first signup (already partially exists — enforce it).
+10. **Skeleton screens** — wire existing `DashboardSkeleton` into `StudentDashboard`, add lightweight skeletons to Study Blaster project list and Exam Prep dashboard.
 
-### New secret
-- Add `CRON_SECRET` (I'll request via `add_secret` when we start).
+## Stage 2 — AI Quality Upgrade ✅ SHIPPED
 
----
+11. ✅ Rewrote system prompts in `study-chat`, `exam-prep`, `study-blaster`: respectful Hindi (aap/aapka, never tu/tera), clarifying questions for vague queries, step-by-step for hard topics, NCERT/board-aligned.
+12. ✅ New WPS formula in `StudentProgress.tsx`: 25% study time (target 7h/wk) + 25% topic completion (3 chapters/wk) + 25% MCQ accuracy + 25% consistency (unique days/7). Now fetches `mcq_attempts` and `chapter_progress` in parallel.
 
-## 2. Password reset 10-min expiry
-- Replace Supabase's built-in `resetPasswordForEmail` flow with a custom token table:
-  - New table `password_reset_tokens(token, user_id, expires_at, used_at)` — 10 min expiry.
-  - Edge function `request-password-reset` — generates token, emails/WhatsApps link.
-  - Edge function `verify-reset-token` + UI in `ResetPassword.tsx` — shows "This link has expired, please request a new one" if `now() > expires_at` or `used_at IS NOT NULL`.
+## Stage 3 — New Features ✅ SHIPPED
 
-*(If you'd rather just shorten Supabase's built-in recovery link lifetime to 10 min instead of building a custom system, say so — that's a 1-line config change in Auth settings.)*
+13. ✅ **YouTube source** — new YouTube tab in Source Manager. `process_url` edge action detects YT URLs, scrapes `captionTracks` from watch page HTML, fetches XML transcript, stores as `extracted_content`.
+14. ✅ **Exam Prep new algorithm** — two new actions: `analyze_full_syllabus` (extracts subjects→chapters→topics with importance/`pastYearFreq`/`expectedMarks` based on board pattern) and `generate_priority_plan` (day-by-day plan: front-loads must-do topics, reserves last 20% for revision/mock). Stored in `exam_prep_sessions.syllabus_structure` + `priority_plan`. UI buttons surface results.
+15. ✅ **Podcast voice upgrade** — `StudyBlasterPodcast` now calls `text-to-speech` (Speechify Henry/Natasha Indian voices) per turn with prosody pacing. Auto-falls-back to browser TTS on Basic plan. Toggle in player UI.
 
 ---
 
-## 3. WhatsApp on new signup
-- `Signup.tsx` already triggers `notify-school-registration`. After Stage-4 auth hardening that function will require the student's JWT — I'll thread `session.access_token` through the invoke call.
-- Verify Twilio secrets are still valid by sending a test message in dev.
+## Technical Notes
+
+- All edge function changes follow existing rule: return HTTP 200 + JSON, parse `req.json()` once.
+- New school‑notification table (if needed) will include `GRANT` + RLS per project conventions.
+- Skeleton components reuse existing `DashboardSkeleton.tsx` patterns — no new deps.
+- No schema changes in Stage 1 except possibly `school_notifications` table.
 
 ---
 
-## 4. Skeleton screens
-- StudentDashboard → use existing `DashboardSkeleton` during initial load (already exists, just wire it).
-- StudyChat → add message-bubble skeleton list during history fetch.
-- StudentProgress / report views → use existing `ProgressSkeleton` / `ReportSkeleton`.
-- Parent report PDF preview → loading skeleton before PDF renders.
-
----
-
-## 5. QA Stages 1–3
-- Stage 1: verify TTS no-longer-throws toast, double-send guard, Study Blaster project insert error surface, respectful Hindi copy, required photo on signup.
-- Stage 2: verify new WPS formula renders on StudentProgress and AI prompts return formal "Aap" Hindi.
-- Stage 3: smoke-test YouTube URL ingestion in Study Blaster, Speechify toggle, `analyze_full_syllabus` + `generate_priority_plan` in Exam Prep.
-- Report any regressions back before closing.
-
----
-
-## Order of execution
-1. Request `CRON_SECRET` secret.
-2. Ship DB migration (RLS tightening + function grants).
-3. Rewrite all 8 edge functions in parallel; deploy.
-4. Build password-reset token system (table + 2 functions + UI).
-5. Wire skeletons.
-6. QA pass on Stages 1-3 + new changes; run security rescan.
-
----
-
-## Questions before I start
-1. **Password reset** — custom 10-min token system as described, or just shorten Supabase Auth's built-in recovery lifetime?
-2. **`CRON_SECRET`** — OK for me to request this secret via the secrets tool?
-3. **Scope confirmation** — this is roughly a 25-file change touching auth on every protected endpoint. Want it as one big push, or split (security first → password reset → skeletons)?
+**Approve and I'll ship Stage 1 immediately.** Then we move to Stage 2, then Stage 3 — each as a separate, reviewable change so nothing regresses.
