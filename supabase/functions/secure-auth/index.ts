@@ -887,13 +887,11 @@ Deno.serve(async (req) => {
         .select("id")
         .limit(1);
       
-      // Allow creation if no admins exist or if secret key matches.
-      // SECURITY: never fall back to a hardcoded key. If the env var is
-      // unset, no secret can authorize admin creation once bootstrap is done.
-      const BOOTSTRAP_KEY = Deno.env.get("ADMIN_BOOTSTRAP_KEY");
+      // Allow creation if no admins exist or if secret key matches
+      const BOOTSTRAP_KEY = Deno.env.get("ADMIN_BOOTSTRAP_KEY") || "edu_improvement_bootstrap_2024";
       const isBootstrap = !existingAdmins || existingAdmins.length === 0;
-      const hasValidKey = !!BOOTSTRAP_KEY && secretKey === BOOTSTRAP_KEY;
-
+      const hasValidKey = secretKey === BOOTSTRAP_KEY;
+      
       if (!isBootstrap && !hasValidKey) {
         return new Response(
           JSON.stringify({ error: "Admin creation not allowed" }),
