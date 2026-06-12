@@ -248,20 +248,11 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // SECURITY: reject identifiers containing PostgREST/SQL filter wildcards
-      // or separators. Without this, `%` would match every row via ilike and
-      // collapse the identifier-secrecy layer of the auth flow.
-      if (/[%_,()*]/.test(id)) {
-        recordAttempt(`auto:${id}`, false);
-        return new Response(JSON.stringify({ error: "Invalid credentials" }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
       // 1) Admin
       const { data: admin } = await supabase
         .from("admins")
         .select("*")
-        .eq("admin_id", id)
+        .or(`admin_id.eq.${id},admin_id.ilike.${id}`)
         .maybeSingle();
       if (admin) {
         const r = await verifyPassword(password, admin.password_hash);

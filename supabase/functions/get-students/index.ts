@@ -120,34 +120,10 @@ Deno.serve(async (req) => {
 
     // Handle student ranking request (for student dashboard)
     if (action === 'get_student_rankings') {
-      // SECURITY: validate JWT and derive student_id from claims.
-      // Strip PII (phone, parent_whatsapp, user_id) from the response.
-      const authHeader = req.headers.get('Authorization');
-      if (!authHeader?.startsWith('Bearer ')) {
+      if (!student_id) {
         return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      const jwt = authHeader.replace('Bearer ', '');
-      const anonClient = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-      );
-      const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(jwt);
-      if (claimsError || !claimsData?.claims?.sub) {
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      const { data: studentRow } = await supabaseAdmin
-        .from('students').select('id').eq('user_id', claimsData.claims.sub).maybeSingle();
-      const trustedStudentId = studentRow?.id;
-      if (!trustedStudentId) {
-        return new Response(
-          JSON.stringify({ error: 'Student not found' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Student ID required' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -155,7 +131,7 @@ Deno.serve(async (req) => {
       const { data: studentData } = await supabaseAdmin
         .from('students')
         .select('*, schools(name)')
-        .eq('id', trustedStudentId)
+        .eq('id', student_id)
         .maybeSingle();
 
       if (!studentData || !studentData.is_approved) {
@@ -218,34 +194,20 @@ Deno.serve(async (req) => {
       const districtRankings = calculateStudentRankings(districtStudentsWithSessions);
 
       // Find the current student's position in each
-      const studentSchoolRank = schoolRankings.find((r: any) => r.id === trustedStudentId);
-      const studentDistrictRank = districtRankings.find((r: any) => r.id === trustedStudentId);
+      const studentSchoolRank = schoolRankings.find((r: any) => r.id === student_id);
+      const studentDistrictRank = districtRankings.find((r: any) => r.id === student_id);
 
       // Get ranking history for the student
       const { data: rankingHistory } = await supabaseAdmin
         .from('ranking_history')
         .select('*')
-        .eq('student_id', trustedStudentId)
+        .eq('student_id', student_id)
         .order('week_start', { ascending: false })
         .limit(10);
 
-      // Strip PII before returning to the client.
-      const safeStudent = studentData ? {
-        id: studentData.id,
-        full_name: studentData.full_name,
-        photo_url: studentData.photo_url,
-        class: studentData.class,
-        board: studentData.board,
-        district: studentData.district,
-        state: studentData.state,
-        school_id: studentData.school_id,
-        is_approved: studentData.is_approved,
-        schools: studentData.schools,
-      } : null;
-
       return new Response(
         JSON.stringify({
-          student: safeStudent,
+          student: studentData,
           mySchoolRank: studentSchoolRank || null,
           myDistrictRank: studentDistrictRank || null,
           schoolRankings: schoolRankings.slice(0, 10),

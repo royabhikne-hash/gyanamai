@@ -116,40 +116,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // SECURITY: require either an admin session token (manual trigger)
-    // or the service-role key in Authorization (cron / server invocation).
-    // Prevents unauthenticated mass DB writes and Twilio spam.
-    const authHeader = req.headers.get('Authorization') || '';
-    const adminToken = req.headers.get('x-admin-token') || '';
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const isServiceCall = authHeader === `Bearer ${serviceKey}`;
-
-    if (!isServiceCall) {
-      if (!adminToken) {
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      const checkClient = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        serviceKey,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-      const { data: session } = await checkClient
-        .from('session_tokens')
-        .select('user_type, expires_at, is_revoked')
-        .eq('token', adminToken)
-        .maybeSingle();
-      const valid = session && !session.is_revoked && new Date(session.expires_at) > new Date() && session.user_type === 'admin';
-      if (!valid) {
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',

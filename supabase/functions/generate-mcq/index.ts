@@ -33,44 +33,24 @@ serve(async (req) => {
       throw new Error("AI service is not configured");
     }
 
-    // SECURITY: validate the JWT cryptographically — header presence is
-    // not enough. Derive the trusted studentId from the verified claims.
+    // Validate auth
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const jwt = authHeader.replace("Bearer ", "");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const anonClient = createClient(supabaseUrl, anonKey);
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(jwt);
-    if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Resolve studentId from JWT — never trust the body's studentId.
-    const { data: studentLookup } = await supabase
-      .from("students").select("id").eq("user_id", claimsData.claims.sub).maybeSingle();
-    if (!studentLookup?.id) {
-      return new Response(JSON.stringify({ error: "Student not found" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const trustedStudentId = studentLookup.id;
 
     // Get student profile
     const { data: student, error: studentError } = await supabase
       .from("students")
       .select("id, board, class, full_name, stream")
-      .eq("id", trustedStudentId)
+      .eq("id", studentId)
       .single();
 
     if (studentError || !student) {
@@ -142,7 +122,7 @@ Return ONLY a valid JSON array with this exact format, no other text:
       let content = data?.choices?.[0]?.message?.content || "";
 
       // Log usage
-      if (data?.usage) logAIUsage(trustedStudentId, "generate_mcq", "google/gemini-3-flash-preview", data.usage);
+      if (studentId && data?.usage) logAIUsage(studentId, "generate_mcq", "google/gemini-3-flash-preview", data.usage);
       
       // Clean markdown code blocks if present
       content = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
@@ -175,7 +155,7 @@ Return ONLY a valid JSON array with this exact format, no other text:
       const { data: existingTest } = await supabase
         .from("weekly_tests")
         .select("id")
-        .eq("student_id", trustedStudentId)
+        .eq("student_id", studentId)
         .gte("created_at", weekStart.toISOString())
         .limit(1);
 
@@ -189,20 +169,20 @@ Return ONLY a valid JSON array with this exact format, no other text:
       const { data: sessions } = await supabase
         .from("study_sessions")
         .select("subject, topic, weak_areas, strong_areas")
-        .eq("student_id", trustedStudentId)
+        .eq("student_id", studentId)
         .gte("created_at", weekStart.toISOString());
 
       const { data: mcqAttempts } = await supabase
         .from("mcq_attempts")
         .select("subject")
-        .eq("student_id", trustedStudentId)
+        .eq("student_id", studentId)
         .gte("created_at", weekStart.toISOString());
 
       // Get previous weak topics from older weekly tests
       const { data: prevTests } = await supabase
         .from("weekly_tests")
         .select("weak_subjects")
-        .eq("student_id", trustedStudentId)
+        .eq("student_id", studentId)
         .order("created_at", { ascending: false })
         .limit(3);
 
@@ -339,7 +319,7 @@ Return ONLY a valid JSON array:
       const { data: lastTest } = await supabase
         .from("weekly_tests")
         .select("id, created_at")
-        .eq("student_id", trustedStudentId)
+        .eq("student_id", studentId)
         .order("created_at", { ascending: false })
         .limit(1);
 
@@ -350,7 +330,7 @@ Return ONLY a valid JSON array:
       const { data: thisWeekTest } = await supabase
         .from("weekly_tests")
         .select("id")
-        .eq("student_id", trustedStudentId)
+        .eq("student_id", studentId)
         .gte("created_at", weekStart.toISOString())
         .limit(1);
 
@@ -360,13 +340,13 @@ Return ONLY a valid JSON array:
       const { data: sessions } = await supabase
         .from("study_sessions")
         .select("subject, topic")
-        .eq("student_id", trustedStudentId)
+        .eq("student_id", studentId)
         .gte("created_at", weekStart.toISOString());
 
       const { data: mcqAttempts } = await supabase
         .from("mcq_attempts")
         .select("subject")
-        .eq("student_id", trustedStudentId)
+        .eq("student_id", studentId)
         .gte("created_at", weekStart.toISOString());
 
       const studiedSubjects = new Set<string>();

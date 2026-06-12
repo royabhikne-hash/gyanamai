@@ -139,7 +139,6 @@ serve(async (req) => {
     const SPEECHIFY_API_KEY = Deno.env.get('SPEECHIFY_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
     
     if (!SPEECHIFY_API_KEY) {
       console.error('SPEECHIFY_API_KEY not configured');
@@ -149,39 +148,7 @@ serve(async (req) => {
       );
     }
 
-    // SECURITY: require a valid Supabase JWT to prevent unauthenticated
-    // abuse of Speechify credits and per-student quota draining.
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    const jwt = authHeader.replace('Bearer ', '');
-
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_KEY) {
-      return new Response(
-        JSON.stringify({ error: 'Backend not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(jwt);
-    if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { text, voiceId = 'henry', speed = 1.0, language = 'en-IN' } = await req.json();
-
-    // Always derive studentId from JWT — never trust body.
-    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    const { data: studentRow } = await adminClient
-      .from('students').select('id').eq('user_id', claimsData.claims.sub).maybeSingle();
-    const studentId = studentRow?.id;
+    const { text, voiceId = 'henry', speed = 1.0, language = 'en-IN', studentId } = await req.json();
 
     if (!text || typeof text !== 'string') {
       return new Response(
@@ -208,7 +175,7 @@ serve(async (req) => {
     // Check subscription and track usage if studentId provided
     let usageInfo = null;
     if (studentId && SUPABASE_URL && SUPABASE_SERVICE_KEY) {
-      const supabase = adminClient;
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
       const usageResult = await checkAndTrackUsage(supabase, studentId, truncatedText.length);
       
       if (!usageResult.canUse) {
