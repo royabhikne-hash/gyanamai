@@ -711,6 +711,7 @@ const StudentDashboard = () => {
         </Tabs>
       </main>
       <BottomNavBar />
+      <AppOnboarding open={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </div>
   );
 };
