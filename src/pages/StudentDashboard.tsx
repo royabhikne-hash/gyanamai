@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import StudentRankingCard from "@/components/StudentRankingCard";
+import AppOnboarding, { hasSeenOnboarding } from "@/components/onboarding/AppOnboarding";
 
 
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -56,6 +57,7 @@ const StudentDashboard = () => {
   const [analyticsView, setAnalyticsView] = useState<"today" | "week">("today");
   const [mainTab, setMainTab] = useState<"study" | "rankings">("study");
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   
   // Ranking data
   const [mySchoolRank, setMySchoolRank] = useState<any>(null);
@@ -96,6 +98,15 @@ const StudentDashboard = () => {
       loadStudentData();
     }
   }, [user, loading, navigate]);
+
+  // Show onboarding on first visit after approval
+  useEffect(() => {
+    if (isApproved && !hasSeenOnboarding()) {
+      // small delay so the dashboard paints first
+      const t = setTimeout(() => setShowOnboarding(true), 400);
+      return () => clearTimeout(t);
+    }
+  }, [isApproved]);
 
   // Real-time subscription for approval status changes
   useEffect(() => {
