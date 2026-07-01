@@ -3,7 +3,7 @@ import { Send, Loader2, Bot, User, Sparkles, ArrowDown, BookOpen, HelpCircle, Li
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import ReactMarkdown from "react-markdown";
+import RichMarkdown from "@/components/chat/RichMarkdown";
 
 interface Message {
   role: "user" | "assistant";
@@ -250,9 +250,7 @@ const StudyBlasterChat = ({ projectId, projectTitle }: Props) => {
                         {isUser ? (
                           <p className="whitespace-pre-wrap">{msg.content}</p>
                         ) : (
-                          <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&_pre]:rounded-xl [&_pre]:bg-secondary [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-xs">
-                            <ReactMarkdown>{msg.content}</ReactMarkdown>
-                          </div>
+                          <RichMarkdown>{msg.content}</RichMarkdown>
                         )}
                       </div>
                     </div>

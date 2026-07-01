@@ -6,6 +6,7 @@ import { MessageCircle, Send, X, Volume2, VolumeX, Loader2, Bot, User, Sparkles 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import RichMarkdown from "@/components/chat/RichMarkdown";
 
 interface Message {
   role: "user" | "assistant";
@@ -232,9 +233,7 @@ const ParentChatbot = ({ token, studentName }: ParentChatbotProps) => {
                     {msg.role === "assistant" ? "Parent Assistant" : "You"}
                   </span>
                   {msg.role === "assistant" ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed [&>p]:mb-1.5 [&>ul]:mb-1.5 [&>ol]:mb-1.5">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
+                    <RichMarkdown>{msg.content}</RichMarkdown>
                   ) : (
                     <p className="text-[13px] text-foreground leading-relaxed">{msg.content}</p>
                   )}

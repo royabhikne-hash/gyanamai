@@ -248,11 +248,20 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      // SECURITY: reject identifiers containing PostgREST/SQL filter wildcards
+      // or separators. Without this, `%` would match every row via ilike and
+      // collapse the identifier-secrecy layer of the auth flow.
+      if (/[%_,()*]/.test(id)) {
+        recordAttempt(`auto:${id}`, false);
+        return new Response(JSON.stringify({ error: "Invalid credentials" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       // 1) Admin
       const { data: admin } = await supabase
         .from("admins")
         .select("*")
-        .or(`admin_id.eq.${id},admin_id.ilike.${id}`)
+        .eq("admin_id", id)
         .maybeSingle();
       if (admin) {
         const r = await verifyPassword(password, admin.password_hash);
@@ -878,11 +887,13 @@ Deno.serve(async (req) => {
         .select("id")
         .limit(1);
       
-      // Allow creation if no admins exist or if secret key matches
-      const BOOTSTRAP_KEY = Deno.env.get("ADMIN_BOOTSTRAP_KEY") || "edu_improvement_bootstrap_2024";
+      // Allow creation if no admins exist or if secret key matches.
+      // SECURITY: never fall back to a hardcoded key. If the env var is
+      // unset, no secret can authorize admin creation once bootstrap is done.
+      const BOOTSTRAP_KEY = Deno.env.get("ADMIN_BOOTSTRAP_KEY");
       const isBootstrap = !existingAdmins || existingAdmins.length === 0;
-      const hasValidKey = secretKey === BOOTSTRAP_KEY;
-      
+      const hasValidKey = !!BOOTSTRAP_KEY && secretKey === BOOTSTRAP_KEY;
+
       if (!isBootstrap && !hasValidKey) {
         return new Response(
           JSON.stringify({ error: "Admin creation not allowed" }),

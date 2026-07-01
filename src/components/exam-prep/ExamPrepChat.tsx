@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Send, Loader2, Mic, MicOff, Volume2, VolumeX, ClipboardCheck, Trophy, ChevronRight, CheckCircle, XCircle, Bot, User, Sparkles } from 'lucide-react';
 import { ExamPrepSession, ChatMessage } from '@/hooks/useExamPrep';
 import ReactMarkdown from 'react-markdown';
+import RichMarkdown from '@/components/chat/RichMarkdown';
 
 interface Props {
   session: ExamPrepSession;
@@ -571,9 +572,7 @@ const ExamPrepChat: React.FC<Props> = ({ session, studentName, onSendMessage, on
                         {isUser ? (
                           <p className="whitespace-pre-wrap">{msg.content}</p>
                         ) : (
-                          <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&_pre]:rounded-xl [&_pre]:bg-secondary [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:text-xs">
-                            <ReactMarkdown>{msg.content}</ReactMarkdown>
-                          </div>
+                          <RichMarkdown>{msg.content}</RichMarkdown>
                         )}
                       </div>
                     </div>
