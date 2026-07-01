@@ -285,11 +285,20 @@ Deno.serve(async (req) => {
       }
 
       // 2) School
-      const { data: school } = await supabase
+      const idLower = id.toLowerCase();
+      let { data: school } = await supabase
         .from("schools")
         .select("*")
-        .or(`school_id.eq.${id},email.eq.${id}`)
+        .eq("school_id", id)
         .maybeSingle();
+      if (!school) {
+        const r2 = await supabase
+          .from("schools")
+          .select("*")
+          .ilike("email", idLower)
+          .maybeSingle();
+        school = r2.data;
+      }
       if (school) {
         if (school.is_banned) {
           return new Response(JSON.stringify({ error: "Account suspended" }),
@@ -316,11 +325,19 @@ Deno.serve(async (req) => {
       }
 
       // 3) Coaching center
-      const { data: coaching } = await supabase
+      let { data: coaching } = await supabase
         .from("coaching_centers")
         .select("*")
-        .or(`coaching_id.eq.${id},email.eq.${id}`)
+        .eq("coaching_id", id)
         .maybeSingle();
+      if (!coaching) {
+        const r3 = await supabase
+          .from("coaching_centers")
+          .select("*")
+          .ilike("email", idLower)
+          .maybeSingle();
+        coaching = r3.data;
+      }
       if (coaching) {
         if (coaching.is_banned) {
           return new Response(JSON.stringify({ error: "Account suspended" }),
