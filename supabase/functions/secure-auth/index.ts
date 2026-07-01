@@ -248,10 +248,10 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // SECURITY: reject identifiers containing PostgREST/SQL filter wildcards
-      // or separators. Without this, `%` would match every row via ilike and
-      // collapse the identifier-secrecy layer of the auth flow.
-      if (/[%_,()*]/.test(id)) {
+      // SECURITY: reject identifiers containing PostgREST filter separators.
+      // We use `.eq` (not ilike) so `%` / `_` are literals and safe. However
+      // `,` `(` `)` `"` would break the `.or()` filter parser, so block those.
+      if (/[,()"]/.test(id)) {
         recordAttempt(`auto:${id}`, false);
         return new Response(JSON.stringify({ error: "Invalid credentials" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -285,11 +285,20 @@ Deno.serve(async (req) => {
       }
 
       // 2) School
-      const { data: school } = await supabase
+      const idLower = id.toLowerCase();
+      let { data: school } = await supabase
         .from("schools")
         .select("*")
-        .or(`school_id.eq.${id},email.eq.${id}`)
+        .eq("school_id", id)
         .maybeSingle();
+      if (!school) {
+        const r2 = await supabase
+          .from("schools")
+          .select("*")
+          .ilike("email", idLower)
+          .maybeSingle();
+        school = r2.data;
+      }
       if (school) {
         if (school.is_banned) {
           return new Response(JSON.stringify({ error: "Account suspended" }),
@@ -316,11 +325,19 @@ Deno.serve(async (req) => {
       }
 
       // 3) Coaching center
-      const { data: coaching } = await supabase
+      let { data: coaching } = await supabase
         .from("coaching_centers")
         .select("*")
-        .or(`coaching_id.eq.${id},email.eq.${id}`)
+        .eq("coaching_id", id)
         .maybeSingle();
+      if (!coaching) {
+        const r3 = await supabase
+          .from("coaching_centers")
+          .select("*")
+          .ilike("email", idLower)
+          .maybeSingle();
+        coaching = r3.data;
+      }
       if (coaching) {
         if (coaching.is_banned) {
           return new Response(JSON.stringify({ error: "Account suspended" }),

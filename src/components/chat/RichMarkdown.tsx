@@ -108,7 +108,7 @@ const RichMarkdown = ({ children }: Props) => {
                 className="text-[13.5px] leading-relaxed text-foreground/90
                   [&_ul]:list-none [&_ul]:pl-0
                   [&_ul>li]:relative [&_ul>li]:pl-5 [&_ul>li]:mb-1.5
-                  [&_ul>li]:before:content-['\\2192'] [&_ul>li]:before:absolute [&_ul>li]:before:left-0 [&_ul>li]:before:text-primary [&_ul>li]:before:font-bold
+                  [&_ul>li]:before:content-['→'] [&_ul>li]:before:absolute [&_ul>li]:before:left-0 [&_ul>li]:before:text-primary [&_ul>li]:before:font-bold
                   [&_ol]:pl-5 [&_ol>li]:mb-1.5
                   [&_p]:mb-2 [&_p:last-child]:mb-0
                   [&_strong]:font-semibold"
