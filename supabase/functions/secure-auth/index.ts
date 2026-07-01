@@ -248,10 +248,10 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // SECURITY: reject identifiers containing PostgREST/SQL filter wildcards
-      // or separators. Without this, `%` would match every row via ilike and
-      // collapse the identifier-secrecy layer of the auth flow.
-      if (/[%_,()*]/.test(id)) {
+      // SECURITY: reject identifiers containing PostgREST filter separators.
+      // We use `.eq` (not ilike) so `%` / `_` are literals and safe. However
+      // `,` `(` `)` `"` would break the `.or()` filter parser, so block those.
+      if (/[,()"]/.test(id)) {
         recordAttempt(`auto:${id}`, false);
         return new Response(JSON.stringify({ error: "Invalid credentials" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
