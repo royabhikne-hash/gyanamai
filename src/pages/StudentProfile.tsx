@@ -453,6 +453,7 @@ const StudentProfile = () => {
         </div>
       </main>
       <BottomNavBar />
+      <LanguagePicker open={showLangPicker} onDone={() => setShowLangPicker(false)} firstRun={false} />
     </div>
   );
 };
