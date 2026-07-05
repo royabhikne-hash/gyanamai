@@ -8,7 +8,9 @@ import { ArrowLeft, User, Phone, Save, Loader2, Key, Camera, Share2, Copy, Check
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage, LANGUAGE_LABELS, Language } from "@/contexts/LanguageContext";
+import { Languages } from "lucide-react";
+import LanguagePicker from "@/components/LanguagePicker";
 import LanguageToggle from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import DailyUsageWidget from "@/components/DailyUsageWidget";
@@ -34,7 +36,8 @@ const StudentProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading } = useAuth();
-  const { language } = useLanguage();
+  const { language, setLanguage } = useLanguage();
+  const [showLangPicker, setShowLangPicker] = useState(false);
   
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
