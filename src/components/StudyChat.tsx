@@ -482,14 +482,19 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     if (!studentId) return null;
 
     const topicToSave = detectedTopic || currentTopic || "General Study";
+    // If the student picked a subject via the selector, prefer that over the
+    // fallback "General Study" so sessions reflect what they actually studied.
+    const finalTopic = topicToSave === "General Study" && selectedSubject
+      ? selectedSubject
+      : topicToSave;
 
     try {
       const { data, error } = await supabase
         .from("study_sessions")
         .insert({
           student_id: studentId,
-          topic: topicToSave,
-          subject: topicToSave !== "General Study" ? topicToSave : null,
+          topic: finalTopic,
+          subject: finalTopic !== "General Study" ? (selectedSubject || finalTopic) : null,
           start_time: startTime.toISOString(),
         })
         .select("id")
