@@ -16,19 +16,23 @@ const BottomNavBar = memo(() => {
   const location = useLocation();
 
   const handleNavClick = useCallback((path: string) => {
+    // No-op if already on this route — prevents accidental double-navigation
+    // and the "1st click sahi, 2nd click kahin aur" glitch caused by rapid
+    // re-taps racing with in-flight route transitions.
+    if (location.pathname === path) return;
     // Haptic feedback for Android
     if ('vibrate' in navigator) {
       navigator.vibrate(10);
     }
     navigate(path);
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 glass-nav border-t border-border/30 sm:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 glass-nav border-t border-border/30"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      <div className="flex items-center justify-around h-[62px]">
+      <div className="flex items-center justify-around h-[62px] max-w-2xl mx-auto sm:h-[64px]">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           return (
