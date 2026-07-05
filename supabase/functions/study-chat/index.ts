@@ -290,9 +290,15 @@ serve(async (req) => {
     }
 
     // Build system prompt with current subject context
+    // If the student explicitly picked a subject via the SubjectChapterSelector,
+    // treat that as the locked "current subject" so the tutor never drifts back
+    // to "General Study" for questions like "computer science ka X samjhao".
+    const effectiveSubject = (currentSubject && currentSubject.trim())
+      ? currentSubject
+      : (subject && subject.trim() ? subject : "");
     const systemPrompt = buildSystemPrompt(
       pastSessions, weakAreas, strongAreas, 
-      currentSubject || "", 
+      effectiveSubject,
       completedSubjects || [],
       studentProfile
     );
