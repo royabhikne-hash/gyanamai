@@ -272,16 +272,6 @@ const StudentProfile = () => {
           </div>
         </div>
 
-        {/* Editable Contact Info */}
-        <div className="edu-card p-6 mb-6">
-          <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Phone className="w-4 h-4 text-primary" />
-            </span>
-            {language === 'en' ? 'Contact Information' : 'संपर्क जानकारी'}
-          </h3>
-        </div>
-
         {/* Preferred language */}
         <div className="edu-card p-6 mb-6">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -303,12 +293,13 @@ const StudentProfile = () => {
           </div>
         </div>
 
+        {/* Editable Contact Info */}
         <div className="edu-card p-6 mb-6">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Phone className="w-4 h-4 text-primary" />
             </span>
-            {language === 'en' ? 'Contact Details' : 'संपर्क विवरण'}
+            {language === 'en' ? 'Contact Information' : 'संपर्क जानकारी'}
           </h3>
           
           <div className="space-y-4">
