@@ -24,6 +24,7 @@ import {
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import StudentRankingCard from "@/components/StudentRankingCard";
 import AppOnboarding, { hasSeenOnboarding } from "@/components/onboarding/AppOnboarding";
+import LanguagePicker from "@/components/LanguagePicker";
 
 
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -47,6 +48,8 @@ const StudentDashboard = () => {
   const { toast } = useToast();
   const { user, signOut, loading } = useAuth();
   const { t, language } = useLanguage();
+  const { hasChosen: hasChosenLanguage } = useLanguage();
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [userName, setUserName] = useState("Student");
   const [studentId, setStudentId] = useState<string | null>(null);
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
@@ -99,14 +102,18 @@ const StudentDashboard = () => {
     }
   }, [user, loading, navigate]);
 
-  // Show onboarding on first visit after approval
+  // First-run flow after approval: language picker → onboarding tour.
   useEffect(() => {
-    if (isApproved && !hasSeenOnboarding()) {
-      // small delay so the dashboard paints first
+    if (!isApproved) return;
+    if (!hasChosenLanguage) {
+      const t = setTimeout(() => setShowLanguagePicker(true), 400);
+      return () => clearTimeout(t);
+    }
+    if (!hasSeenOnboarding()) {
       const t = setTimeout(() => setShowOnboarding(true), 400);
       return () => clearTimeout(t);
     }
-  }, [isApproved]);
+  }, [isApproved, hasChosenLanguage]);
 
   // Real-time subscription for approval status changes
   useEffect(() => {
@@ -711,6 +718,13 @@ const StudentDashboard = () => {
         </Tabs>
       </main>
       <BottomNavBar />
+      <LanguagePicker
+        open={showLanguagePicker}
+        onDone={() => {
+          setShowLanguagePicker(false);
+          if (!hasSeenOnboarding()) setShowOnboarding(true);
+        }}
+      />
       <AppOnboarding open={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </div>
   );

@@ -8,7 +8,9 @@ import { ArrowLeft, User, Phone, Save, Loader2, Key, Camera, Share2, Copy, Check
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage, LANGUAGE_LABELS, Language } from "@/contexts/LanguageContext";
+import { Languages } from "lucide-react";
+import LanguagePicker from "@/components/LanguagePicker";
 import LanguageToggle from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import DailyUsageWidget from "@/components/DailyUsageWidget";
@@ -34,7 +36,8 @@ const StudentProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading } = useAuth();
-  const { language } = useLanguage();
+  const { language, setLanguage } = useLanguage();
+  const [showLangPicker, setShowLangPicker] = useState(false);
   
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -269,6 +272,27 @@ const StudentProfile = () => {
           </div>
         </div>
 
+        {/* Preferred language */}
+        <div className="edu-card p-6 mb-6">
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Languages className="w-4 h-4 text-primary" />
+            </span>
+            App & Chatbot Language
+          </h3>
+          <div className="bg-secondary/30 rounded-xl p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-medium">{LANGUAGE_LABELS[language].native}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                All chatbots (Study Chat, Study Blaster, Exam Prep, Parent Assistant) will reply in this language.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowLangPicker(true)}>
+              Change
+            </Button>
+          </div>
+        </div>
+
         {/* Editable Contact Info */}
         <div className="edu-card p-6 mb-6">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -429,6 +453,7 @@ const StudentProfile = () => {
         </div>
       </main>
       <BottomNavBar />
+      <LanguagePicker open={showLangPicker} onDone={() => setShowLangPicker(false)} firstRun={false} />
     </div>
   );
 };

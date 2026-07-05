@@ -16,6 +16,7 @@ import { useSmartTTS, SPEECHIFY_VOICES } from "@/hooks/useSmartTTS";
 import SpeechifyVoiceSelector from "@/components/SpeechifyVoiceSelector";
 import SubjectChapterSelector from "@/components/SubjectChapterSelector";
 import { BoardType } from "@/data/syllabusData";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Web Speech API types
 interface SpeechRecognitionEvent extends Event {
@@ -112,6 +113,7 @@ interface StudyChatProps {
 
 const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = "CBSE" }: StudyChatProps) => {
   const { toast } = useToast();
+  const { language: preferredLanguage } = useLanguage();
   
   // Subject and Chapter selection state (optional - for reference only)
   const [selectedSubject, setSelectedSubject] = useState("");
@@ -416,7 +418,8 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
           subject: selectedSubject || undefined,
           chapter: selectedChapter || undefined,
           studentClass: studentClass,
-          studentBoard: studentBoard
+          studentBoard: studentBoard,
+          preferredLanguage,
         }
       });
 

@@ -1,6 +1,22 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-type Language = 'en' | 'hi';
+// Supported UI + AI reply languages. `en` and `hi` drive the UI dictionary;
+// `hinglish` and `kn` fall back to English UI copy but instruct every chatbot
+// to reply in the student's preferred language.
+export type Language = 'en' | 'hi' | 'hinglish' | 'kn';
+
+export const LANGUAGE_LABELS: Record<Language, { native: string; english: string; flag: string }> = {
+  en: { native: 'English', english: 'English', flag: '🇬🇧' },
+  hi: { native: 'हिंदी', english: 'Hindi', flag: '🇮🇳' },
+  hinglish: { native: 'Hinglish', english: 'Hinglish', flag: '🇮🇳' },
+  kn: { native: 'ಕನ್ನಡ', english: 'Kannada', flag: '🇮🇳' },
+};
+
+const LANG_STORAGE_KEY = 'appLanguage';
+const LANG_CHOSEN_KEY = 'appLanguageChosen';
+
+const isLanguage = (v: unknown): v is Language =>
+  v === 'en' || v === 'hi' || v === 'hinglish' || v === 'kn';
 
 interface Translations {
   [key: string]: {
@@ -202,6 +218,7 @@ export const translations: Translations = {
 
 interface LanguageContextType {
   language: Language;
+  hasChosen: boolean;
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
   toggleLanguage: () => void;
@@ -211,33 +228,41 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    const stored = localStorage.getItem('appLanguage');
-    return (stored === 'en' || stored === 'hi') ? stored : 'en';
+    const stored = localStorage.getItem(LANG_STORAGE_KEY);
+    return isLanguage(stored) ? stored : 'en';
+  });
+  const [hasChosen, setHasChosen] = useState<boolean>(() => {
+    try { return localStorage.getItem(LANG_CHOSEN_KEY) === '1'; } catch { return false; }
   });
 
   useEffect(() => {
-    localStorage.setItem('appLanguage', language);
+    localStorage.setItem(LANG_STORAGE_KEY, language);
   }, [language]);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
+    try {
+      localStorage.setItem(LANG_CHOSEN_KEY, '1');
+      localStorage.setItem(LANG_STORAGE_KEY, lang);
+    } catch { /* ignore */ }
+    setHasChosen(true);
   };
 
   const toggleLanguage = () => {
-    setLanguageState(prev => prev === 'en' ? 'hi' : 'en');
+    setLanguageState(prev => (prev === 'en' ? 'hi' : 'en'));
   };
 
   const t = (key: string): string => {
     const translation = translations[key];
-    if (!translation) {
-      console.warn(`Translation missing for key: ${key}`);
-      return key;
-    }
-    return translation[language];
+    if (!translation) return key;
+    // UI dictionary only has en/hi. Hinglish + Kannada fall back to English UI
+    // labels; the AI reply language is controlled separately via `language`.
+    if (language === 'hi') return translation.hi;
+    return translation.en;
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t, toggleLanguage }}>
+    <LanguageContext.Provider value={{ language, hasChosen, setLanguage, t, toggleLanguage }}>
       {children}
     </LanguageContext.Provider>
   );

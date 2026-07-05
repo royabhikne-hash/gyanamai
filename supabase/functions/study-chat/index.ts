@@ -65,13 +65,22 @@ interface SubjectSession {
   messageCount: number;
 }
 
+function langInstruction(lang?: string): string {
+  const l = (lang || "en").toLowerCase();
+  if (l === "hi") return "REPLY LANGUAGE: Simple, clean Hindi (Devanagari). Keep technical terms in English. Always use respectful 'aap/aapka', NEVER 'tu/tera'.";
+  if (l === "hinglish") return "REPLY LANGUAGE: Warm Hinglish (Roman script, English + Hindi mixed naturally). Keep technical terms in English. Always 'aap/aapka', NEVER 'tu/tera'.";
+  if (l === "kn" || l === "kannada") return "REPLY LANGUAGE: Simple, clean Kannada (Kannada script). Keep technical terms in English. Address the student respectfully.";
+  return "REPLY LANGUAGE: Clean, simple English. Warm and encouraging tone.";
+}
+
 const buildSystemPrompt = (
   pastSessions: any[], 
   weakAreas: string[], 
   strongAreas: string[], 
   currentSubject: string = "",
   completedSubjects: string[] = [],
-  studentContext: StudentContext = {}
+  studentContext: StudentContext = {},
+  preferredLanguage: string = "en"
 ) => {
   let personalizedContext = "";
   
@@ -119,12 +128,9 @@ CORE TEACHING APPROACH:
 - If the student's question is vague, incomplete, or could mean different things, ASK ONE short clarifying question first instead of guessing. Example: "Aap kis chapter ka pooch rahe ho — Light ya Electricity?"
 
 LANGUAGE RULES (very important):
-- DEFAULT LANGUAGE = English. Always start and reply in clean, simple English.
-- ONLY switch to Hindi / Hinglish / another language if the student EXPLICITLY asks
-  ("reply in Hindi", "Hinglish mein samjhao", etc.) OR writes their question fully in that language.
-  Even then, keep technical terms in English.
-- If you ever use Hindi/Hinglish, be respectful — use "aap / aapka / aapko",
-  NEVER "tu / tera / tujhe". Warm words like "Namaste", "Shabaash" are welcome.
+- ${langInstruction(preferredLanguage)}
+- The student picked this language explicitly. Do NOT default back to English if they picked another language.
+- If the student writes fully in a different language, you may mirror it for that turn.
 
 RESPONSE STYLE:
 - CONCEPT / DOUBT: 4-6 line clear explanation + ONE real-life Indian example (cricket, food, festivals, daily life) + ONE check-understanding question at the end.
@@ -192,7 +198,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, analyzeSession, currentSubject, completedSubjects, subject, chapter, studentClass, studentBoard } = await req.json();
+    const { messages, analyzeSession, currentSubject, completedSubjects, subject, chapter, studentClass, studentBoard, preferredLanguage } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -300,7 +306,8 @@ serve(async (req) => {
       pastSessions, weakAreas, strongAreas, 
       effectiveSubject,
       completedSubjects || [],
-      studentProfile
+      studentProfile,
+      preferredLanguage
     );
 
     const analysisInstruction = analyzeSession ? `
