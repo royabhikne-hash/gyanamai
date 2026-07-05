@@ -418,7 +418,8 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
           subject: selectedSubject || undefined,
           chapter: selectedChapter || undefined,
           studentClass: studentClass,
-          studentBoard: studentBoard
+          studentBoard: studentBoard,
+          preferredLanguage,
         }
       });
 
