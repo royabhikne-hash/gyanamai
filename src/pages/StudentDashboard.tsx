@@ -25,6 +25,8 @@ import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import StudentRankingCard from "@/components/StudentRankingCard";
 import AppOnboarding, { hasSeenOnboarding } from "@/components/onboarding/AppOnboarding";
 import LanguagePicker from "@/components/LanguagePicker";
+import BookCoverUpload, { hasSeenBookUpload } from "@/components/onboarding/BookCoverUpload";
+import TeacherHome from "@/components/teacher/TeacherHome";
 
 
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -50,6 +52,7 @@ const StudentDashboard = () => {
   const { t, language } = useLanguage();
   const { hasChosen: hasChosenLanguage } = useLanguage();
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [showBookUpload, setShowBookUpload] = useState(false);
   const [userName, setUserName] = useState("Student");
   const [studentId, setStudentId] = useState<string | null>(null);
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
@@ -107,6 +110,10 @@ const StudentDashboard = () => {
     if (!isApproved) return;
     if (!hasChosenLanguage) {
       const t = setTimeout(() => setShowLanguagePicker(true), 400);
+      return () => clearTimeout(t);
+    }
+    if (!hasSeenBookUpload()) {
+      const t = setTimeout(() => setShowBookUpload(true), 400);
       return () => clearTimeout(t);
     }
     if (!hasSeenOnboarding()) {
@@ -523,6 +530,13 @@ const StudentDashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl relative z-10">
+        {/* AI Tutor Home — new primary experience */}
+        {studentId && isApproved && (
+          <div className="mb-6 sm:mb-8 animate-fade-in">
+            <TeacherHome studentId={studentId} studentName={userName} />
+          </div>
+        )}
+
         {/* Welcome & Start Study */}
         <div className="mb-6 sm:mb-8 animate-fade-in">
           <div className="glass-card relative overflow-hidden p-5 sm:p-8 md:p-10 text-center"
@@ -722,6 +736,15 @@ const StudentDashboard = () => {
         open={showLanguagePicker}
         onDone={() => {
           setShowLanguagePicker(false);
+          if (!hasSeenBookUpload()) setShowBookUpload(true);
+          else if (!hasSeenOnboarding()) setShowOnboarding(true);
+        }}
+      />
+      <BookCoverUpload
+        open={showBookUpload}
+        studentId={studentId}
+        onDone={() => {
+          setShowBookUpload(false);
           if (!hasSeenOnboarding()) setShowOnboarding(true);
         }}
       />
