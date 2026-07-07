@@ -530,6 +530,13 @@ const StudentDashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl relative z-10">
+        {/* AI Tutor Home — new primary experience */}
+        {studentId && isApproved && (
+          <div className="mb-6 sm:mb-8 animate-fade-in">
+            <TeacherHome studentId={studentId} studentName={userName} />
+          </div>
+        )}
+
         {/* Welcome & Start Study */}
         <div className="mb-6 sm:mb-8 animate-fade-in">
           <div className="glass-card relative overflow-hidden p-5 sm:p-8 md:p-10 text-center"
