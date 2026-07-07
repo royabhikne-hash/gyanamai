@@ -729,6 +729,15 @@ const StudentDashboard = () => {
         open={showLanguagePicker}
         onDone={() => {
           setShowLanguagePicker(false);
+          if (!hasSeenBookUpload()) setShowBookUpload(true);
+          else if (!hasSeenOnboarding()) setShowOnboarding(true);
+        }}
+      />
+      <BookCoverUpload
+        open={showBookUpload}
+        studentId={studentId}
+        onDone={() => {
+          setShowBookUpload(false);
           if (!hasSeenOnboarding()) setShowOnboarding(true);
         }}
       />
