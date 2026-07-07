@@ -25,6 +25,8 @@ import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import StudentRankingCard from "@/components/StudentRankingCard";
 import AppOnboarding, { hasSeenOnboarding } from "@/components/onboarding/AppOnboarding";
 import LanguagePicker from "@/components/LanguagePicker";
+import BookCoverUpload, { hasSeenBookUpload } from "@/components/onboarding/BookCoverUpload";
+import TeacherHome from "@/components/teacher/TeacherHome";
 
 
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -50,6 +52,7 @@ const StudentDashboard = () => {
   const { t, language } = useLanguage();
   const { hasChosen: hasChosenLanguage } = useLanguage();
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [showBookUpload, setShowBookUpload] = useState(false);
   const [userName, setUserName] = useState("Student");
   const [studentId, setStudentId] = useState<string | null>(null);
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
@@ -107,6 +110,10 @@ const StudentDashboard = () => {
     if (!isApproved) return;
     if (!hasChosenLanguage) {
       const t = setTimeout(() => setShowLanguagePicker(true), 400);
+      return () => clearTimeout(t);
+    }
+    if (!hasSeenBookUpload()) {
+      const t = setTimeout(() => setShowBookUpload(true), 400);
       return () => clearTimeout(t);
     }
     if (!hasSeenOnboarding()) {
