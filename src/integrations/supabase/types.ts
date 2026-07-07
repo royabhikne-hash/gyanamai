@@ -319,6 +319,56 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_plans: {
+        Row: {
+          completed_steps: Json
+          created_at: string
+          greeting: string | null
+          id: string
+          plan_date: string
+          recap: string | null
+          status: string
+          steps: Json
+          student_id: string
+          total_minutes: number | null
+          updated_at: string
+        }
+        Insert: {
+          completed_steps?: Json
+          created_at?: string
+          greeting?: string | null
+          id?: string
+          plan_date?: string
+          recap?: string | null
+          status?: string
+          steps?: Json
+          student_id: string
+          total_minutes?: number | null
+          updated_at?: string
+        }
+        Update: {
+          completed_steps?: Json
+          created_at?: string
+          greeting?: string | null
+          id?: string
+          plan_date?: string
+          recap?: string | null
+          status?: string
+          steps?: Json
+          student_id?: string
+          total_minutes?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_plans_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_usage: {
         Row: {
           chats_used: number
@@ -1011,6 +1061,150 @@ export type Database = {
           user_type?: string
         }
         Relationships: []
+      }
+      student_books: {
+        Row: {
+          book_title: string | null
+          confidence: number | null
+          cover_url: string | null
+          created_at: string
+          detected_board: string | null
+          detected_class: string | null
+          id: string
+          publisher: string | null
+          raw_detection: Json | null
+          student_id: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          book_title?: string | null
+          confidence?: number | null
+          cover_url?: string | null
+          created_at?: string
+          detected_board?: string | null
+          detected_class?: string | null
+          id?: string
+          publisher?: string | null
+          raw_detection?: Json | null
+          student_id: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          book_title?: string | null
+          confidence?: number | null
+          cover_url?: string | null
+          created_at?: string
+          detected_board?: string | null
+          detected_class?: string | null
+          id?: string
+          publisher?: string | null
+          raw_detection?: Json | null
+          student_id?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_books_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_memory: {
+        Row: {
+          best_study_time: string | null
+          last_session_summary: string | null
+          learning_style: string | null
+          streak_health: string | null
+          strong_topics: Json
+          student_id: string
+          updated_at: string
+          weak_topics: Json
+        }
+        Insert: {
+          best_study_time?: string | null
+          last_session_summary?: string | null
+          learning_style?: string | null
+          streak_health?: string | null
+          strong_topics?: Json
+          student_id: string
+          updated_at?: string
+          weak_topics?: Json
+        }
+        Update: {
+          best_study_time?: string | null
+          last_session_summary?: string | null
+          learning_style?: string | null
+          streak_health?: string | null
+          strong_topics?: Json
+          student_id?: string
+          updated_at?: string
+          weak_topics?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_memory_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_observations: {
+        Row: {
+          created_at: string
+          device: string | null
+          focus_level: string | null
+          id: string
+          meta: Json | null
+          mood: string | null
+          observed_at: string
+          session_length_minutes: number | null
+          source: string | null
+          student_id: string
+          time_of_day: string | null
+        }
+        Insert: {
+          created_at?: string
+          device?: string | null
+          focus_level?: string | null
+          id?: string
+          meta?: Json | null
+          mood?: string | null
+          observed_at?: string
+          session_length_minutes?: number | null
+          source?: string | null
+          student_id: string
+          time_of_day?: string | null
+        }
+        Update: {
+          created_at?: string
+          device?: string | null
+          focus_level?: string | null
+          id?: string
+          meta?: Json | null
+          mood?: string | null
+          observed_at?: string
+          session_length_minutes?: number | null
+          source?: string | null
+          student_id?: string
+          time_of_day?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_observations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       students: {
         Row: {
