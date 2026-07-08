@@ -70,7 +70,15 @@ Deno.serve(async (req) => {
 
     const plan = sub?.plan || "starter";
     const body = await req.json();
-    const { action } = body;
+    const { action, language } = body;
+
+    const langInstruction = (() => {
+      const l = (language || "en").toLowerCase();
+      if (l === "hi") return "STUDENT'S PREFERRED LANGUAGE: Hindi (Devanagari). Reply in clean Hindi, respectful 'aap/aapka'. Keep technical terms in English.";
+      if (l === "hinglish") return "STUDENT'S PREFERRED LANGUAGE: Hinglish (Roman script, English + Hindi mixed). Respectful 'aap/aapka'.";
+      if (l === "kn") return "STUDENT'S PREFERRED LANGUAGE: Kannada. Reply in Kannada script, technical terms in English.";
+      return "STUDENT'S PREFERRED LANGUAGE: English. Reply in clean simple English.";
+    })();
 
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
@@ -236,6 +244,8 @@ Deno.serve(async (req) => {
           : 'No specific topics extracted yet';
 
         const systemPrompt = `You are Gyanam AI Exam Coach — a warm, NCERT-aligned exam prep tutor for ${student.full_name} (Class ${student.class}, ${student.board} board).
+
+${langInstruction}
 
 Student Profile:
 - Topic familiarity: ${session?.topic_familiarity || "new"}

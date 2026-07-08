@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChevronLeft, Check, RefreshCw, BookOpen, Brain, ClipboardList, PencilLine, Zap, ArrowRight } from "lucide-react";
@@ -19,6 +19,7 @@ const routeForStep = (s: PlanStep): string | null => {
   if (s.type === "mcq") return "/mcq-practice";
   if (s.type === "teach" || s.type === "revision" || s.type === "homework_review") return "/study";
   if (s.type === "flashcards") return "/study-blaster";
+  if (s.type === "notebook") return "/study";
   return null;
 };
 
@@ -40,6 +41,16 @@ const TeacherSession = ({
   const step = plan.steps[idx];
   const Icon = stepIcon[step.type] ?? BookOpen;
   const done = plan.completed_steps.includes(idx);
+
+  // Phase 3: proactively surface next tool. We do NOT auto-navigate (would rip
+  // the student out of the session context); we highlight the primary CTA and
+  // pre-warm a soft hint after 1s of viewing the step.
+  const [hintVisible, setHintVisible] = useState(false);
+  useEffect(() => {
+    setHintVisible(false);
+    const t = setTimeout(() => setHintVisible(true), 1200);
+    return () => clearTimeout(t);
+  }, [idx]);
 
   const markDone = async () => {
     const nextDone = Array.from(new Set([...(plan.completed_steps ?? []), idx]));
@@ -107,8 +118,12 @@ const TeacherSession = ({
 
         <div className="mt-6 flex flex-col sm:flex-row gap-2">
           {routeForStep(step) && (
-            <Button onClick={openTool} size="lg" className="rounded-2xl min-h-11 flex-1">
-              Open <ArrowRight className="w-4 h-4 ml-1.5" />
+            <Button
+              onClick={openTool}
+              size="lg"
+              className={`rounded-2xl min-h-11 flex-1 transition-transform ${hintVisible ? "ring-2 ring-primary/40 scale-[1.02]" : ""}`}
+            >
+              Open now <ArrowRight className="w-4 h-4 ml-1.5" />
             </Button>
           )}
           <Button
