@@ -100,24 +100,26 @@ const BookCoverUpload = ({
               <button
                 key={s}
                 onClick={() => pick(s)}
-                className="relative aspect-[3/4] rounded-2xl border border-border/60 bg-muted/30 hover:border-primary/50 transition-all overflow-hidden text-left touch-manipulation"
+                className="relative aspect-square rounded-2xl border border-border/60 bg-muted/30 hover:border-primary/50 transition-all overflow-hidden text-left touch-manipulation flex flex-col"
                 aria-label={`Add cover for ${s}`}
               >
-                {cover ? (
-                  <>
-                    <img src={cover} alt={`${s} textbook cover`} className="absolute inset-0 w-full h-full object-cover" />
-                    <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow">
-                      <Check className="w-3.5 h-3.5" />
+                <div className="px-2.5 py-1.5 border-b border-border/40 bg-background/60 flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-foreground truncate">{s}</span>
+                  {cover && (
+                    <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
+                      <Check className="w-2.5 h-2.5" />
                     </span>
-                  </>
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-muted-foreground">
-                    <Camera className="w-6 h-6" />
-                    <span className="text-[11px] font-medium">Tap to add</span>
-                  </div>
-                )}
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent px-2 py-1.5">
-                  <span className="text-[11px] font-semibold text-foreground">{s}</span>
+                  )}
+                </div>
+                <div className="relative flex-1">
+                  {cover ? (
+                    <img src={cover} alt={`${s} textbook cover`} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+                      <Camera className="w-5 h-5" />
+                      <span className="text-[10px] font-medium">Tap to add</span>
+                    </div>
+                  )}
                 </div>
               </button>
             );
