@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sparkles, Play, RefreshCw, BookOpen, Brain, ClipboardList, PencilLine, Zap, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import TeacherSession from "./TeacherSession";
+import { thinkingLines, proactiveNote, refuseSkipLines, pickLine } from "./teacherVoice";
 
 export type PlanStep = {
   type: "revision" | "teach" | "mcq" | "notebook" | "homework_review" | "flashcards";
@@ -48,6 +49,12 @@ const TeacherHome = ({ studentId, studentName }: { studentId: string; studentNam
   const [plan, setPlan] = useState<DailyPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  // Behavior layer: teacher "thinks" before revealing anything.
+  const [thinking, setThinking] = useState(true);
+  const [thinkingLine] = useState(() => pickLine(thinkingLines));
+  const [dots, setDots] = useState("");
+  const [refuseMsg, setRefuseMsg] = useState<string | null>(null);
+  const revealedOnce = useRef(false);
 
   const loadPlan = async (force = false) => {
     setLoading(true);
@@ -67,10 +74,53 @@ const TeacherHome = ({ studentId, studentName }: { studentId: string; studentNam
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId]);
 
-  if (loading && !plan) {
+  // Animated typing dots while the teacher "thinks".
+  useEffect(() => {
+    if (!thinking) return;
+    const t = setInterval(() => setDots((d) => (d.length >= 3 ? "" : d + ".")), 400);
+    return () => clearInterval(t);
+  }, [thinking]);
+
+  // Reveal the plan only after (a) data is loaded and (b) at least ~2.4s
+  // of "thinking" — but only the first time in this session.
+  useEffect(() => {
+    if (!plan || revealedOnce.current) return;
+    const t = setTimeout(() => {
+      setThinking(false);
+      revealedOnce.current = true;
+    }, 2400);
+    return () => clearTimeout(t);
+  }, [plan]);
+
+  const hasStarted = !!plan && (plan.completed_steps?.length ?? 0) > 0;
+  const allDone = !!plan && (plan.completed_steps?.length ?? 0) >= plan.steps.length;
+  const note = plan ? proactiveNote({ name: studentName.split(" ")[0], hasStarted, allDone }) : "";
+
+  const handleRethink = () => {
+    // Teacher refuses ~65% of the time if student hasn't done anything yet.
+    if (!hasStarted && Math.random() < 0.65) {
+      setRefuseMsg(pickLine(refuseSkipLines));
+      setTimeout(() => setRefuseMsg(null), 6000);
+      return;
+    }
+    setThinking(true);
+    revealedOnce.current = false;
+    loadPlan(true);
+  };
+
+  if ((loading && !plan) || thinking) {
     return (
-      <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-6 min-h-[220px] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-6 sm:p-8 min-h-[220px] flex items-start gap-4">
+        <div className="w-11 h-11 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
+          <Sparkles className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0 pt-1">
+          <p className="text-[11px] font-medium tracking-wide uppercase text-primary/80 mb-1">Your Teacher</p>
+          <p className="text-base sm:text-lg font-medium text-foreground leading-relaxed">
+            {thinkingLine}
+            <span className="text-primary inline-block w-6 text-left">{dots}</span>
+          </p>
+        </div>
       </div>
     );
   }
@@ -100,6 +150,11 @@ const TeacherHome = ({ studentId, studentName }: { studentId: string; studentNam
             {plan.greeting || `Good to see you, ${studentName}.`}
           </h1>
           {plan.recap && <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{plan.recap}</p>}
+          {note && (
+            <p className="text-[13px] text-primary/90 mt-2 leading-relaxed animate-fade-in">
+              {note}
+            </p>
+          )}
         </div>
       </header>
 
@@ -133,13 +188,19 @@ const TeacherHome = ({ studentId, studentName }: { studentId: string; studentNam
         You don't have to figure out what to study next. That's my job.
       </p>
 
+      {refuseMsg && (
+        <Card className="mt-4 p-3 border-primary/30 bg-primary/5 animate-fade-in">
+          <p className="text-sm text-foreground leading-relaxed">{refuseMsg}</p>
+        </Card>
+      )}
+
       <div className="mt-5 flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] text-muted-foreground">Time together today</p>
           <p className="text-sm font-bold text-foreground">{plan.total_minutes} min</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => loadPlan(true)} aria-label="Rethink today">
+          <Button variant="ghost" size="sm" onClick={handleRethink} aria-label="Rethink today">
             <RefreshCw className="w-4 h-4" />
           </Button>
           <Button size="lg" onClick={() => setRunning(true)} className="rounded-2xl min-h-11">
