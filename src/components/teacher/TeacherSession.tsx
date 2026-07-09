@@ -5,6 +5,7 @@ import { ChevronLeft, Check, RefreshCw, BookOpen, Brain, ClipboardList, PencilLi
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { DailyPlan, PlanStep } from "./TeacherHome";
+import { doneReactions, finalReactions, refuseSkipLines, pickLine } from "./teacherVoice";
 
 const stepIcon: Record<PlanStep["type"], any> = {
   revision: RefreshCw,
@@ -63,6 +64,11 @@ const TeacherSession = ({
   const isLast = idx >= plan.steps.length - 1;
   const allDone = plan.completed_steps.length >= plan.steps.length;
 
+  // Teacher's live reaction between steps ("Hmm — nicely done.").
+  const [reaction, setReaction] = useState<string | null>(null);
+  // Pushback if student tries to exit mid-session without finishing.
+  const [pushback, setPushback] = useState<string | null>(null);
+
   // Phase 3: proactively surface next tool. We do NOT auto-navigate (would rip
   // the student out of the session context); we highlight the primary CTA and
   // pre-warm a soft hint after 1s of viewing the step.
@@ -93,7 +99,20 @@ const TeacherSession = ({
       meta: { step_type: step.type, topic: step.topic, subject: step.subject },
     });
 
-    if (idx < plan.steps.length - 1) setIdx(idx + 1);
+    // Teacher reacts, briefly. Feels alive; not just "next".
+    const line = isLast || nextDone.length >= plan.steps.length
+      ? pickLine(finalReactions)
+      : pickLine(doneReactions);
+    setReaction(line);
+    // Advance to the next step after the reaction sits for ~1.4s.
+    if (idx < plan.steps.length - 1) {
+      setTimeout(() => {
+        setReaction(null);
+        setIdx(idx + 1);
+      }, 1400);
+    } else {
+      setTimeout(() => setReaction(null), 4000);
+    }
   };
 
   const openTool = () => {
@@ -101,10 +120,20 @@ const TeacherSession = ({
     if (r) navigate(`${r}?topic=${encodeURIComponent(step.topic)}${step.subject ? `&subject=${encodeURIComponent(step.subject)}` : ""}`);
   };
 
+  const handleExit = () => {
+    // Teacher pushes back if student leaves before finishing — but only once.
+    const completed = plan.completed_steps.length;
+    if (!allDone && !pushback && Math.random() < 0.7 && completed < plan.steps.length) {
+      setPushback(pickLine(refuseSkipLines));
+      return;
+    }
+    onExit();
+  };
+
   return (
     <section aria-labelledby="teacher-session-title" className="rounded-3xl border border-border/60 bg-background overflow-hidden shadow-sm">
       <header className="flex items-center gap-2 px-4 py-3 border-b border-border/60 bg-muted/30">
-        <Button variant="ghost" size="icon" onClick={onExit} aria-label="Back to plan" className="min-h-11 min-w-11">
+        <Button variant="ghost" size="icon" onClick={handleExit} aria-label="Back" className="min-h-11 min-w-11">
           <ChevronLeft className="w-5 h-5" />
         </Button>
         <p className="text-[11px] text-muted-foreground flex-1">
@@ -120,6 +149,22 @@ const TeacherSession = ({
         </div>
       </header>
 
+      {pushback && (
+        <div className="px-4 sm:px-6 pt-4">
+          <Card className="p-3 border-primary/30 bg-primary/5 animate-fade-in">
+            <p className="text-sm text-foreground leading-relaxed">{pushback}</p>
+            <div className="flex gap-2 mt-3">
+              <Button size="sm" variant="outline" onClick={() => setPushback(null)} className="rounded-xl">
+                Okay, I'll stay
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setPushback(null); onExit(); }} className="rounded-xl">
+                Leave anyway
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
       <div className="p-6 sm:p-8">
         <div className="w-14 h-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center mb-4">
           <Icon className="w-6 h-6" />
@@ -134,6 +179,12 @@ const TeacherSession = ({
         {step.reason && (
           <Card className="p-4 mt-5 bg-primary/5 border-primary/20">
             <p className="text-sm text-foreground leading-relaxed">{step.reason}</p>
+          </Card>
+        )}
+
+        {reaction && (
+          <Card className="p-4 mt-4 border-primary/30 bg-primary/10 animate-fade-in">
+            <p className="text-sm text-foreground font-medium leading-relaxed">{reaction}</p>
           </Card>
         )}
 
