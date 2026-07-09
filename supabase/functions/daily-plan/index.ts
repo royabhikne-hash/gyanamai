@@ -24,14 +24,14 @@ function partOfDay(d = new Date()) {
 function fallbackPlan(name: string, subjects: string[]): { greeting: string; recap: string; steps: Step[]; total: number } {
   const subj = subjects[0] ?? 'your syllabus';
   const steps: Step[] = [
-    { type: 'revision', subject: subj, topic: 'Last chapter recap', minutes: 10, reason: 'Warm-up before new material.' },
-    { type: 'teach', subject: subj, topic: 'Next concept', minutes: 25, reason: "Today's core lesson." },
-    { type: 'mcq', subject: subj, topic: 'Quick check', minutes: 15, reason: 'Practice what you just learnt.' },
-    { type: 'notebook', subject: subj, topic: 'Write 3 short answers', minutes: 10, reason: 'Retention through writing.' },
+    { type: 'revision', subject: subj, topic: 'Last chapter recap', minutes: 10, reason: "Let's warm up before we go further." },
+    { type: 'teach', subject: subj, topic: 'Next concept', minutes: 25, reason: "This is where we'll spend most of our time today." },
+    { type: 'mcq', subject: subj, topic: 'Quick check', minutes: 15, reason: "I want to see what stayed with you." },
+    { type: 'notebook', subject: subj, topic: 'Write 3 short answers', minutes: 10, reason: "Writing it down helps me trust you know it." },
   ];
   return {
-    greeting: `Good ${partOfDay()}, ${name}.`,
-    recap: "Let's keep your streak going. I've kept today light but focused.",
+    greeting: `Good ${partOfDay()}, ${name}. I've planned today's session for you.`,
+    recap: "Don't worry about what to study — I'll guide you step by step.",
     steps,
     total: steps.reduce((s, x) => s + x.minutes, 0),
   };
@@ -53,16 +53,16 @@ async function aiPlan(input: {
     : input.language === 'kn' ? 'Reply in Kannada.'
     : 'Reply in simple English.';
 
-  const sys = `You are Gyanam, a personal AI Tutor. Build TODAY's study plan for a Class ${input.className ?? '?'} ${input.board ?? ''} student.
+  const sys = `You are the student's personal Teacher (never say "AI" or "bot" or "tool"). Prepare TODAY's session for a Class ${input.className ?? '?'} ${input.board ?? ''} student.
 ${langInstr}
-You always speak first, like a caring teacher. Never ask the student what to study — you decide.
+Speak warmly, like a real human teacher who already knows this student. You decide what to study — never ask them. Own the responsibility with lines like "I've planned today for you" or "Don't worry about what to study, I'll guide you". Occasionally show mild human uncertainty ("Hmm, let's try...", "Good — I expected that"). Never use the words "AI", "plan", "tool", "MCQ", "flashcards", "podcast", "Study Blaster", "Exam Prep" in the greeting or recap.
 Return ONLY strict JSON with this exact shape:
 {
-  "greeting": "1 short sentence greeting the student by name and referencing time of day",
-  "recap": "1-2 sentences recalling yesterday and setting today's tone",
+  "greeting": "1 short warm sentence greeting the student by name and gently owning today ('I've prepared...', 'Let's begin with...')",
+  "recap": "1-2 sentences recalling yesterday specifically (a topic, a mistake, an improvement) and setting today's tone. Sound like a human teacher, not a system.",
   "steps": [{"type":"revision|teach|mcq|notebook|homework_review|flashcards","subject":"","topic":"","minutes":number,"reason":"1 short sentence"}]
 }
-Rules: 3-5 steps, total 40-75 minutes, always start with revision or homework_review, always end with a light mcq or notebook step, use subjects from the provided list only.`;
+Rules: 3-5 steps, total 40-75 minutes, always start with revision or homework_review, always end with a light mcq or notebook step, use subjects from the provided list only. The "reason" field is what the teacher would whisper to the student — warm, specific, one sentence.`;
 
   const user = `Student: ${input.name}
 Subjects available: ${input.subjects.join(', ') || 'General Studies'}
