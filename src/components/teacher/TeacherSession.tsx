@@ -15,6 +15,25 @@ const stepIcon: Record<PlanStep["type"], any> = {
   flashcards: Zap,
 };
 
+// Teacher-voice: never expose tool names.
+const stepLabel: Record<PlanStep["type"], string> = {
+  revision: "Quick recap",
+  teach: "New lesson",
+  mcq: "Let's practice",
+  notebook: "Write it down",
+  homework_review: "Homework check",
+  flashcards: "Memory check",
+};
+
+const stepCta: Record<PlanStep["type"], string> = {
+  revision: "Start recap",
+  teach: "Begin lesson",
+  mcq: "Let's practice",
+  notebook: "Open notebook",
+  homework_review: "Show me your work",
+  flashcards: "Quick memory check",
+};
+
 const routeForStep = (s: PlanStep): string | null => {
   if (s.type === "mcq") return "/mcq-practice";
   if (s.type === "teach" || s.type === "revision" || s.type === "homework_review") return "/study";
@@ -41,6 +60,8 @@ const TeacherSession = ({
   const step = plan.steps[idx];
   const Icon = stepIcon[step.type] ?? BookOpen;
   const done = plan.completed_steps.includes(idx);
+  const isLast = idx >= plan.steps.length - 1;
+  const allDone = plan.completed_steps.length >= plan.steps.length;
 
   // Phase 3: proactively surface next tool. We do NOT auto-navigate (would rip
   // the student out of the session context); we highlight the primary CTA and
@@ -104,7 +125,7 @@ const TeacherSession = ({
           <Icon className="w-6 h-6" />
         </div>
         <p className="text-[11px] font-medium tracking-wide uppercase text-primary/80 mb-1">
-          {step.type.replace("_", " ")} · {step.minutes} min
+          {stepLabel[step.type] ?? "Session"} · {step.minutes} min
         </p>
         <h2 id="teacher-session-title" className="text-2xl font-bold text-foreground font-display leading-tight">
           {step.topic}
@@ -123,7 +144,7 @@ const TeacherSession = ({
               size="lg"
               className={`rounded-2xl min-h-11 flex-1 transition-transform ${hintVisible ? "ring-2 ring-primary/40 scale-[1.02]" : ""}`}
             >
-              Open now <ArrowRight className="w-4 h-4 ml-1.5" />
+              {stepCta[step.type] ?? "Continue with me"} <ArrowRight className="w-4 h-4 ml-1.5" />
             </Button>
           )}
           <Button
@@ -133,9 +154,17 @@ const TeacherSession = ({
             className="rounded-2xl min-h-11 flex-1"
           >
             <Check className="w-4 h-4 mr-1.5" />
-            {done ? "Marked done" : "Mark done & continue"}
+            {done ? "Nicely done" : isLast ? "Finish for today" : "Done — next"}
           </Button>
         </div>
+
+        {allDone && (
+          <Card className="p-4 mt-5 bg-primary/5 border-primary/20">
+            <p className="text-sm text-foreground leading-relaxed">
+              Today's work is complete. I noticed where you hesitated — I'll adjust tomorrow's session for that. Enjoy your evening.
+            </p>
+          </Card>
+        )}
       </div>
     </section>
   );
