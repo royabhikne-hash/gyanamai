@@ -33,6 +33,16 @@ const stepIcon: Record<PlanStep["type"], any> = {
   flashcards: Zap,
 };
 
+// Teacher-voice labels — student never sees tool names.
+const stepLabel: Record<PlanStep["type"], string> = {
+  revision: "Quick recap",
+  teach: "New lesson",
+  mcq: "Let's practice",
+  notebook: "Write it down",
+  homework_review: "Homework check",
+  flashcards: "Memory check",
+};
+
 const TeacherHome = ({ studentId, studentName }: { studentId: string; studentName: string }) => {
   const { language } = useLanguage();
   const [plan, setPlan] = useState<DailyPlan | null>(null);
@@ -85,15 +95,18 @@ const TeacherHome = ({ studentId, studentName }: { studentId: string; studentNam
           <Sparkles className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-medium tracking-wide uppercase text-primary/80">Your AI Tutor</p>
+          <p className="text-[11px] font-medium tracking-wide uppercase text-primary/80">Your Teacher</p>
           <h1 id="teacher-home-title" className="text-lg sm:text-xl font-bold text-foreground font-display leading-tight">
-            {plan.greeting || `Hi ${studentName}, ready to learn?`}
+            {plan.greeting || `Good to see you, ${studentName}.`}
           </h1>
           {plan.recap && <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{plan.recap}</p>}
         </div>
       </header>
 
-      <ol className="space-y-2 mt-4" aria-label="Today's study plan">
+      <p className="text-sm text-foreground/80 mt-4 mb-2 italic">
+        Today we'll do this together —
+      </p>
+      <ol className="space-y-2" aria-label="Today's session">
         {plan.steps.map((s, i) => {
           const Icon = stepIcon[s.type] ?? BookOpen;
           const done = plan.completed_steps.includes(i);
@@ -106,7 +119,7 @@ const TeacherHome = ({ studentId, studentName }: { studentId: string; studentNam
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{s.topic}</p>
                   <p className="text-[11px] text-muted-foreground truncate">
-                    {s.subject ? `${s.subject} · ` : ""}{s.minutes} min · {s.type.replace("_", " ")}
+                    {s.subject ? `${s.subject} · ` : ""}{s.minutes} min · {stepLabel[s.type] ?? "Session"}
                   </p>
                 </div>
                 {done && <span className="text-[10px] font-semibold text-primary">Done</span>}
@@ -116,18 +129,22 @@ const TeacherHome = ({ studentId, studentName }: { studentId: string; studentNam
         })}
       </ol>
 
+      <p className="mt-4 text-[12px] text-muted-foreground italic leading-relaxed border-l-2 border-primary/40 pl-3">
+        You don't have to figure out what to study next. That's my job.
+      </p>
+
       <div className="mt-5 flex items-center justify-between gap-3">
         <div>
-          <p className="text-[11px] text-muted-foreground">Total today</p>
+          <p className="text-[11px] text-muted-foreground">Time together today</p>
           <p className="text-sm font-bold text-foreground">{plan.total_minutes} min</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => loadPlan(true)} aria-label="Regenerate plan">
+          <Button variant="ghost" size="sm" onClick={() => loadPlan(true)} aria-label="Rethink today">
             <RefreshCw className="w-4 h-4" />
           </Button>
           <Button size="lg" onClick={() => setRunning(true)} className="rounded-2xl min-h-11">
             <Play className="w-4 h-4 mr-1.5" />
-            Start learning
+            Let's begin
           </Button>
         </div>
       </div>
