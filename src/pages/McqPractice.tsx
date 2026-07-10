@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getSubjects, BoardType } from "@/data/syllabusData";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
+import { askBrain } from "@/lib/teacherBrain";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MCQQuestion {
   question: string;
@@ -27,6 +29,7 @@ const McqPractice = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { toast } = useToast();
+  const { language } = useLanguage();
 
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentBoard, setStudentBoard] = useState<string>("CBSE");
@@ -52,6 +55,8 @@ const McqPractice = () => {
   // Results
   const [correctCount, setCorrectCount] = useState(0);
   const [wrongCount, setWrongCount] = useState(0);
+  // In-lesson teacher reaction shown right after the student submits an answer.
+  const [teacherReaction, setTeacherReaction] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -163,6 +168,20 @@ const McqPractice = () => {
     } else {
       setWrongCount(prev => prev + 1);
     }
+
+    // TeacherBrain reacts in-lesson — references memory when relevant
+    // ("Same slip as Tuesday…"), not a generic "Correct/Wrong".
+    if (studentId) {
+      setTeacherReaction(null);
+      askBrain(
+        studentId,
+        "react_to_answer",
+        { isCorrect, topic: selectedSubject, subject: selectedSubject, question: q.question.slice(0, 120) },
+        language,
+      ).then((d) => {
+        if (d.speech) setTeacherReaction(d.speech);
+      });
+    }
   };
 
   const handleNextQuestion = () => {
@@ -175,6 +194,7 @@ const McqPractice = () => {
       setCurrentQuestion(prev => prev + 1);
       setSelectedAnswer(null);
       setIsAnswered(false);
+      setTeacherReaction(null);
     }
   };
 
@@ -402,6 +422,14 @@ const McqPractice = () => {
                   <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">{q.explanation}</p>
                 </div>
               </div>
+            </Card>
+          )}
+
+          {/* Teacher's in-lesson reaction — feels alive, references memory */}
+          {isAnswered && teacherReaction && (
+            <Card className="p-4 mb-6 border-primary/30 bg-primary/5 animate-fade-in">
+              <p className="text-[11px] font-medium tracking-wide uppercase text-primary/80 mb-1">Your Teacher</p>
+              <p className="text-sm text-foreground leading-relaxed">{teacherReaction}</p>
             </Card>
           )}
 
