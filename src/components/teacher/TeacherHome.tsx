@@ -5,7 +5,8 @@ import { Sparkles, Play, RefreshCw, BookOpen, Brain, ClipboardList, PencilLine, 
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import TeacherSession from "./TeacherSession";
-import { thinkingLines, proactiveNote, refuseSkipLines, pickLine } from "./teacherVoice";
+import { thinkingLines, proactiveNote, pickLine } from "./teacherVoice";
+import { askBrain } from "@/lib/teacherBrain";
 
 export type PlanStep = {
   type: "revision" | "teach" | "mcq" | "notebook" | "homework_review" | "flashcards";
@@ -54,6 +55,7 @@ const TeacherHome = ({ studentId, studentName }: { studentId: string; studentNam
   const [thinkingLine] = useState(() => pickLine(thinkingLines));
   const [dots, setDots] = useState("");
   const [refuseMsg, setRefuseMsg] = useState<string | null>(null);
+  const [recallMsg, setRecallMsg] = useState<string | null>(null);
   const revealedOnce = useRef(false);
 
   const loadPlan = async (force = false) => {
@@ -73,6 +75,16 @@ const TeacherHome = ({ studentId, studentName }: { studentId: string; studentNam
     if (studentId) loadPlan(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId]);
+
+  // Ask the brain for ONE specific recall line (references real past mistakes).
+  useEffect(() => {
+    if (!studentId) return;
+    let cancelled = false;
+    askBrain(studentId, "daily_recall", {}, language).then((d) => {
+      if (!cancelled && d.speech) setRecallMsg(d.speech);
+    });
+    return () => { cancelled = true; };
+  }, [studentId, language]);
 
   // Animated typing dots while the teacher "thinks".
   useEffect(() => {
@@ -96,11 +108,12 @@ const TeacherHome = ({ studentId, studentName }: { studentId: string; studentNam
   const allDone = !!plan && (plan.completed_steps?.length ?? 0) >= plan.steps.length;
   const note = plan ? proactiveNote({ name: studentName.split(" ")[0], hasStarted, allDone }) : "";
 
-  const handleRethink = () => {
-    // Teacher refuses ~65% of the time if student hasn't done anything yet.
-    if (!hasStarted && Math.random() < 0.65) {
-      setRefuseMsg(pickLine(refuseSkipLines));
-      setTimeout(() => setRefuseMsg(null), 6000);
+  const handleRethink = async () => {
+    // Reason-based refusal — no RNG. Brain looks at plan state, homework, mistakes.
+    const d = await askBrain(studentId, "should_refuse_replan", {}, language);
+    if (d.decision === "refuse") {
+      setRefuseMsg(d.speech || "Let's not change today's plan yet.");
+      setTimeout(() => setRefuseMsg(null), 7000);
       return;
     }
     setThinking(true);
@@ -150,6 +163,11 @@ const TeacherHome = ({ studentId, studentName }: { studentId: string; studentNam
             {plan.greeting || `Good to see you, ${studentName}.`}
           </h1>
           {plan.recap && <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{plan.recap}</p>}
+          {recallMsg && (
+            <p className="text-[13px] text-foreground/85 mt-2 leading-relaxed animate-fade-in border-l-2 border-primary/50 pl-3">
+              {recallMsg}
+            </p>
+          )}
           {note && (
             <p className="text-[13px] text-primary/90 mt-2 leading-relaxed animate-fade-in">
               {note}

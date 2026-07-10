@@ -5,7 +5,8 @@ import { ChevronLeft, Check, RefreshCw, BookOpen, Brain, ClipboardList, PencilLi
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { DailyPlan, PlanStep } from "./TeacherHome";
-import { doneReactions, finalReactions, refuseSkipLines, pickLine } from "./teacherVoice";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { askBrain } from "@/lib/teacherBrain";
 
 const stepIcon: Record<PlanStep["type"], any> = {
   revision: RefreshCw,
@@ -55,6 +56,7 @@ const TeacherSession = ({
   onPlanUpdate: (p: DailyPlan) => void;
 }) => {
   const navigate = useNavigate();
+  const { language } = useLanguage();
   const firstPending = plan.steps.findIndex((_, i) => !plan.completed_steps.includes(i));
   const [idx, setIdx] = useState(firstPending === -1 ? 0 : firstPending);
 
@@ -99,11 +101,16 @@ const TeacherSession = ({
       meta: { step_type: step.type, topic: step.topic, subject: step.subject },
     });
 
-    // Teacher reacts, briefly. Feels alive; not just "next".
-    const line = isLast || nextDone.length >= plan.steps.length
-      ? pickLine(finalReactions)
-      : pickLine(doneReactions);
-    setReaction(line);
+    // Reaction comes from the TeacherBrain — references real memory
+    // (e.g. "you cleared a spot you struggled with earlier"), not a random line.
+    const done = nextDone.length >= plan.steps.length;
+    const d = await askBrain(
+      studentId,
+      "step_reaction",
+      { stepType: step.type, topic: step.topic, subject: step.subject, isLast: isLast || done },
+      language,
+    );
+    setReaction(d.speech || "Good. Moving on.");
     // Advance to the next step after the reaction sits for ~1.4s.
     if (idx < plan.steps.length - 1) {
       setTimeout(() => {
@@ -120,11 +127,13 @@ const TeacherSession = ({
     if (r) navigate(`${r}?topic=${encodeURIComponent(step.topic)}${step.subject ? `&subject=${encodeURIComponent(step.subject)}` : ""}`);
   };
 
-  const handleExit = () => {
-    // Teacher pushes back if student leaves before finishing — but only once.
-    const completed = plan.completed_steps.length;
-    if (!allDone && !pushback && Math.random() < 0.7 && completed < plan.steps.length) {
-      setPushback(pickLine(refuseSkipLines));
+  const handleExit = async () => {
+    if (allDone || pushback) { onExit(); return; }
+    // Ask the brain: refuse only for a real reason (unfinished homework,
+    // one step left, repeating mistake). Never RNG.
+    const d = await askBrain(studentId, "should_refuse_exit", {}, language);
+    if (d.decision === "refuse" && d.speech) {
+      setPushback(d.speech);
       return;
     }
     onExit();
