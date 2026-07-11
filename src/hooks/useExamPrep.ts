@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-const getLang = () => {
-  try { return localStorage.getItem('appLanguage') || 'en'; } catch { return 'en'; }
-};
-
 export interface ExamPrepAccess {
   hasAccess: boolean;
   plan: string;
@@ -97,7 +93,7 @@ export const useExamPrep = () => {
 
   const sendChat = useCallback(async (sessionId: string, message: string, history: ChatMessage[]) => {
     const { data, error: err } = await supabase.functions.invoke('exam-prep', {
-      body: { action: 'chat', sessionId, message, history, language: getLang() },
+      body: { action: 'chat', sessionId, message, history },
     });
     if (err) throw err;
     if (data?.error) throw new Error(data.error);

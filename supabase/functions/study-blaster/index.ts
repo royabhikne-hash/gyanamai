@@ -25,15 +25,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, projectId, messages, content, fileName, fileType, fileBase64, exchanges, language } = body;
-
-    const langInstruction = (() => {
-      const l = (language || "en").toLowerCase();
-      if (l === "hi") return "STUDENT'S PREFERRED LANGUAGE: Hindi (Devanagari). Reply in clean, simple Hindi. Keep technical terms in English. Always use respectful 'aap/aapka'.";
-      if (l === "hinglish") return "STUDENT'S PREFERRED LANGUAGE: Hinglish. Reply in warm Hinglish (Roman script, English + Hindi mixed naturally). Always use respectful 'aap/aapka'.";
-      if (l === "kn") return "STUDENT'S PREFERRED LANGUAGE: Kannada. Reply in Kannada script. Keep technical terms in English.";
-      return "STUDENT'S PREFERRED LANGUAGE: English. Reply in clean, simple English.";
-    })();
+    const { action, projectId, messages, content, fileName, fileType, fileBase64, exchanges } = body;
 
     // Validate user
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
@@ -243,8 +235,6 @@ ${combinedContent.substring(0, 80000)}`;
         : "";
 
       const systemPrompt = `You are Study Blaster AI — a warm, friendly, expert NCERT-aligned tutor for Indian students (Classes 6-12). Think of yourself as a caring senior bhaiya/didi who explains things deeply and clearly.
-
-${langInstruction}
 
 GROUNDING RULES (HIGHEST PRIORITY):
 - Answer ONLY using the SOURCE MATERIALS below. No outside facts, dates, names, or numbers.

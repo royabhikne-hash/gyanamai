@@ -102,7 +102,6 @@ const StudyBlasterChat = ({ projectId, projectTitle }: Props) => {
           action: "chat",
           projectId,
           messages: newMessages,
-          language: (typeof window !== "undefined" ? localStorage.getItem("appLanguage") : null) || "en",
         }),
       });
 
