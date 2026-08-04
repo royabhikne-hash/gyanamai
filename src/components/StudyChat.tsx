@@ -11,7 +11,6 @@ import RichMarkdown from "@/components/chat/RichMarkdown";
 import SoundWave from "@/components/SoundWave";
 import VoiceInputIndicator from "@/components/VoiceInputIndicator";
 import Confetti from "@/components/Confetti";
-import TypingText from "@/components/TypingText";
 import { useSmartTTS, SPEECHIFY_VOICES } from "@/hooks/useSmartTTS";
 import SpeechifyVoiceSelector from "@/components/SpeechifyVoiceSelector";
 import SubjectChapterSelector from "@/components/SubjectChapterSelector";
@@ -197,7 +196,6 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   const [showExplanation, setShowExplanation] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [hasPlayedWelcome, setHasPlayedWelcome] = useState(false);
-  const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
   const [answerResults, setAnswerResults] = useState<AnswerAnalysis[]>([]);
   const [analyzingAnswer, setAnalyzingAnswer] = useState(false);
   const [shortAnswerInput, setShortAnswerInput] = useState("");
@@ -740,19 +738,6 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     setIsLoading(false);
   };
   
-  const handleTypingComplete = (messageId: string, content: string) => {
-    setTypingMessageId(null);
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId ? { ...msg, isTyping: false } : msg
-    ));
-    
-    // Auto-speak after typing is complete
-    if (autoSpeak && content) {
-      setTimeout(() => {
-        speakText(content, messageId, false);
-      }, 200);
-    }
-  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
