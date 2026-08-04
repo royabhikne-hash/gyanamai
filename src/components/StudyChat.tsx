@@ -578,7 +578,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     }
 
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: newMsgId(),
       role: "user",
       content: inputValue,
       timestamp: new Date(),
@@ -599,7 +599,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
       if (currentSubject) {
         // Must finish current subject first
         const warnMsg: ChatMessage = {
-          id: (Date.now() + 1).toString(),
+          id: newMsgId(),
           role: "assistant",
           content: `You're currently studying ${currentSubject}. Please say "${currentSubject} done" first before starting ${command.subject}! 📝`,
           timestamp: new Date(),
@@ -617,14 +617,12 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
       }));
       
       const startMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: newMsgId(),
         role: "assistant",
         content: `Chalo ${command.subject} shuru karte hain! 📖\n\nBatao konsa topic ya doubt hai ${command.subject} mein? Main ready hoon help karne ke liye!\n\nJab ${command.subject} ho jaye toh bolo "${command.subject} done" 👍`,
         timestamp: new Date(),
-        isTyping: true,
-      };
+        };
       setMessages(prev => [...prev, startMsg]);
-      setTypingMessageId(startMsg.id);
       
       const sessId = await ensureSession(command.subject);
       if (sessId) await saveMessageToDb(userMessage, sessId);
@@ -637,7 +635,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
       const subjectToComplete = command.subject || currentSubject;
       if (!currentSubject || currentSubject.toLowerCase() !== subjectToComplete.toLowerCase()) {
         const errorMsg: ChatMessage = {
-          id: (Date.now() + 1).toString(),
+          id: newMsgId(),
           role: "assistant",
           content: currentSubject 
             ? `You're studying ${currentSubject}, not ${subjectToComplete}. Say "${currentSubject} done" to finish it.`
@@ -666,14 +664,12 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
       setCurrentTopic("");
       
       const doneMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: newMsgId(),
         role: "assistant",
         content: `${completedSubj} complete! Bahut accha padha tumne! ✅\n\nAb kya karna hai?\n- Naya subject padhne ke liye bolo "Start [Subject]"\n- Quiz lene ke liye bolo "Finish study" 🎯`,
         timestamp: new Date(),
-        isTyping: true,
-      };
+        };
       setMessages(prev => [...prev, doneMsg]);
-      setTypingMessageId(doneMsg.id);
       
       const sessId = await ensureSession(completedSubj);
       if (sessId) await saveMessageToDb(userMessage, sessId);
@@ -720,17 +716,15 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
 
     const aiResponseText = await getAIResponse(newMessages);
     
-    const aiResponseId = (Date.now() + 1).toString();
+    const aiResponseId = newMsgId();
     const aiResponse: ChatMessage = {
       id: aiResponseId,
       role: "assistant",
       content: aiResponseText,
       timestamp: new Date(),
-      isTyping: true,
     };
     
     setMessages((prev) => [...prev, aiResponse]);
-    setTypingMessageId(aiResponseId);
     
     if (sessId) await saveMessageToDb(aiResponse, sessId);
     setIsLoading(false);
@@ -777,14 +771,12 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     try {
       // Show intro message
       const introMsg: ChatMessage = {
-        id: Date.now().toString(),
+        id: newMsgId(),
         role: "assistant",
         content: `Great study session! You covered ${subjects.length} subject(s): ${subjects.join(", ")}. 📝\n\nNow generating a comprehensive quiz for each subject (10 MCQs + 3 Short + 1 Long per subject). Get ready!`,
         timestamp: new Date(),
-        isTyping: true,
-      };
+        };
       setMessages(prev => [...prev, introMsg]);
-      setTypingMessageId(introMsg.id);
 
       // Generate quiz for first subject (sequential to avoid rate limits)
       const allQuestions: QuizQuestion[] = [];
@@ -818,7 +810,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
           allQuestions.push(...labeledQuestions);
           
           const subjectDoneMsg: ChatMessage = {
-            id: (Date.now() + Math.random()).toString(),
+            id: newMsgId(),
             role: "assistant",
             content: `${subj} quiz ready! (${labeledQuestions.length} questions) ✅`,
             timestamp: new Date(),
@@ -838,7 +830,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         setShortAnswerInput("");
         
         const startMsg: ChatMessage = {
-          id: (Date.now() + 2).toString(),
+          id: newMsgId(),
           role: "assistant",
           content: `All quizzes generated! ${allQuestions.length} total questions across ${subjects.length} subject(s). Let's begin! 🚀`,
           timestamp: new Date(),
@@ -891,7 +883,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
           : `Great study session! Let's see how much you learned. Here are ${data.quiz.questions.length} quick questions - let's go!`;
         
         const quizIntro: ChatMessage = {
-          id: Date.now().toString(),
+          id: newMsgId(),
           role: "assistant",
           content: introMessage,
           timestamp: new Date(),
@@ -1018,7 +1010,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     setShowResult(true);
 
     const resultMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: newMsgId(),
       role: "assistant",
       content: getResultMessage(correctCount, quizQuestions.length, understanding),
       timestamp: new Date(),
@@ -1087,7 +1079,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     
     // Add confirmation message
     const confirmMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: newMsgId(),
       role: "assistant",
       content: `Perfect! 📖 You've selected **${selectedSubject}** chapter **"${chapter}"**. Ask me anything about this chapter - I'll focus my help on it! Let's begin? 🚀`,
       timestamp: new Date(),
