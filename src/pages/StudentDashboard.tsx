@@ -728,10 +728,19 @@ const StudentDashboard = () => {
         open={showLanguagePicker}
         onDone={() => {
           setShowLanguagePicker(false);
-          if (!hasSeenOnboarding()) setShowOnboarding(true);
+          if (!hasSeenOnboarding() && !firstRunPrompted.current.tour) {
+            firstRunPrompted.current.tour = true;
+            setShowOnboarding(true);
+          }
         }}
       />
-      <AppOnboarding open={showOnboarding} onClose={() => setShowOnboarding(false)} />
+      <AppOnboarding
+        open={showOnboarding}
+        onClose={() => {
+          markOnboardingSeen();
+          setShowOnboarding(false);
+        }}
+      />
     </div>
   );
 };
