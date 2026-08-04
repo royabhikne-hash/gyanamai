@@ -103,13 +103,19 @@ const StudentDashboard = () => {
   }, [user, loading, navigate]);
 
   // First-run flow after approval: language picker → onboarding tour.
+  // Guarded so each prompt can fire at most once per app session, even if
+  // approval state re-resolves (realtime updates, refetches).
+  const firstRunPrompted = React.useRef({ lang: false, tour: false });
   useEffect(() => {
     if (!isApproved) return;
     if (!hasChosenLanguage) {
+      if (firstRunPrompted.current.lang) return;
+      firstRunPrompted.current.lang = true;
       const t = setTimeout(() => setShowLanguagePicker(true), 400);
       return () => clearTimeout(t);
     }
-    if (!hasSeenOnboarding()) {
+    if (!hasSeenOnboarding() && !firstRunPrompted.current.tour) {
+      firstRunPrompted.current.tour = true;
       const t = setTimeout(() => setShowOnboarding(true), 400);
       return () => clearTimeout(t);
     }
