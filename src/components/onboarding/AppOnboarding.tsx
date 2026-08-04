@@ -170,7 +170,7 @@ const AppOnboarding = ({ open, onClose }: Props) => {
         if (!v) finish();
       }}
     >
-      <DialogContent className="p-0 gap-0 max-w-md w-[calc(100vw-1.5rem)] rounded-3xl overflow-hidden border border-border/60 bg-background">
+      <DialogContent className="p-0 gap-0 max-w-md rounded-3xl overflow-hidden border border-border/60 bg-background [&>button]:hidden">
         {/* Skip */}
         <div className="flex items-center justify-between px-5 pt-5">
           <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
