@@ -30,8 +30,8 @@ const LanguagePicker = ({ open, onDone, firstRun = true }: Props) => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onDone(); }}>
-      <DialogContent className="p-0 gap-0 max-w-md w-[calc(100vw-1.5rem)] rounded-3xl overflow-hidden border border-border/60 bg-background">
+    <Dialog open={open} onOpenChange={(v) => { if (!v) confirm(); }}>
+      <DialogContent className="p-0 gap-0 max-w-md rounded-3xl overflow-hidden border border-border/60 bg-background [&>button]:hidden">
         <div className="px-6 pt-6 pb-2 flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
             <Languages className="w-5 h-5" />
