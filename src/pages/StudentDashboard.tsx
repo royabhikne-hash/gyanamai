@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import StudentRankingCard from "@/components/StudentRankingCard";
-import AppOnboarding, { hasSeenOnboarding } from "@/components/onboarding/AppOnboarding";
+import AppOnboarding, { hasSeenOnboarding, markOnboardingSeen } from "@/components/onboarding/AppOnboarding";
 import LanguagePicker from "@/components/LanguagePicker";
 
 
