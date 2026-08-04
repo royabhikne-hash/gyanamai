@@ -125,6 +125,11 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   const [completedSubjects, setCompletedSubjects] = useState<string[]>([]);
   const [subjectSessions, setSubjectSessions] = useState<Record<string, { messages: ChatMessage[], startedAt: Date }>>({});
   
+  // Collision-proof message id. Date.now() alone produced duplicate keys for
+  // rapid messages, which made earlier messages vanish from the list.
+  const msgSeq = useRef(0);
+  const newMsgId = () => `m${Date.now()}-${++msgSeq.current}-${Math.random().toString(36).slice(2, 7)}`;
+
   const getRandomGreeting = () => {
     const greetings = [
       "Hey there! 🚀 Let's crush some studying today!\n\nJust say \"Start Maths\" or \"Start Science\" and we'll get rolling. When you're done with a subject, say \"[Subject] done\" and I'll set up the next one!",
@@ -623,6 +628,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         timestamp: new Date(),
         };
       setMessages(prev => [...prev, startMsg]);
+      if (autoSpeak) setTimeout(() => speakText(startMsg.content, startMsg.id, false), 200);
       
       const sessId = await ensureSession(command.subject);
       if (sessId) await saveMessageToDb(userMessage, sessId);
@@ -670,6 +676,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         timestamp: new Date(),
         };
       setMessages(prev => [...prev, doneMsg]);
+      if (autoSpeak) setTimeout(() => speakText(doneMsg.content, doneMsg.id, false), 200);
       
       const sessId = await ensureSession(completedSubj);
       if (sessId) await saveMessageToDb(userMessage, sessId);
@@ -725,6 +732,9 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     };
     
     setMessages((prev) => [...prev, aiResponse]);
+    if (autoSpeak && aiResponseText) {
+      setTimeout(() => speakText(aiResponseText, aiResponseId, false), 200);
+    }
     
     if (sessId) await saveMessageToDb(aiResponse, sessId);
     setIsLoading(false);
@@ -1345,13 +1355,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                     }`}
                     style={!isUser ? { boxShadow: 'var(--clay-shadow)' } : undefined}
                   >
-                    {!isUser && message.isTyping && typingMessageId === message.id ? (
-                      <TypingText
-                        text={message.content}
-                        speed={12}
-                        onComplete={() => handleTypingComplete(message.id, message.content)}
-                      />
-                    ) : isUser ? (
+                    {isUser ? (
                       <span className="whitespace-pre-wrap">{message.content}</span>
                     ) : (
                       <RichMarkdown>{message.content}</RichMarkdown>
