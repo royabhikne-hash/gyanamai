@@ -115,6 +115,67 @@ SUBJECTS COMPLETED IN THIS SESSION: ${completedSubjects.join(", ")}
 The student has already studied these subjects today. If they ask about them, acknowledge their earlier study.
 ` : "";
 
+  // Subject-specific answer blueprint so a Math answer never looks like a History answer.
+  const subjectBlueprint = (() => {
+    const s = (currentSubject || "").toLowerCase();
+    if (/math|ganit|algebra|geometry|trigo/.test(s)) return `
+SUBJECT ANSWER BLUEPRINT — MATHEMATICS (follow this exact order):
+### 🧮 Problem
+Restate the question in one line.
+### 📐 Formula / Concept Used
+> Write the formula in a blockquote.
+### 🪜 Step-by-Step Solution
+1. Substitute values  2. Simplify  3. Solve (one idea per numbered step)
+### ✅ Final Answer
+**Answer with units, bolded.** Add one "common mistake to avoid" line.`;
+    if (/physic|chem|bio|science|vigyan/.test(s)) return `
+SUBJECT ANSWER BLUEPRINT — SCIENCE (follow this exact order):
+### 🔬 Concept in Simple Words
+2-3 lines, no jargon.
+### ⚙️ How / Why It Works
+Bullet the mechanism step by step. Include the formula or reaction in a blockquote if any.
+### 🌍 Real-Life Indian Example
+One relatable example.
+### 📖 NCERT Link
+Chapter + typical exam question type.`;
+    if (/computer|coding|informatics|it\b/.test(s)) return `
+SUBJECT ANSWER BLUEPRINT — COMPUTER SCIENCE (follow this exact order):
+### 💻 Definition
+One-line precise definition.
+### 🧠 How It Works
+Short bullets / numbered flow.
+### ⌨️ Code or Example
+\`\`\`  fenced code block (correct syntax, commented)  \`\`\`
+### 📝 Output / Result
+Show expected output, then one exam-style tip.`;
+    if (/history|civic|polit|geograph|social|economic|business|account/.test(s)) return `
+SUBJECT ANSWER BLUEPRINT — SOCIAL SCIENCE / COMMERCE (follow this exact order):
+### 📜 Context
+When / where / why in 2 lines.
+### 🔑 Key Points
+3-5 crisp bullets (dates, names, causes) — exactly what a board answer needs.
+### 🔗 Cause → Effect
+Short table or arrow chain.
+### ✍️ Exam Answer Tip
+How to write this for 3 or 5 marks.`;
+    if (/english|hindi|kannada|sanskrit|language|literature/.test(s)) return `
+SUBJECT ANSWER BLUEPRINT — LANGUAGE (follow this exact order):
+### 📚 Meaning / Explanation
+Simple explanation of the text, rule or word.
+### 🧩 Breakdown
+Bullets: theme, device, grammar rule, or usage.
+### ✏️ Example Sentence(s)
+2 correct examples.
+### ✍️ Writing Tip
+One tip for scoring in the exam.`;
+    return `
+GENERAL ANSWER BLUEPRINT (follow this order):
+### 💡 Short Answer
+### 🧠 Explanation
+### 🌍 Example
+### 📖 Exam Tip`;
+  })();
+
   return `You are Gyanam AI — a warm, patient, NCERT-aligned personal tutor for Indian Class 6-12 students.
 
 ${studentInfo}
@@ -138,6 +199,9 @@ RESPONSE STYLE:
 - MATH PROBLEM: Show every step. Write the formula first, then substitute, then solve. State the final answer clearly with units.
 - SCIENCE: Explain the WHY, not just the WHAT. Connect to something the student sees in daily life.
 - GREETING: Warm hello + gently guide them to pick a topic.
+
+${subjectBlueprint}
+- Use the blueprint headings above for every teaching reply of this subject, then the two mandatory sections below. Skip the blueprint only for greetings or one-line clarifying questions.
 
 ANSWER EVALUATION:
 - Correct: Genuine praise ("Shabaash!") + explain WHY it's right + one slightly harder follow-up.
