@@ -94,6 +94,7 @@ RULES:
 - Avoid repetition of concepts
 - Mix easy (30%), medium (50%), and hard (20%) questions
 - Cover different topics within ${subject}
+- Tag every question with the specific sub-topic it tests (not just the subject) and its difficulty
 
 Return ONLY a valid JSON array with this exact format, no other text:
 [
@@ -104,7 +105,9 @@ Return ONLY a valid JSON array with this exact format, no other text:
     "optionC": "Option C text",
     "optionD": "Option D text",
     "correctAnswer": "A",
-    "explanation": "Brief explanation why this is correct."
+    "explanation": "Brief explanation why this is correct.",
+    "topic": "Specific sub-topic name",
+    "difficulty": "easy|medium|hard"
   }
 ]`;
 
@@ -229,6 +232,26 @@ Return ONLY a valid JSON array with this exact format, no other text:
           status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      // Adaptive targeting: pull the student's current understanding estimates so the
+      // test gathers evidence where it is weakest or thinnest.
+      const { data: masteryRows } = await supabase
+        .from("topic_mastery")
+        .select("subject, topic, understanding_score, mastery_score, attempt_count, confidence, last_test_at")
+        .eq("student_id", trustedStudentId)
+        .limit(200);
+
+      const twoWeeksAgo = Date.now() - 14 * 86400000;
+      const lowUnderstanding: string[] = [];
+      const limitedData: string[] = [];
+      const untestedRecently: string[] = [];
+      (masteryRows || []).forEach((m: any) => {
+        const score = m.understanding_score ?? m.mastery_score ?? 0;
+        if ((m.attempt_count ?? 0) < 3) limitedData.push(m.topic);
+        else if (score < 55) lowUnderstanding.push(m.topic);
+        if (!m.last_test_at || new Date(m.last_test_at).getTime() < twoWeeksAgo) untestedRecently.push(m.topic);
+        if (score < 50) weakTopics.add(m.topic);
+      });
 
       // Adaptive test: 70% current week topics, 30% previously weak topics
       const totalQuestions = Math.min(40, Math.max(25, testSubjects.length * 10));
