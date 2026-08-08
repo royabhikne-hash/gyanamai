@@ -19,6 +19,9 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import LanguageToggle from "@/components/LanguageToggle";
 import jsPDF from "jspdf";
 import { ProgressSkeleton } from "@/components/DashboardSkeleton";
+import TopicUnderstandingList from "@/components/progress/TopicUnderstandingList";
+import EffortUnderstandingMatrix, { MatrixItem } from "@/components/progress/EffortUnderstandingMatrix";
+import { TopicMasteryRow, calculateEffort, confidenceOf, understandingView } from "@/lib/mastery";
 import {
   XAxis,
   YAxis,
@@ -58,15 +61,7 @@ interface StudySession {
   created_at: string;
 }
 
-interface TopicMastery {
-  id: string;
-  subject: string;
-  topic: string;
-  mastery_score: number;
-  attempt_count: number;
-  last_practiced: string;
-  trend: string;
-}
+type TopicMastery = TopicMasteryRow;
 
 interface McqRecord {
   id: string;
@@ -140,7 +135,7 @@ const StudentProgress = () => {
             .order("created_at", { ascending: true }),
           supabase
             .from("topic_mastery")
-            .select("id, subject, topic, mastery_score, attempt_count, last_practiced, trend")
+            .select("id, subject, topic, mastery_score, understanding_score, attempt_count, last_practiced, trend, confidence, mcq_count, test_count, chatbot_count")
             .eq("student_id", student.id)
             .order("mastery_score", { ascending: true }),
           supabase
