@@ -272,6 +272,12 @@ ADAPTIVE TEST STRUCTURE:
 - ${weakTopicQuestions} questions (30%) from PREVIOUSLY WEAK areas: ${weakList}
 - Subjects covered: ${subjectList}
 
+TARGET THESE TOPICS FIRST (we need evidence about them):
+- Low understanding: ${lowUnderstanding.slice(0, 8).join(", ") || "None"}
+- Limited data (fewer than 3 attempts): ${limitedData.slice(0, 8).join(", ") || "None"}
+- Not tested in 2+ weeks: ${untestedRecently.slice(0, 8).join(", ") || "None"}
+Still keep some spread across all studied subjects so the test reflects overall syllabus coverage.
+
 DIFFICULTY DISTRIBUTION:
 - Easy (30%): Basic recall & understanding
 - Medium (50%): Application & analysis
@@ -282,12 +288,14 @@ RULES:
 - Each question must have 4 options (A, B, C, D) 
 - Include the subject name for each question
 - Mark difficulty level for each question
+- Tag every question with the SPECIFIC sub-topic it tests (never just the subject name)
 - This is a weekly adaptive assessment test
 
 Return ONLY a valid JSON array:
 [
   {
     "subject": "Subject name",
+    "topic": "Specific sub-topic name",
     "question": "Question text?",
     "optionA": "Option A",
     "optionB": "Option B",
