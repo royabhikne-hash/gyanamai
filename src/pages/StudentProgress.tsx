@@ -237,9 +237,14 @@ const StudentProgress = () => {
     return Object.entries(dayData).map(([day, minutes]) => ({ day, minutes }));
   };
 
-  // ===== Topic Mastery Helpers =====
-  const weakTopics = topicMastery.filter(t => t.mastery_score < 50).slice(0, 5);
-  const strongTopics = topicMastery.filter(t => t.mastery_score >= 70);
+  // ===== Understanding helpers (confidence-aware) =====
+  const weakTopics = topicMastery
+    .filter(t => understandingView(t).score < 50 && confidenceOf(t) !== "low")
+    .slice(0, 5);
+  const strongTopics = topicMastery.filter(
+    t => understandingView(t).score >= 70 && confidenceOf(t) !== "low",
+  );
+  const lowDataTopics = topicMastery.filter(t => confidenceOf(t) === "low").slice(0, 5);
 
   // ===== Activity Timeline =====
   const getActivityTimeline = (): ActivityItem[] => {
