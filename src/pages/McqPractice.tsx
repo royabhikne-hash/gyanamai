@@ -207,6 +207,19 @@ const McqPractice = () => {
         questions: questions as any,
         answers: answers as any,
       });
+
+      // Feed per-question evidence into the Understanding Score engine.
+      await supabase.functions.invoke("update-topic-mastery", {
+        body: {
+          source: "mcq",
+          questionResults: questions.map((q, i) => ({
+            subject: selectedSubject,
+            topic: q.topic || selectedSubject,
+            difficulty: q.difficulty || "medium",
+            correct: !!answers[i]?.isCorrect,
+          })),
+        },
+      });
     } catch (err) {
       console.error("Error saving MCQ results:", err);
     }
