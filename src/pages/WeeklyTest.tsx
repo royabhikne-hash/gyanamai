@@ -18,6 +18,8 @@ interface WeeklyQuestion {
   optionD: string;
   correctAnswer: string;
   explanation: string;
+  topic?: string;
+  difficulty?: string;
 }
 
 type Phase = "checking" | "unavailable" | "ready" | "loading" | "test" | "result";
@@ -194,6 +196,12 @@ const WeeklyTest = () => {
           body: {
             studentId,
             source: "weekly_test",
+            questionResults: questions.map((q, i) => ({
+              subject: q.subject,
+              topic: q.topic || q.subject,
+              difficulty: q.difficulty || "medium",
+              correct: selectedAnswers[i] === q.correctAnswer,
+            })),
             testData: {
               subjectResults: Object.fromEntries(
                 Object.keys(subjectTotal).map(sub => [sub, { correct: subjectCorrect[sub] || 0, total: subjectTotal[sub] }])
