@@ -19,6 +19,8 @@ interface MCQQuestion {
   optionD: string;
   correctAnswer: string;
   explanation: string;
+  topic?: string;
+  difficulty?: string;
 }
 
 type TestPhase = "setup" | "loading" | "test" | "result";
