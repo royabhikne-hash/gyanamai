@@ -1605,42 +1605,69 @@ export type Database = {
       }
       topic_mastery: {
         Row: {
+          alpha: number
           attempt_count: number
+          beta: number
+          chatbot_count: number
+          confidence: string
           created_at: string
+          evidence: Json
           id: string
           last_practiced: string
+          last_test_at: string | null
           mastery_score: number
+          mcq_count: number
           score_history: Json
           student_id: string
           subject: string
+          test_count: number
           topic: string
           trend: string
+          understanding_score: number | null
           updated_at: string
         }
         Insert: {
+          alpha?: number
           attempt_count?: number
+          beta?: number
+          chatbot_count?: number
+          confidence?: string
           created_at?: string
+          evidence?: Json
           id?: string
           last_practiced?: string
+          last_test_at?: string | null
           mastery_score?: number
+          mcq_count?: number
           score_history?: Json
           student_id: string
           subject: string
+          test_count?: number
           topic: string
           trend?: string
+          understanding_score?: number | null
           updated_at?: string
         }
         Update: {
+          alpha?: number
           attempt_count?: number
+          beta?: number
+          chatbot_count?: number
+          confidence?: string
           created_at?: string
+          evidence?: Json
           id?: string
           last_practiced?: string
+          last_test_at?: string | null
           mastery_score?: number
+          mcq_count?: number
           score_history?: Json
           student_id?: string
           subject?: string
+          test_count?: number
           topic?: string
           trend?: string
+          understanding_score?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1690,6 +1717,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "upgrade_requests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_effort_scores: {
+        Row: {
+          active_days: number
+          chapters_covered: number
+          created_at: string
+          effort_score: number
+          exam_tasks_completed: number
+          id: string
+          student_id: string
+          study_minutes: number
+          updated_at: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          active_days?: number
+          chapters_covered?: number
+          created_at?: string
+          effort_score?: number
+          exam_tasks_completed?: number
+          id?: string
+          student_id: string
+          study_minutes?: number
+          updated_at?: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          active_days?: number
+          chapters_covered?: number
+          created_at?: string
+          effort_score?: number
+          exam_tasks_completed?: number
+          id?: string
+          student_id?: string
+          study_minutes?: number
+          updated_at?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_effort_scores_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"

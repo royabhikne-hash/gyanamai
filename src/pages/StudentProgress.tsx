@@ -19,6 +19,9 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import LanguageToggle from "@/components/LanguageToggle";
 import jsPDF from "jspdf";
 import { ProgressSkeleton } from "@/components/DashboardSkeleton";
+import TopicUnderstandingList from "@/components/progress/TopicUnderstandingList";
+import EffortUnderstandingMatrix, { MatrixItem } from "@/components/progress/EffortUnderstandingMatrix";
+import { TopicMasteryRow, calculateEffort, confidenceOf, understandingView } from "@/lib/mastery";
 import {
   XAxis,
   YAxis,
@@ -58,15 +61,7 @@ interface StudySession {
   created_at: string;
 }
 
-interface TopicMastery {
-  id: string;
-  subject: string;
-  topic: string;
-  mastery_score: number;
-  attempt_count: number;
-  last_practiced: string;
-  trend: string;
-}
+type TopicMastery = TopicMasteryRow;
 
 interface McqRecord {
   id: string;
@@ -140,7 +135,7 @@ const StudentProgress = () => {
             .order("created_at", { ascending: true }),
           supabase
             .from("topic_mastery")
-            .select("id, subject, topic, mastery_score, attempt_count, last_practiced, trend")
+            .select("id, subject, topic, mastery_score, understanding_score, attempt_count, last_practiced, trend, confidence, mcq_count, test_count, chatbot_count")
             .eq("student_id", student.id)
             .order("mastery_score", { ascending: true }),
           supabase
@@ -168,12 +163,9 @@ const StudentProgress = () => {
     }
   };
 
-  // ===== WPS Calculation =====
-  // New formula (each 0-100, weighted 25% each):
-  //  - Study time: weekly minutes / 420 (target 7h/week)
-  //  - Topic completion: chapters completed in week / 3 (target 3 chapters/week)
-  //  - MCQ score: average accuracy across that week's MCQ attempts (falls back to weekly-test accuracy)
-  //  - Consistency: unique study days that week / 7
+  // ===== Effort Score (Track B) =====
+  // Effort measures WORK ONLY. Accuracy lives entirely in the Understanding Score,
+  // so high effort can never mask poor comprehension.
   const calculateWPS = (testIndex: number): number => {
     if (weeklyTests.length === 0) return 0;
     const test = weeklyTests[testIndex];
@@ -183,25 +175,33 @@ const StudentProgress = () => {
 
     const weekSessions = sessions.filter(s => inWeek(s.created_at));
     const minutes = weekSessions.reduce((acc, s) => acc + (s.time_spent || 0), 0);
-    const studyTimeScore = Math.min(100, (minutes / 420) * 100);
-
     const weekChapters = chaptersDone.filter(c => c.completed_at && inWeek(c.completed_at)).length;
-    const topicCompletionScore = Math.min(100, (weekChapters / 3) * 100);
-
-    const weekMcq = mcqAttempts.filter(m => inWeek(m.created_at));
-    const mcqScore = weekMcq.length > 0
-      ? weekMcq.reduce((a, m) => a + (m.accuracy_percentage || 0), 0) / weekMcq.length
-      : test.accuracy_percentage; // fallback to weekly test accuracy
-
     const uniqueDays = new Set(weekSessions.map(s => new Date(s.created_at).toDateString())).size;
-    const consistencyScore = (uniqueDays / 7) * 100;
 
-    return Math.round(
-      studyTimeScore * 0.25 +
-      topicCompletionScore * 0.25 +
-      mcqScore * 0.25 +
-      consistencyScore * 0.25
-    );
+    return calculateEffort({
+      studyMinutes: minutes,
+      activeDays: uniqueDays,
+      chaptersCovered: weekChapters,
+      examTasksCompleted: 0,
+      examTasksTotal: 0,
+    });
+  };
+
+  /** Effort for the current calendar week (independent of whether a test was taken). */
+  const getCurrentWeekEffort = (): number => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay());
+    start.setHours(0, 0, 0, 0);
+    const inWeek = (iso: string) => new Date(iso) >= start;
+    const weekSessions = sessions.filter(s => inWeek(s.created_at));
+    return calculateEffort({
+      studyMinutes: weekSessions.reduce((a, s) => a + (s.time_spent || 0), 0),
+      activeDays: new Set(weekSessions.map(s => new Date(s.created_at).toDateString())).size,
+      chaptersCovered: chaptersDone.filter(c => c.completed_at && inWeek(c.completed_at)).length,
+      examTasksCompleted: 0,
+      examTasksTotal: 0,
+    });
   };
 
   const getLatestWPS = () => weeklyTests.length === 0 ? 0 : calculateWPS(weeklyTests.length - 1);
@@ -237,9 +237,14 @@ const StudentProgress = () => {
     return Object.entries(dayData).map(([day, minutes]) => ({ day, minutes }));
   };
 
-  // ===== Topic Mastery Helpers =====
-  const weakTopics = topicMastery.filter(t => t.mastery_score < 50).slice(0, 5);
-  const strongTopics = topicMastery.filter(t => t.mastery_score >= 70);
+  // ===== Understanding helpers (confidence-aware) =====
+  const weakTopics = topicMastery
+    .filter(t => understandingView(t).score < 50 && confidenceOf(t) !== "low")
+    .slice(0, 5);
+  const strongTopics = topicMastery.filter(
+    t => understandingView(t).score >= 70 && confidenceOf(t) !== "low",
+  );
+  const lowDataTopics = topicMastery.filter(t => confidenceOf(t) === "low").slice(0, 5);
 
   // ===== Activity Timeline =====
   const getActivityTimeline = (): ActivityItem[] => {
@@ -386,6 +391,30 @@ const StudentProgress = () => {
   const stats = getStudyStats();
   const latestWPS = getLatestWPS();
   const activityTimeline = getActivityTimeline();
+  const currentEffort = getCurrentWeekEffort();
+
+  // Effort x Understanding per subject
+  const matrixItems: MatrixItem[] = Object.values(
+    topicMastery.reduce((acc: Record<string, MatrixItem>, tm) => {
+      const v = understandingView(tm);
+      const existing = acc[tm.subject];
+      if (!existing) {
+        acc[tm.subject] = {
+          key: tm.subject,
+          name: tm.subject,
+          understanding: v.score,
+          effort: currentEffort,
+          confidence: confidenceOf(tm),
+          meta: `${topicMastery.filter(x => x.subject === tm.subject).length} topics`,
+        };
+      } else {
+        existing.understanding = Math.round((existing.understanding + v.score) / 2);
+        if (confidenceOf(tm) === "high") existing.confidence = "high";
+        else if (confidenceOf(tm) === "medium" && existing.confidence === "low") existing.confidence = "medium";
+      }
+      return acc;
+    }, {}),
+  );
 
   const wpsDelta = weeklyTests.length >= 2
     ? calculateWPS(weeklyTests.length - 1) - calculateWPS(weeklyTests.length - 2)
@@ -426,49 +455,15 @@ const StudentProgress = () => {
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Key Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <MetricCard label="WPS Score" value={`${latestWPS}%`} trend={wpsDelta} />
-          <MetricCard label="Avg Accuracy" value={`${stats.avgAccuracy}%`} />
+          <MetricCard label="Effort (this week)" value={`${currentEffort}%`} trend={wpsDelta} />
+          <MetricCard label="Test Accuracy" value={`${stats.avgAccuracy}%`} />
           <MetricCard label="Study Time" value={`${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`} />
           <MetricCard label="Streak" value={`${stats.streak} days`} />
         </div>
 
-        {/* Topic Mastery Map */}
-        {topicMastery.length > 0 && (
-          <section className="rounded-lg border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Topic Mastery</h3>
-              <span className="text-xs text-muted-foreground">{topicMastery.length} topics tracked</span>
-            </div>
-            <div className="space-y-3">
-              {topicMastery.slice(0, 12).map((tm) => (
-                <div key={tm.id} className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium truncate">{tm.topic}</span>
-                      {tm.trend === "improving" && <TrendingUp className="w-3 h-3 text-green-500 shrink-0" />}
-                      {tm.trend === "declining" && <TrendingDown className="w-3 h-3 text-red-500 shrink-0" />}
-                      {tm.trend === "stable" && <Minus className="w-3 h-3 text-muted-foreground shrink-0" />}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${getMasteryColor(tm.mastery_score)}`}
-                          style={{ width: `${tm.mastery_score}%` }}
-                        />
-                      </div>
-                      <span className={`text-xs font-semibold tabular-nums w-8 text-right ${getMasteryTextColor(tm.mastery_score)}`}>
-                        {tm.mastery_score}%
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {tm.subject} · {tm.attempt_count} attempts
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        <EffortUnderstandingMatrix items={matrixItems} />
+
+        <TopicUnderstandingList topics={topicMastery} />
 
         {/* Weak Topics Action Card */}
         {weakTopics.length > 0 && (
@@ -483,7 +478,7 @@ const StudentProgress = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{tm.topic}</p>
                     <p className="text-xs text-muted-foreground">
-                      {tm.subject} · {tm.mastery_score}% mastery · {tm.attempt_count} attempts
+                      {tm.subject} · {understandingView(tm).score}% understanding · {understandingView(tm).confidenceLabel}
                     </p>
                   </div>
                   <Button
