@@ -391,6 +391,30 @@ const StudentProgress = () => {
   const stats = getStudyStats();
   const latestWPS = getLatestWPS();
   const activityTimeline = getActivityTimeline();
+  const currentEffort = getCurrentWeekEffort();
+
+  // Effort x Understanding per subject
+  const matrixItems: MatrixItem[] = Object.values(
+    topicMastery.reduce((acc: Record<string, MatrixItem>, tm) => {
+      const v = understandingView(tm);
+      const existing = acc[tm.subject];
+      if (!existing) {
+        acc[tm.subject] = {
+          key: tm.subject,
+          name: tm.subject,
+          understanding: v.score,
+          effort: currentEffort,
+          confidence: confidenceOf(tm),
+          meta: `${topicMastery.filter(x => x.subject === tm.subject).length} topics`,
+        };
+      } else {
+        existing.understanding = Math.round((existing.understanding + v.score) / 2);
+        if (confidenceOf(tm) === "high") existing.confidence = "high";
+        else if (confidenceOf(tm) === "medium" && existing.confidence === "low") existing.confidence = "medium";
+      }
+      return acc;
+    }, {}),
+  );
 
   const wpsDelta = weeklyTests.length >= 2
     ? calculateWPS(weeklyTests.length - 1) - calculateWPS(weeklyTests.length - 2)
@@ -431,49 +455,15 @@ const StudentProgress = () => {
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Key Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <MetricCard label="WPS Score" value={`${latestWPS}%`} trend={wpsDelta} />
-          <MetricCard label="Avg Accuracy" value={`${stats.avgAccuracy}%`} />
+          <MetricCard label="Effort (this week)" value={`${currentEffort}%`} trend={wpsDelta} />
+          <MetricCard label="Test Accuracy" value={`${stats.avgAccuracy}%`} />
           <MetricCard label="Study Time" value={`${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`} />
           <MetricCard label="Streak" value={`${stats.streak} days`} />
         </div>
 
-        {/* Topic Mastery Map */}
-        {topicMastery.length > 0 && (
-          <section className="rounded-lg border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Topic Mastery</h3>
-              <span className="text-xs text-muted-foreground">{topicMastery.length} topics tracked</span>
-            </div>
-            <div className="space-y-3">
-              {topicMastery.slice(0, 12).map((tm) => (
-                <div key={tm.id} className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium truncate">{tm.topic}</span>
-                      {tm.trend === "improving" && <TrendingUp className="w-3 h-3 text-green-500 shrink-0" />}
-                      {tm.trend === "declining" && <TrendingDown className="w-3 h-3 text-red-500 shrink-0" />}
-                      {tm.trend === "stable" && <Minus className="w-3 h-3 text-muted-foreground shrink-0" />}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${getMasteryColor(tm.mastery_score)}`}
-                          style={{ width: `${tm.mastery_score}%` }}
-                        />
-                      </div>
-                      <span className={`text-xs font-semibold tabular-nums w-8 text-right ${getMasteryTextColor(tm.mastery_score)}`}>
-                        {tm.mastery_score}%
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {tm.subject} · {tm.attempt_count} attempts
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        <EffortUnderstandingMatrix items={matrixItems} />
+
+        <TopicUnderstandingList topics={topicMastery} />
 
         {/* Weak Topics Action Card */}
         {weakTopics.length > 0 && (
@@ -488,7 +478,7 @@ const StudentProgress = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{tm.topic}</p>
                     <p className="text-xs text-muted-foreground">
-                      {tm.subject} · {tm.mastery_score}% mastery · {tm.attempt_count} attempts
+                      {tm.subject} · {understandingView(tm).score}% understanding · {understandingView(tm).confidenceLabel}
                     </p>
                   </div>
                   <Button
