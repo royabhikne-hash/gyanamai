@@ -163,12 +163,9 @@ const StudentProgress = () => {
     }
   };
 
-  // ===== WPS Calculation =====
-  // New formula (each 0-100, weighted 25% each):
-  //  - Study time: weekly minutes / 420 (target 7h/week)
-  //  - Topic completion: chapters completed in week / 3 (target 3 chapters/week)
-  //  - MCQ score: average accuracy across that week's MCQ attempts (falls back to weekly-test accuracy)
-  //  - Consistency: unique study days that week / 7
+  // ===== Effort Score (Track B) =====
+  // Effort measures WORK ONLY. Accuracy lives entirely in the Understanding Score,
+  // so high effort can never mask poor comprehension.
   const calculateWPS = (testIndex: number): number => {
     if (weeklyTests.length === 0) return 0;
     const test = weeklyTests[testIndex];
@@ -178,25 +175,33 @@ const StudentProgress = () => {
 
     const weekSessions = sessions.filter(s => inWeek(s.created_at));
     const minutes = weekSessions.reduce((acc, s) => acc + (s.time_spent || 0), 0);
-    const studyTimeScore = Math.min(100, (minutes / 420) * 100);
-
     const weekChapters = chaptersDone.filter(c => c.completed_at && inWeek(c.completed_at)).length;
-    const topicCompletionScore = Math.min(100, (weekChapters / 3) * 100);
-
-    const weekMcq = mcqAttempts.filter(m => inWeek(m.created_at));
-    const mcqScore = weekMcq.length > 0
-      ? weekMcq.reduce((a, m) => a + (m.accuracy_percentage || 0), 0) / weekMcq.length
-      : test.accuracy_percentage; // fallback to weekly test accuracy
-
     const uniqueDays = new Set(weekSessions.map(s => new Date(s.created_at).toDateString())).size;
-    const consistencyScore = (uniqueDays / 7) * 100;
 
-    return Math.round(
-      studyTimeScore * 0.25 +
-      topicCompletionScore * 0.25 +
-      mcqScore * 0.25 +
-      consistencyScore * 0.25
-    );
+    return calculateEffort({
+      studyMinutes: minutes,
+      activeDays: uniqueDays,
+      chaptersCovered: weekChapters,
+      examTasksCompleted: 0,
+      examTasksTotal: 0,
+    });
+  };
+
+  /** Effort for the current calendar week (independent of whether a test was taken). */
+  const getCurrentWeekEffort = (): number => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay());
+    start.setHours(0, 0, 0, 0);
+    const inWeek = (iso: string) => new Date(iso) >= start;
+    const weekSessions = sessions.filter(s => inWeek(s.created_at));
+    return calculateEffort({
+      studyMinutes: weekSessions.reduce((a, s) => a + (s.time_spent || 0), 0),
+      activeDays: new Set(weekSessions.map(s => new Date(s.created_at).toDateString())).size,
+      chaptersCovered: chaptersDone.filter(c => c.completed_at && inWeek(c.completed_at)).length,
+      examTasksCompleted: 0,
+      examTasksTotal: 0,
+    });
   };
 
   const getLatestWPS = () => weeklyTests.length === 0 ? 0 : calculateWPS(weeklyTests.length - 1);
